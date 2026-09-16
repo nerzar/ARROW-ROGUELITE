@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { encounterFromJson, EncounterState, findWin } from '../src/index.js'
+import { encounterFromJson, EncounterState, findWin, maxHits } from '../src/index.js'
 
 const load = (name: string) => JSON.parse(readFileSync(new URL(`../encounters/${name}`, import.meta.url), 'utf8'))
 
@@ -43,14 +43,19 @@ describe('EXP-009 gray prologue encounter 4 (mini-boss, seed 1571)', () => {
     expect(enc.encounter.rotate.allow.sort()).toEqual([-1, 1])
   })
 
-  it('is winnable with the one granted Rotate and provably not without it', () => {
+  it('killing the boss needs the one granted Rotate', () => {
     const { file: enc, level } = encounterFromJson(load('prologue-e4-miniboss.json'))
     const start = EncounterState.fromLevel(level, enc.encounter)
-    expect(findWin(start, { maxRotates: 0 })).toMatchObject({ win: false, proven: true })
-    expect(findWin(start, { maxRotates: 1 }).win).toBe(true)
+    // EXP-010: this EXP-009 file carries no attackTimer/blockedTapDamage, so nothing can hurt the
+    // player and "board cleared alive" (docs/COMBAT-RULES.md 8) is trivially reachable even at
+    // maxRotates 0. The original claim was about *killing*; that part is unchanged and checked below
+    // (see encounters/cp-e5.json for the EXP-010 combat-pressure version of this same seed/boss).
+    expect(findWin(start, { maxRotates: 0 }).win).toBe(true)
+    expect(maxHits(start, { maxRotates: 0 }).hits).toBeLessThan(start.totalHp)
+    expect(maxHits(start, { maxRotates: 1 }).hits).toBe(start.totalHp)
   })
 
-  it('under natural (hit-first) phase-1 play, one Rotate direction is a proven dead end and the other wins', () => {
+  it('under natural (hit-first) phase-1 play, only one Rotate direction lets phase 2 be fully killed', () => {
     const { file: enc, level } = encounterFromJson(load('prologue-e4-miniboss.json'))
     const def = enc.encounter
     const s = EncounterState.fromLevel(level, def)
@@ -61,12 +66,15 @@ describe('EXP-009 gray prologue encounter 4 (mini-boss, seed 1571)', () => {
     expect(s.phaseIndex).toBe(1)
     expect(s.rotateCharges).toBe(1)
 
+    // EXP-010: without HP pressure, both directions still "win" via board-clear-alive (see above);
+    // the meaningful EXP-009 distinction — cw cannot land the remaining N hits, ccw can — survives
+    // as a hit-count claim.
     const cw = s.clone()
     cw.rotate(1)
-    expect(findWin(cw, { maxRotates: 0 })).toMatchObject({ win: false, proven: true })
+    expect(maxHits(cw, { maxRotates: 0 }).hits).toBeLessThan(s.totalHp)
 
     const ccw = s.clone()
     ccw.rotate(-1)
-    expect(findWin(ccw, { maxRotates: 0 }).win).toBe(true)
+    expect(maxHits(ccw, { maxRotates: 0 }).hits).toBe(s.totalHp)
   })
 })

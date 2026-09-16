@@ -23,6 +23,15 @@ npm run cli -- analyze --preset medium --seed 2908          # seed analyzer
 npm run cli -- shortlist --count 3000                       # encounters/shortlist.json
 npm run cli -- encounter encounters/prologue-miniboss.json  # validator
 # viewer: http://localhost:5177/viewer/encounter.html
+
+# EXP-009: gray prologue, encounters 1-4 chained (см. .orchestra/archive)
+# viewer: http://localhost:5177/viewer/prologue.html
+
+# EXP-010: combat pressure — player HP, blocked-tap damage, ATTACK IN N (см. EXP-010-REPORT.md)
+npm run cli -- cp-shortlist --step 3 --count 4000            # encounters/cp-e3-shortlist.json
+npm run cli -- cp-shortlist --step 4 --count 4000            # encounters/cp-e4-shortlist.json
+npm run cli -- encounter encounters/cp-e5.json --player-hp 4  # validator with a real starting HP
+# viewer: http://localhost:5177/viewer/cp-prologue.html
 ```
 
 Node ≥ 20.
@@ -53,9 +62,14 @@ validateLevel / replayOrder  независимая проверка без Boar
 | [src/generator.ts](src/generator.ts) | генератор |
 | [src/metrics.ts](src/metrics.ts) | метрики |
 | [src/presets.ts](src/presets.ts) | пресеты бенчмарка (не кривая сложности игры) |
-| [tools/cli.ts](tools/cli.ts) | CLI `gen` / `verify` / `bench` |
+| [tools/cli.ts](tools/cli.ts) | CLI `gen` / `verify` / `bench` / `analyze` / `encounter` / `shortlist` / `prologue` / `cp-shortlist` |
 | [viewer/](viewer/index.html) | debug viewer |
 | [test/](test/property.test.ts) | unit + property tests |
+| [src/encounter.ts](src/encounter.ts) | `EncounterState`: boss phases, Rotate, EXP-010 player HP / blocked-tap damage / `attackTimer` |
+| [src/encounter-solver.ts](src/encounter-solver.ts) | `findWin`, `maxHits`, `minDamageToWin` (EXP-010), validator report |
+| [src/run-state.ts](src/run-state.ts) | EXP-010 `RunState`: HP across chained encounters, restart-step/restart-run |
+| [src/analyze.ts](src/analyze.ts) | seed analyzer; `hitTiming` (EXP-010) for timed-encounter shortlisting |
+| [tools/cp-shortlist.ts](tools/cp-shortlist.ts) | EXP-010 seed shortlist for the timed encounters (E3/E4) |
 
 ## Правила, на которых стоит ядро
 

@@ -1,0 +1,509 @@
+{
+  "generatedBy": "npm run cli -- cp-shortlist",
+  "step": 4,
+  "options": {
+    "preset": "easy",
+    "side": "E",
+    "hp": 5,
+    "attackTimer": {
+      "interval": 3,
+      "damage": 3
+    },
+    "blockedTapDamage": 1,
+    "playerHp": 10,
+    "start": 1,
+    "count": 6000,
+    "minArrows": 8,
+    "maxArrows": 18,
+    "top": 8,
+    "requireNoDamage": false,
+    "damageRange": [
+      6,
+      9
+    ]
+  },
+  "scanned": 6000,
+  "passed": 371,
+  "candidates": [
+    {
+      "rank": 1,
+      "score": 57,
+      "seed": 1638,
+      "levelHash": "16113a93",
+      "arrows": 12,
+      "dirCounts": [
+        0,
+        7,
+        2,
+        3
+      ],
+      "initialFree": [
+        0,
+        1,
+        1,
+        2
+      ],
+      "earliestHitTurn": 1,
+      "maxGap": 2,
+      "boardClearTurns": 12,
+      "minDamageOnIntendedPath": 6,
+      "why": [
+        "7 E-side arrows for 5 hp (slack 2)",
+        "earliest possible hit (canonical order): turn 1",
+        "board clears in 12 turns along the canonical order",
+        "min unavoidable damage on the fastest kill path: 6 (~2 attack cycle(s) of 3)"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 1638,
+          "levelHash": "16113a93"
+        },
+        "encounter": {
+          "id": "cp_e4",
+          "title": "Combat pressure 4 — the same size, again, harder",
+          "boss": {
+            "id": "grunt_timed",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 5,
+                "attackTimer": {
+                  "interval": 3,
+                  "damage": 3
+                },
+                "label": "ATTACK IN 3"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          },
+          "blockedTapDamage": 1
+        }
+      }
+    },
+    {
+      "rank": 2,
+      "score": 57,
+      "seed": 3270,
+      "levelHash": "e15a3761",
+      "arrows": 12,
+      "dirCounts": [
+        4,
+        7,
+        1,
+        0
+      ],
+      "initialFree": [
+        1,
+        2,
+        0,
+        0
+      ],
+      "earliestHitTurn": 1,
+      "maxGap": 1,
+      "boardClearTurns": 12,
+      "minDamageOnIntendedPath": 6,
+      "why": [
+        "7 E-side arrows for 5 hp (slack 2)",
+        "earliest possible hit (canonical order): turn 1",
+        "board clears in 12 turns along the canonical order",
+        "min unavoidable damage on the fastest kill path: 6 (~2 attack cycle(s) of 3)"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 3270,
+          "levelHash": "e15a3761"
+        },
+        "encounter": {
+          "id": "cp_e4",
+          "title": "Combat pressure 4 — the same size, again, harder",
+          "boss": {
+            "id": "grunt_timed",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 5,
+                "attackTimer": {
+                  "interval": 3,
+                  "damage": 3
+                },
+                "label": "ATTACK IN 3"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          },
+          "blockedTapDamage": 1
+        }
+      }
+    },
+    {
+      "rank": 3,
+      "score": 56,
+      "seed": 954,
+      "levelHash": "bc49cd4f",
+      "arrows": 13,
+      "dirCounts": [
+        5,
+        7,
+        0,
+        1
+      ],
+      "initialFree": [
+        2,
+        0,
+        0,
+        1
+      ],
+      "earliestHitTurn": 2,
+      "maxGap": 1,
+      "boardClearTurns": 13,
+      "minDamageOnIntendedPath": 6,
+      "why": [
+        "7 E-side arrows for 5 hp (slack 2)",
+        "earliest possible hit (canonical order): turn 2",
+        "board clears in 13 turns along the canonical order",
+        "min unavoidable damage on the fastest kill path: 6 (~2 attack cycle(s) of 3)"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 954,
+          "levelHash": "bc49cd4f"
+        },
+        "encounter": {
+          "id": "cp_e4",
+          "title": "Combat pressure 4 — the same size, again, harder",
+          "boss": {
+            "id": "grunt_timed",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 5,
+                "attackTimer": {
+                  "interval": 3,
+                  "damage": 3
+                },
+                "label": "ATTACK IN 3"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          },
+          "blockedTapDamage": 1
+        }
+      }
+    },
+    {
+      "rank": 4,
+      "score": 56,
+      "seed": 1522,
+      "levelHash": "18634303",
+      "arrows": 14,
+      "dirCounts": [
+        3,
+        6,
+        2,
+        3
+      ],
+      "initialFree": [
+        0,
+        2,
+        1,
+        3
+      ],
+      "earliestHitTurn": 1,
+      "maxGap": 2,
+      "boardClearTurns": 14,
+      "minDamageOnIntendedPath": 6,
+      "why": [
+        "6 E-side arrows for 5 hp (slack 1)",
+        "earliest possible hit (canonical order): turn 1",
+        "board clears in 14 turns along the canonical order",
+        "min unavoidable damage on the fastest kill path: 6 (~2 attack cycle(s) of 3)"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 1522,
+          "levelHash": "18634303"
+        },
+        "encounter": {
+          "id": "cp_e4",
+          "title": "Combat pressure 4 — the same size, again, harder",
+          "boss": {
+            "id": "grunt_timed",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 5,
+                "attackTimer": {
+                  "interval": 3,
+                  "damage": 3
+                },
+                "label": "ATTACK IN 3"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          },
+          "blockedTapDamage": 1
+        }
+      }
+    },
+    {
+      "rank": 5,
+      "score": 56,
+      "seed": 2535,
+      "levelHash": "89f7598d",
+      "arrows": 14,
+      "dirCounts": [
+        2,
+        6,
+        3,
+        3
+      ],
+      "initialFree": [
+        2,
+        2,
+        1,
+        2
+      ],
+      "earliestHitTurn": 1,
+      "maxGap": 3,
+      "boardClearTurns": 14,
+      "minDamageOnIntendedPath": 6,
+      "why": [
+        "6 E-side arrows for 5 hp (slack 1)",
+        "earliest possible hit (canonical order): turn 1",
+        "board clears in 14 turns along the canonical order",
+        "min unavoidable damage on the fastest kill path: 6 (~2 attack cycle(s) of 3)"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 2535,
+          "levelHash": "89f7598d"
+        },
+        "encounter": {
+          "id": "cp_e4",
+          "title": "Combat pressure 4 — the same size, again, harder",
+          "boss": {
+            "id": "grunt_timed",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 5,
+                "attackTimer": {
+                  "interval": 3,
+                  "damage": 3
+                },
+                "label": "ATTACK IN 3"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          },
+          "blockedTapDamage": 1
+        }
+      }
+    },
+    {
+      "rank": 6,
+      "score": 56,
+      "seed": 4131,
+      "levelHash": "0e91cc1a",
+      "arrows": 11,
+      "dirCounts": [
+        1,
+        7,
+        3,
+        0
+      ],
+      "initialFree": [
+        0,
+        3,
+        1,
+        0
+      ],
+      "earliestHitTurn": 1,
+      "maxGap": 1,
+      "boardClearTurns": 11,
+      "minDamageOnIntendedPath": 6,
+      "why": [
+        "7 E-side arrows for 5 hp (slack 2)",
+        "earliest possible hit (canonical order): turn 1",
+        "board clears in 11 turns along the canonical order",
+        "min unavoidable damage on the fastest kill path: 6 (~2 attack cycle(s) of 3)"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 4131,
+          "levelHash": "0e91cc1a"
+        },
+        "encounter": {
+          "id": "cp_e4",
+          "title": "Combat pressure 4 — the same size, again, harder",
+          "boss": {
+            "id": "grunt_timed",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 5,
+                "attackTimer": {
+                  "interval": 3,
+                  "damage": 3
+                },
+                "label": "ATTACK IN 3"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          },
+          "blockedTapDamage": 1
+        }
+      }
+    },
+    {
+      "rank": 7,
+      "score": 56,
+      "seed": 4825,
+      "levelHash": "057a489e",
+      "arrows": 11,
+      "dirCounts": [
+        1,
+        7,
+        3,
+        0
+      ],
+      "initialFree": [
+        0,
+        2,
+        0,
+        0
+      ],
+      "earliestHitTurn": 1,
+      "maxGap": 1,
+      "boardClearTurns": 11,
+      "minDamageOnIntendedPath": 6,
+      "why": [
+        "7 E-side arrows for 5 hp (slack 2)",
+        "earliest possible hit (canonical order): turn 1",
+        "board clears in 11 turns along the canonical order",
+        "min unavoidable damage on the fastest kill path: 6 (~2 attack cycle(s) of 3)"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 4825,
+          "levelHash": "057a489e"
+        },
+        "encounter": {
+          "id": "cp_e4",
+          "title": "Combat pressure 4 — the same size, again, harder",
+          "boss": {
+            "id": "grunt_timed",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 5,
+                "attackTimer": {
+                  "interval": 3,
+                  "damage": 3
+                },
+                "label": "ATTACK IN 3"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          },
+          "blockedTapDamage": 1
+        }
+      }
+    },
+    {
+      "rank": 8,
+      "score": 56,
+      "seed": 5704,
+      "levelHash": "1142acee",
+      "arrows": 11,
+      "dirCounts": [
+        0,
+        7,
+        2,
+        2
+      ],
+      "initialFree": [
+        0,
+        2,
+        1,
+        2
+      ],
+      "earliestHitTurn": 1,
+      "maxGap": 1,
+      "boardClearTurns": 11,
+      "minDamageOnIntendedPath": 6,
+      "why": [
+        "7 E-side arrows for 5 hp (slack 2)",
+        "earliest possible hit (canonical order): turn 1",
+        "board clears in 11 turns along the canonical order",
+        "min unavoidable damage on the fastest kill path: 6 (~2 attack cycle(s) of 3)"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 5704,
+          "levelHash": "1142acee"
+        },
+        "encounter": {
+          "id": "cp_e4",
+          "title": "Combat pressure 4 — the same size, again, harder",
+          "boss": {
+            "id": "grunt_timed",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 5,
+                "attackTimer": {
+                  "interval": 3,
+                  "damage": 3
+                },
+                "label": "ATTACK IN 3"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          },
+          "blockedTapDamage": 1
+        }
+      }
+    }
+  ]
+}

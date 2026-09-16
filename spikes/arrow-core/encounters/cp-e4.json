@@ -1,0 +1,32 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 1638,
+    "levelHash": "16113a93"
+  },
+  "encounter": {
+    "id": "cp_e4",
+    "title": "Combat pressure 4 — the same size, again, harder — PROVISIONAL (shortlist #1, seed 1638)",
+    "boss": {
+      "id": "grunt_timed",
+      "phases": [
+        {
+          "side": "E",
+          "hpUnits": 5,
+          "attackTimer": {
+            "interval": 3,
+            "damage": 3
+          },
+          "label": "ATTACK IN 3"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 1,
+    "notes": "EXP-010 provisional, not user-approved. easy 6x7 again (docs/COMBAT-RULES.md 10: same size as E3, reinforced not a one-off), 12 arrows, target E, 5 hp, ATTACK IN 3 dmg 3 (Gemini-suggested tuning). Minimum unavoidable damage on the fastest kill path is 6 (2 attack cycles) -- deliberately not zero: E4 is meant to show repeated attack pressure, unlike E3. blockedTapDamage 1 (shared provisional default). playerHp ~10 provisional: this leaves ~4 HP entering E5."
+  }
+}
