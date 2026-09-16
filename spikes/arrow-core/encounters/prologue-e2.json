@@ -1,0 +1,26 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "tiny",
+    "seed": 300,
+    "levelHash": "e1910ddc"
+  },
+  "encounter": {
+    "id": "prologue_e2",
+    "title": "Prologue 2 — free the arrow — PROVISIONAL (shortlist #1, seed 300)",
+    "boss": {
+      "id": "target_placeholder",
+      "phases": [
+        {
+          "side": "E",
+          "hpUnits": 2
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "notes": "EXP-009 demo only, not chosen by the user. tiny 4 arrows, target E, 2 hp, free-at-start N/E/S/W 0/1/0/0. One E arrow starts blocked and visible next to the free one, on purpose: docs/COMBAT-RULES.md 9 assigns this slot to 'blocked tap now costs HP', which EXP-009 does not implement (no player HP / no damage yet, so a blocked tap here is still free to try)."
+  }
+}

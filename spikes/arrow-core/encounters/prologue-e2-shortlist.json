@@ -1,0 +1,440 @@
+{
+  "generatedBy": "npm run cli -- prologue",
+  "step": 2,
+  "options": {
+    "preset": "tiny",
+    "side": "E",
+    "hp": 2,
+    "start": 1,
+    "count": 8000,
+    "top": 8
+  },
+  "scanned": 8000,
+  "passed": 1850,
+  "candidates": [
+    {
+      "rank": 1,
+      "score": 65,
+      "seed": 300,
+      "levelHash": "e1910ddc",
+      "arrows": 4,
+      "dirCounts": [
+        1,
+        2,
+        0,
+        1
+      ],
+      "initialFree": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "freeAtStart": 1,
+      "branchPoints": 0,
+      "dirBranchPoints": 0,
+      "why": [
+        "one target arrow already free, one more needs freeing",
+        "4 arrows total",
+        "0 direction branch point(s)",
+        "2 target-side arrows for 2 hp"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "tiny",
+          "seed": 300,
+          "levelHash": "e1910ddc"
+        },
+        "encounter": {
+          "id": "prologue_e2",
+          "title": "Prologue 2 — free the arrow",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 2
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 2,
+      "score": 65,
+      "seed": 1257,
+      "levelHash": "c2c1bade",
+      "arrows": 4,
+      "dirCounts": [
+        1,
+        2,
+        0,
+        1
+      ],
+      "initialFree": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "freeAtStart": 1,
+      "branchPoints": 0,
+      "dirBranchPoints": 0,
+      "why": [
+        "one target arrow already free, one more needs freeing",
+        "4 arrows total",
+        "0 direction branch point(s)",
+        "2 target-side arrows for 2 hp"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "tiny",
+          "seed": 1257,
+          "levelHash": "c2c1bade"
+        },
+        "encounter": {
+          "id": "prologue_e2",
+          "title": "Prologue 2 — free the arrow",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 2
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 3,
+      "score": 65,
+      "seed": 1523,
+      "levelHash": "e1f53ea8",
+      "arrows": 4,
+      "dirCounts": [
+        0,
+        2,
+        1,
+        1
+      ],
+      "initialFree": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "freeAtStart": 1,
+      "branchPoints": 0,
+      "dirBranchPoints": 0,
+      "why": [
+        "one target arrow already free, one more needs freeing",
+        "4 arrows total",
+        "0 direction branch point(s)",
+        "2 target-side arrows for 2 hp"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "tiny",
+          "seed": 1523,
+          "levelHash": "e1f53ea8"
+        },
+        "encounter": {
+          "id": "prologue_e2",
+          "title": "Prologue 2 — free the arrow",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 2
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 4,
+      "score": 65,
+      "seed": 1947,
+      "levelHash": "03462394",
+      "arrows": 4,
+      "dirCounts": [
+        1,
+        2,
+        0,
+        1
+      ],
+      "initialFree": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "freeAtStart": 1,
+      "branchPoints": 0,
+      "dirBranchPoints": 0,
+      "why": [
+        "one target arrow already free, one more needs freeing",
+        "4 arrows total",
+        "0 direction branch point(s)",
+        "2 target-side arrows for 2 hp"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "tiny",
+          "seed": 1947,
+          "levelHash": "03462394"
+        },
+        "encounter": {
+          "id": "prologue_e2",
+          "title": "Prologue 2 — free the arrow",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 2
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 5,
+      "score": 65,
+      "seed": 2048,
+      "levelHash": "da27cf14",
+      "arrows": 4,
+      "dirCounts": [
+        0,
+        2,
+        2,
+        0
+      ],
+      "initialFree": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "freeAtStart": 1,
+      "branchPoints": 0,
+      "dirBranchPoints": 0,
+      "why": [
+        "one target arrow already free, one more needs freeing",
+        "4 arrows total",
+        "0 direction branch point(s)",
+        "2 target-side arrows for 2 hp"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "tiny",
+          "seed": 2048,
+          "levelHash": "da27cf14"
+        },
+        "encounter": {
+          "id": "prologue_e2",
+          "title": "Prologue 2 — free the arrow",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 2
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 6,
+      "score": 65,
+      "seed": 2593,
+      "levelHash": "8e7333c4",
+      "arrows": 4,
+      "dirCounts": [
+        0,
+        2,
+        2,
+        0
+      ],
+      "initialFree": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "freeAtStart": 1,
+      "branchPoints": 0,
+      "dirBranchPoints": 0,
+      "why": [
+        "one target arrow already free, one more needs freeing",
+        "4 arrows total",
+        "0 direction branch point(s)",
+        "2 target-side arrows for 2 hp"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "tiny",
+          "seed": 2593,
+          "levelHash": "8e7333c4"
+        },
+        "encounter": {
+          "id": "prologue_e2",
+          "title": "Prologue 2 — free the arrow",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 2
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 7,
+      "score": 65,
+      "seed": 2746,
+      "levelHash": "13df9afa",
+      "arrows": 4,
+      "dirCounts": [
+        1,
+        2,
+        1,
+        0
+      ],
+      "initialFree": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "freeAtStart": 1,
+      "branchPoints": 0,
+      "dirBranchPoints": 0,
+      "why": [
+        "one target arrow already free, one more needs freeing",
+        "4 arrows total",
+        "0 direction branch point(s)",
+        "2 target-side arrows for 2 hp"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "tiny",
+          "seed": 2746,
+          "levelHash": "13df9afa"
+        },
+        "encounter": {
+          "id": "prologue_e2",
+          "title": "Prologue 2 — free the arrow",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 2
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 8,
+      "score": 65,
+      "seed": 2992,
+      "levelHash": "507c7bf4",
+      "arrows": 4,
+      "dirCounts": [
+        0,
+        2,
+        1,
+        1
+      ],
+      "initialFree": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "freeAtStart": 1,
+      "branchPoints": 0,
+      "dirBranchPoints": 0,
+      "why": [
+        "one target arrow already free, one more needs freeing",
+        "4 arrows total",
+        "0 direction branch point(s)",
+        "2 target-side arrows for 2 hp"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "tiny",
+          "seed": 2992,
+          "levelHash": "507c7bf4"
+        },
+        "encounter": {
+          "id": "prologue_e2",
+          "title": "Prologue 2 — free the arrow",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 2
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    }
+  ]
+}

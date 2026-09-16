@@ -1,0 +1,26 @@
+{
+  "name": "arrow-core-spike",
+  "private": true,
+  "version": "0.0.0-spike",
+  "description": "EXP-007 spike: pure TypeScript Arrow puzzle core (generator + solver). Not production code.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "cli": "npm run build && node dist/tools/cli.js",
+    "gen": "npm run build && node dist/tools/cli.js gen",
+    "bench": "npm run build && node dist/tools/cli.js bench",
+    "viewer": "npm run build && node tools/serve.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "fast-check": "^4.3.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

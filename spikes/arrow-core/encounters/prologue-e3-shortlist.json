@@ -1,0 +1,440 @@
+{
+  "generatedBy": "npm run cli -- prologue",
+  "step": 3,
+  "options": {
+    "preset": "easy",
+    "side": "E",
+    "hp": 3,
+    "start": 1,
+    "count": 5000,
+    "top": 8
+  },
+  "scanned": 5000,
+  "passed": 686,
+  "candidates": [
+    {
+      "rank": 1,
+      "score": 59,
+      "seed": 2535,
+      "levelHash": "89f7598d",
+      "arrows": 14,
+      "dirCounts": [
+        2,
+        6,
+        3,
+        3
+      ],
+      "initialFree": [
+        2,
+        2,
+        1,
+        2
+      ],
+      "freeAtStart": 7,
+      "branchPoints": 12,
+      "dirBranchPoints": 10,
+      "why": [
+        "6 target-side arrows for 3 hp (slack 3)",
+        "14 arrows total: more variety to show a projectile budget",
+        "10 direction branch point(s)",
+        "target arrow already free at start"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 2535,
+          "levelHash": "89f7598d"
+        },
+        "encounter": {
+          "id": "prologue_e3",
+          "title": "Prologue 3 — projectile budget",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 3
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 2,
+      "score": 58,
+      "seed": 522,
+      "levelHash": "5ca80632",
+      "arrows": 13,
+      "dirCounts": [
+        3,
+        6,
+        2,
+        2
+      ],
+      "initialFree": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "freeAtStart": 6,
+      "branchPoints": 11,
+      "dirBranchPoints": 11,
+      "why": [
+        "6 target-side arrows for 3 hp (slack 3)",
+        "13 arrows total: more variety to show a projectile budget",
+        "11 direction branch point(s)",
+        "target arrow already free at start"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 522,
+          "levelHash": "5ca80632"
+        },
+        "encounter": {
+          "id": "prologue_e3",
+          "title": "Prologue 3 — projectile budget",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 3
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 3,
+      "score": 58,
+      "seed": 1734,
+      "levelHash": "949e580d",
+      "arrows": 13,
+      "dirCounts": [
+        2,
+        6,
+        3,
+        2
+      ],
+      "initialFree": [
+        0,
+        3,
+        1,
+        1
+      ],
+      "freeAtStart": 5,
+      "branchPoints": 12,
+      "dirBranchPoints": 11,
+      "why": [
+        "6 target-side arrows for 3 hp (slack 3)",
+        "13 arrows total: more variety to show a projectile budget",
+        "11 direction branch point(s)",
+        "target arrow already free at start"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 1734,
+          "levelHash": "949e580d"
+        },
+        "encounter": {
+          "id": "prologue_e3",
+          "title": "Prologue 3 — projectile budget",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 3
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 4,
+      "score": 58,
+      "seed": 2728,
+      "levelHash": "9481d776",
+      "arrows": 13,
+      "dirCounts": [
+        1,
+        6,
+        2,
+        4
+      ],
+      "initialFree": [
+        0,
+        1,
+        1,
+        3
+      ],
+      "freeAtStart": 5,
+      "branchPoints": 12,
+      "dirBranchPoints": 11,
+      "why": [
+        "6 target-side arrows for 3 hp (slack 3)",
+        "13 arrows total: more variety to show a projectile budget",
+        "11 direction branch point(s)",
+        "target arrow already free at start"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 2728,
+          "levelHash": "9481d776"
+        },
+        "encounter": {
+          "id": "prologue_e3",
+          "title": "Prologue 3 — projectile budget",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 3
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 5,
+      "score": 58,
+      "seed": 3913,
+      "levelHash": "2d76d73a",
+      "arrows": 13,
+      "dirCounts": [
+        2,
+        6,
+        1,
+        4
+      ],
+      "initialFree": [
+        0,
+        4,
+        0,
+        3
+      ],
+      "freeAtStart": 7,
+      "branchPoints": 12,
+      "dirBranchPoints": 12,
+      "why": [
+        "6 target-side arrows for 3 hp (slack 3)",
+        "13 arrows total: more variety to show a projectile budget",
+        "12 direction branch point(s)",
+        "target arrow already free at start"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 3913,
+          "levelHash": "2d76d73a"
+        },
+        "encounter": {
+          "id": "prologue_e3",
+          "title": "Prologue 3 — projectile budget",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 3
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 6,
+      "score": 58,
+      "seed": 3948,
+      "levelHash": "32f270b2",
+      "arrows": 13,
+      "dirCounts": [
+        2,
+        6,
+        1,
+        4
+      ],
+      "initialFree": [
+        1,
+        3,
+        0,
+        1
+      ],
+      "freeAtStart": 5,
+      "branchPoints": 12,
+      "dirBranchPoints": 12,
+      "why": [
+        "6 target-side arrows for 3 hp (slack 3)",
+        "13 arrows total: more variety to show a projectile budget",
+        "12 direction branch point(s)",
+        "target arrow already free at start"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 3948,
+          "levelHash": "32f270b2"
+        },
+        "encounter": {
+          "id": "prologue_e3",
+          "title": "Prologue 3 — projectile budget",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 3
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 7,
+      "score": 58,
+      "seed": 4392,
+      "levelHash": "5b386cca",
+      "arrows": 13,
+      "dirCounts": [
+        2,
+        6,
+        4,
+        1
+      ],
+      "initialFree": [
+        1,
+        3,
+        2,
+        0
+      ],
+      "freeAtStart": 6,
+      "branchPoints": 10,
+      "dirBranchPoints": 10,
+      "why": [
+        "6 target-side arrows for 3 hp (slack 3)",
+        "13 arrows total: more variety to show a projectile budget",
+        "10 direction branch point(s)",
+        "target arrow already free at start"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 4392,
+          "levelHash": "5b386cca"
+        },
+        "encounter": {
+          "id": "prologue_e3",
+          "title": "Prologue 3 — projectile budget",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 3
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    },
+    {
+      "rank": 8,
+      "score": 57.5,
+      "seed": 1522,
+      "levelHash": "18634303",
+      "arrows": 14,
+      "dirCounts": [
+        3,
+        6,
+        2,
+        3
+      ],
+      "initialFree": [
+        0,
+        2,
+        1,
+        3
+      ],
+      "freeAtStart": 6,
+      "branchPoints": 10,
+      "dirBranchPoints": 9,
+      "why": [
+        "6 target-side arrows for 3 hp (slack 3)",
+        "14 arrows total: more variety to show a projectile budget",
+        "9 direction branch point(s)",
+        "target arrow already free at start"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "easy",
+          "seed": 1522,
+          "levelHash": "18634303"
+        },
+        "encounter": {
+          "id": "prologue_e3",
+          "title": "Prologue 3 — projectile budget",
+          "boss": {
+            "id": "target_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 3
+              }
+            ]
+          },
+          "rotate": {
+            "allow": []
+          }
+        }
+      }
+    }
+  ]
+}

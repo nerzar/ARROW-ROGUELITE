@@ -1,0 +1,943 @@
+{
+  "generatedBy": "npm run cli -- shortlist",
+  "options": {
+    "preset": "medium",
+    "start": 1,
+    "count": 3000,
+    "side1": "E",
+    "side2": "N",
+    "minArrows": 12,
+    "maxArrows": 24,
+    "top": 10
+  },
+  "scanned": 3000,
+  "passed": 1876,
+  "candidates": [
+    {
+      "rank": 1,
+      "score": 99.5,
+      "seed": 2908,
+      "levelHash": "8788e588",
+      "arrows": 21,
+      "dirCounts": [
+        1,
+        9,
+        3,
+        8
+      ],
+      "initialFree": [
+        1,
+        4,
+        1,
+        3
+      ],
+      "dirSequence": "EWEWWWESWENEEWWESESWE",
+      "dirBranchPoints": 20,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 5,
+      "onSideAtPhase2": 1,
+      "rotateSupplyAtPhase2": 8,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 1,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "4+3",
+        "3+4",
+        "2+5",
+        "4+2",
+        "3+3",
+        "2+4",
+        "3+2",
+        "2+3",
+        "2+2"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 1.0 arrows facing N for 5 hp",
+        "after the best Rotate 8.0 arrows face N",
+        "4 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 100%, ccw 100%",
+        "without Rotate at most 5/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 2908,
+          "levelHash": "8788e588"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 2,
+      "score": 99,
+      "seed": 2088,
+      "levelHash": "c91e020b",
+      "arrows": 21,
+      "dirCounts": [
+        2,
+        10,
+        2,
+        7
+      ],
+      "initialFree": [
+        0,
+        3,
+        1,
+        3
+      ],
+      "dirSequence": "EWWEEEWWNEEEEWSEWSWEN",
+      "dirBranchPoints": 19,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 6,
+      "onSideAtPhase2": 2,
+      "rotateSupplyAtPhase2": 7,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 1,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "4+3",
+        "3+4",
+        "2+5",
+        "3+3",
+        "2+4",
+        "2+3"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 2.0 arrows facing N for 5 hp",
+        "after the best Rotate 7.0 arrows face N",
+        "3 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 100%, ccw 100%",
+        "without Rotate at most 6/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 2088,
+          "levelHash": "c91e020b"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 3,
+      "score": 98.9,
+      "seed": 2082,
+      "levelHash": "a12808bc",
+      "arrows": 19,
+      "dirCounts": [
+        2,
+        11,
+        1,
+        5
+      ],
+      "initialFree": [
+        0,
+        4,
+        1,
+        2
+      ],
+      "dirSequence": "ESWWWEWEEEEEEWNENEE",
+      "dirBranchPoints": 17,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 6,
+      "onSideAtPhase2": 2,
+      "rotateSupplyAtPhase2": 7,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 1,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "4+3",
+        "3+4",
+        "2+5",
+        "3+3",
+        "2+4",
+        "2+3"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 2.0 arrows facing N for 5 hp",
+        "after the best Rotate 7.0 arrows face N",
+        "4 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 100%, ccw 100%",
+        "without Rotate at most 6/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 2082,
+          "levelHash": "a12808bc"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 4,
+      "score": 98.4,
+      "seed": 2717,
+      "levelHash": "23f493d4",
+      "arrows": 19,
+      "dirCounts": [
+        1,
+        12,
+        1,
+        5
+      ],
+      "initialFree": [
+        0,
+        6,
+        0,
+        2
+      ],
+      "dirSequence": "EWWENEEEEEEEWEWWEES",
+      "dirBranchPoints": 16,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 5,
+      "onSideAtPhase2": 1,
+      "rotateSupplyAtPhase2": 8,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 1,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "4+3",
+        "3+4",
+        "2+5",
+        "4+2",
+        "3+3",
+        "2+4",
+        "3+2",
+        "2+3",
+        "2+2"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 1.0 arrows facing N for 5 hp",
+        "after the best Rotate 8.0 arrows face N",
+        "6 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 100%, ccw 100%",
+        "without Rotate at most 5/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 2717,
+          "levelHash": "23f493d4"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 5,
+      "score": 98.4,
+      "seed": 2885,
+      "levelHash": "60f010f4",
+      "arrows": 19,
+      "dirCounts": [
+        2,
+        10,
+        0,
+        7
+      ],
+      "initialFree": [
+        0,
+        4,
+        0,
+        3
+      ],
+      "dirSequence": "WWWEEEEWEWENEWENWEE",
+      "dirBranchPoints": 16,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 6,
+      "onSideAtPhase2": 2,
+      "rotateSupplyAtPhase2": 7,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 1,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "4+3",
+        "3+4",
+        "2+5",
+        "3+3",
+        "2+4",
+        "2+3"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 2.0 arrows facing N for 5 hp",
+        "after the best Rotate 7.0 arrows face N",
+        "4 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 100%, ccw 100%",
+        "without Rotate at most 6/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 2885,
+          "levelHash": "60f010f4"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 6,
+      "score": 97.9,
+      "seed": 1552,
+      "levelHash": "b0e336ca",
+      "arrows": 19,
+      "dirCounts": [
+        1,
+        10,
+        0,
+        8
+      ],
+      "initialFree": [
+        0,
+        5,
+        0,
+        2
+      ],
+      "dirSequence": "WEEWEEEEWEEENWEWWWW",
+      "dirBranchPoints": 15,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 5,
+      "onSideAtPhase2": 1,
+      "rotateSupplyAtPhase2": 8,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 1,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "4+3",
+        "3+4",
+        "2+5",
+        "4+2",
+        "3+3",
+        "2+4",
+        "3+2",
+        "2+3",
+        "2+2"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 1.0 arrows facing N for 5 hp",
+        "after the best Rotate 8.0 arrows face N",
+        "5 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 100%, ccw 100%",
+        "without Rotate at most 5/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 1552,
+          "levelHash": "b0e336ca"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 7,
+      "score": 96.4,
+      "seed": 1571,
+      "levelHash": "60b50974",
+      "arrows": 18,
+      "dirCounts": [
+        1,
+        11,
+        2,
+        4
+      ],
+      "initialFree": [
+        1,
+        2,
+        1,
+        2
+      ],
+      "dirSequence": "EESNEEWEEWEWWEEEES",
+      "dirBranchPoints": 17,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 5,
+      "onSideAtPhase2": 1,
+      "rotateSupplyAtPhase2": 7,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 0,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "4+3",
+        "3+4",
+        "2+5",
+        "4+2",
+        "3+3",
+        "2+4",
+        "3+2",
+        "2+3",
+        "2+2"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 1.0 arrows facing N for 5 hp",
+        "after the best Rotate 7.0 arrows face N",
+        "2 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 0%, ccw 100%",
+        "without Rotate at most 5/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 1571,
+          "levelHash": "60b50974"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 8,
+      "score": 96.3,
+      "seed": 1060,
+      "levelHash": "43ffa639",
+      "arrows": 15,
+      "dirCounts": [
+        3,
+        11,
+        1,
+        0
+      ],
+      "initialFree": [
+        1,
+        4,
+        0,
+        0
+      ],
+      "dirSequence": "EENEEEEEEEENENS",
+      "dirBranchPoints": 14,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 7,
+      "onSideAtPhase2": 3,
+      "rotateSupplyAtPhase2": 7,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 0,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "3+4",
+        "2+5",
+        "2+4"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 3.0 arrows facing N for 5 hp",
+        "after the best Rotate 7.0 arrows face N",
+        "4 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 0%, ccw 100%",
+        "without Rotate at most 7/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 1060,
+          "levelHash": "43ffa639"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 9,
+      "score": 96.3,
+      "seed": 2506,
+      "levelHash": "c288f04e",
+      "arrows": 14,
+      "dirCounts": [
+        3,
+        11,
+        0,
+        0
+      ],
+      "initialFree": [
+        1,
+        5,
+        0,
+        0
+      ],
+      "dirSequence": "EEEEEEEEEENNEN",
+      "dirBranchPoints": 13,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 7,
+      "onSideAtPhase2": 3,
+      "rotateSupplyAtPhase2": 7,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 0,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "3+4",
+        "2+5",
+        "2+4"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 3.0 arrows facing N for 5 hp",
+        "after the best Rotate 7.0 arrows face N",
+        "5 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 0%, ccw 100%",
+        "without Rotate at most 7/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 2506,
+          "levelHash": "c288f04e"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rank": 10,
+      "score": 95.9,
+      "seed": 2802,
+      "levelHash": "00151e51",
+      "arrows": 18,
+      "dirCounts": [
+        2,
+        12,
+        0,
+        4
+      ],
+      "initialFree": [
+        1,
+        6,
+        0,
+        1
+      ],
+      "dirSequence": "WEEEEEWEWEEEENWNEE",
+      "dirBranchPoints": 16,
+      "hp": [
+        4,
+        5
+      ],
+      "maxHitsWithoutRotate": 6,
+      "onSideAtPhase2": 2,
+      "rotateSupplyAtPhase2": 8,
+      "greedyWin": 1,
+      "sloppyWinnable": 1,
+      "turnWin": {
+        "cw": 0,
+        "ccw": 1
+      },
+      "viableSplits": [
+        "4+6",
+        "4+5",
+        "3+6",
+        "4+4",
+        "3+5",
+        "2+6",
+        "4+3",
+        "3+4",
+        "2+5",
+        "3+3",
+        "2+4",
+        "2+3"
+      ],
+      "why": [
+        "careless phase 1 still winnable: 100%",
+        "hit-greedy player + Rotate wins: 100%",
+        "phase 2 starts with 2.0 arrows facing N for 5 hp",
+        "after the best Rotate 8.0 arrows face N",
+        "6 E arrows free at start",
+        "Rotate right at phase 2 still wins: cw 0%, ccw 100%",
+        "without Rotate at most 6/9 damage"
+      ],
+      "file": {
+        "format": "arrow-core-encounter",
+        "v": 1,
+        "board": {
+          "preset": "medium",
+          "seed": 2802,
+          "levelHash": "00151e51"
+        },
+        "encounter": {
+          "id": "prologue_miniboss",
+          "title": "Prologue mini-boss (placeholder)",
+          "boss": {
+            "id": "miniboss_placeholder",
+            "phases": [
+              {
+                "side": "E",
+                "hpUnits": 4,
+                "label": "familiar side"
+              },
+              {
+                "side": "N",
+                "hpUnits": 5,
+                "grantRotate": 1,
+                "label": "moved: direction becomes a resource"
+              }
+            ]
+          },
+          "rotate": {
+            "allow": [
+              "cw",
+              "ccw"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

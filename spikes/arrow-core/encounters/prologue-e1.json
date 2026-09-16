@@ -1,0 +1,26 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "tiny",
+    "seed": 238,
+    "levelHash": "616207aa"
+  },
+  "encounter": {
+    "id": "prologue_e1",
+    "title": "Prologue 1 — first shot — PROVISIONAL (shortlist #1, seed 238)",
+    "boss": {
+      "id": "target_placeholder",
+      "phases": [
+        {
+          "side": "E",
+          "hpUnits": 1
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "notes": "EXP-009 demo only, not chosen by the user. tiny 4 arrows, target E, 1 hp, free-at-start N/E/S/W 0/1/0/0"
+  }
+}

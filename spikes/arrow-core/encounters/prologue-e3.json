@@ -1,0 +1,26 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 2535,
+    "levelHash": "89f7598d"
+  },
+  "encounter": {
+    "id": "prologue_e3",
+    "title": "Prologue 3 — projectile budget — PROVISIONAL (shortlist #1, seed 2535)",
+    "boss": {
+      "id": "target_placeholder",
+      "phases": [
+        {
+          "side": "E",
+          "hpUnits": 3
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "notes": "EXP-009 demo only, not chosen by the user. easy 14 arrows, target E, 3 hp, free-at-start N/E/S/W 2/2/1/2, 6 E arrows total (slack 3, not scarce). docs/COMBAT-RULES.md 9 assigns this slot to the first real 'ATTACK IN N' deadline; EXP-009 implements no timer/deadline, just a board shallow enough (2 of 3 needed E arrows already free) that a future soft deadline would not need direction quotas."
+  }
+}
