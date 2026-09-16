@@ -30,5 +30,6 @@ createServer(async (req, res) => {
   }
 }).listen(port, '127.0.0.1', () => {
   console.log(`arrow-core viewer: http://localhost:${port}/viewer/#preset=medium&seed=1
- mini-boss:         http://localhost:${port}/viewer/encounter.html`)
+ mini-boss:         http://localhost:${port}/viewer/encounter.html
+ gray prologue:     http://localhost:${port}/viewer/prologue.html`)
 })

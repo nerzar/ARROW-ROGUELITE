@@ -1,0 +1,36 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "medium",
+    "seed": 1571,
+    "levelHash": "60b50974"
+  },
+  "encounter": {
+    "id": "prologue_e4_miniboss",
+    "title": "Prologue 4 — mini-boss (seed 1571, user-chosen provisional)",
+    "boss": {
+      "id": "miniboss_placeholder",
+      "phases": [
+        {
+          "side": "E",
+          "hpUnits": 4,
+          "label": "familiar side"
+        },
+        {
+          "side": "N",
+          "hpUnits": 5,
+          "grantRotate": 1,
+          "label": "moved: direction becomes a resource"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ]
+    },
+    "notes": "EXP-009: phase 1 boss on E (4 hp), phase 2 boss moves to N (5 hp) and grants 1 Rotate. Without Rotate max 5/9 (proven). Playing phase 1 greedily (hit E whenever a hitting arrow is free), Rotate cw is a proven dead end once the single charge is spent; Rotate ccw wins (verified by exhaustive search, not just the shortlist's simulated sample). A sufficiently deliberate choice of which E arrows to tap in phase 1 can make cw win too (validator's own example does) -- the one-rotation-loses guarantee holds for natural/greedy play, not for every possible phase-1 order. docs/COMBAT-RULES.md 9 independently names this exact seed/preset as the mini-boss provisional and confirms the reason (a wrong Rotate can lose the fight); a future EXP still needs to layer player HP, blocked-tap damage and an attack deadline onto this same boss per COMBAT-RULES.md 9 -- not implemented here."
+  }
+}

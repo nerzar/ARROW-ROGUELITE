@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { performance } from 'node:perf_hooks'
+import { type PrologueStep, scanPrologueStep } from './prologue-shortlist.js'
 import { scanShortlist } from './shortlist.js'
 import {
   analyzeSeed,
@@ -39,6 +40,8 @@ const HELP = `arrow-core spike CLI
          validator: win? win without Rotate? win with <= k Rotate? example winning sequence
   shortlist [--preset medium] [--start 1] [--count 3000] [--side1 E] [--side2 N]
          [--min-arrows 12] [--max-arrows 24] [--top 10] [--out encounters/shortlist.json]
+  prologue --step 1|2|3 [--start 1] [--count 5000] [--top 8] [--out encounters/prologue-eN-shortlist.json]
+         seed shortlist for one of the three single-target prologue encounters (EXP-009)
   bench  [--count 10000] [--presets tiny,easy,medium,hard,expert] [--seed 1]
          [--extra huge:500,xl:100,strict:1000|none] [--out bench-results/latest.json]
 
@@ -219,6 +222,61 @@ scanned ${o.count}/${o.count} in ${sec.toFixed(1)}s
         `${c.hp[0]}+${c.hp[1]} | ${c.maxHitsWithoutRotate}/${c.hp[0] + c.hp[1]} | ${c.onSideAtPhase2} | ${c.rotateSupplyAtPhase2} | ` +
         `${Object.values(c.turnWin).map((v) => `${Math.round(v * 100)}%`).join(' / ')} | ` +
         `${Math.round(c.greedyWin * 100)}% | ${Math.round(c.sloppyWinnable * 100)}% |`,
+    )
+  }
+  console.log(`
+json: ${out}`)
+}
+
+const PROLOGUE_STEPS: Record<PrologueStep, { preset: PresetName; side: Dir; hp: number; id: string; title: string }> = {
+  1: { preset: 'tiny', side: 1, hp: 1, id: 'prologue_e1', title: 'Prologue 1 — first shot' },
+  2: { preset: 'tiny', side: 1, hp: 2, id: 'prologue_e2', title: 'Prologue 2 — free the arrow' },
+  3: { preset: 'easy', side: 1, hp: 3, id: 'prologue_e3', title: 'Prologue 3 — projectile budget' },
+}
+
+function cmdPrologue(opt: Record<string, string>): void {
+  const step = Number(opt.step ?? 1) as PrologueStep
+  if (![1, 2, 3].includes(step)) throw new Error('--step must be 1, 2 or 3')
+  const spec = PROLOGUE_STEPS[step]
+  const o = {
+    preset: spec.preset,
+    side: spec.side,
+    hp: spec.hp,
+    start: parseSeed(opt.start, 1),
+    count: Number(opt.count ?? 5000),
+    top: Number(opt.top ?? 8),
+  }
+  const t0 = performance.now()
+  const res = scanPrologueStep(step, o, spec.id, spec.title, (i) => process.stderr.write(`
+scanned ${i}/${o.count}`))
+  const sec = (performance.now() - t0) / 1000
+  process.stderr.write(`
+scanned ${o.count}/${o.count} in ${sec.toFixed(1)}s
+`)
+  const out = opt.out ?? `encounters/prologue-e${step}-shortlist.json`
+  mkdirSync(dirname(out), { recursive: true })
+  writeFileSync(
+    out,
+    JSON.stringify(
+      {
+        generatedBy: 'npm run cli -- prologue',
+        step,
+        options: { ...o, side: DIR_NAMES[o.side] },
+        scanned: res.scanned,
+        passed: res.passed,
+        candidates: res.candidates.map((c) => ({ ...c, file: encounterToJson(c.file) })),
+      },
+      null,
+      2,
+    ),
+  )
+  console.log(`${spec.preset} seeds ${o.start}..${o.start + o.count - 1}: ${res.passed} boards pass readability filter for step ${step} (${DIR_NAMES[o.side]}, ${o.hp} hp)
+`)
+  console.log('| rank | seed | score | arrows | N/E/S/W | free0 N/E/S/W | branch/dir-branch |')
+  console.log('|---|---|---|---|---|---|---|')
+  for (const c of res.candidates) {
+    console.log(
+      `| ${c.rank} | ${c.seed} | ${c.score} | ${c.arrows} | ${c.dirCounts.join('/')} | ${c.initialFree.join('/')} | ${c.branchPoints}/${c.dirBranchPoints} |`,
     )
   }
   console.log(`
@@ -466,6 +524,7 @@ try {
   else if (cmd === 'analyze') cmdAnalyze(opt)
   else if (cmd === 'encounter') cmdEncounter(pos, opt)
   else if (cmd === 'shortlist') cmdShortlist(opt)
+  else if (cmd === 'prologue') cmdPrologue(opt)
   else console.log(HELP)
 } catch (e) {
   console.error((e as Error).message)
