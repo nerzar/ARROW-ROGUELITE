@@ -6,15 +6,16 @@
 
 | Task | Кто делает | Статус | Ветка |
 |---|---|---|---|
-| BUILD-001 — VK Market Collector Phase 2 | Claude Opus | DONE — ждёт решения пользователя | `build/BUILD-001-vk-market-collector` |
+| — | — | — | — |
 
 ## Дальше
 
 | Task | Кому лучше отдать | От чего зависит |
 |---|---|---|
-| EXP-002 — анализ рынка/аудитории по первому snapshot | Claude Opus | принять BUILD-001 |
+| EXP-002 — карта рынка и стратегия классификации первого snapshot | Claude Opus | решить формат локальной аналитики и границы LLM-разметки |
 | EXP-003 — разбор 2–4 Arrow/Tap Away референсов | Claude Sonnet или Opus | shortlist после первого анализа |
-| EXP-004 — дешёвая массовая тематическая разметка каталога | Muse Spark 1.3 | схема данных BUILD-001 + решить, нужен ли отдельный текстовый корпус descriptions |
+| EXP-004 — массовая тематическая разметка выбранного корпуса | Claude Sonnet / Muse Spark 1.3 | taxonomy + candidate set из EXP-002 |
+| EXP-005 — демография официальных сообществ shortlist | Claude Opus | shortlist + утверждённая методика выборки |
 
 ## Правило
 
