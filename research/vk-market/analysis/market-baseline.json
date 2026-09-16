@@ -1,0 +1,2708 @@
+{
+ "_note": "EXP-002 baseline from snapshot 2026-09-16. members_count is not MAU. Ranks are best (lowest) rank per app per sort; deep popular/popular_today ranks are approximate. age_days is counted from the snapshot capture time.",
+ "snapshot_meta": [
+  {
+   "snapshot_ref_ts_utc": "2026-09-16 16:49:48.687",
+   "apps": 4985,
+   "ranking_rows": 29852,
+   "published_min": "2009-07-30 07:03:25",
+   "published_max": "2026-09-16 14:42:44"
+  }
+ ],
+ "members_overall": [
+  {
+   "n": 4985,
+   "p25": 2571,
+   "median": 9541,
+   "p75": 37201,
+   "p90": 152615,
+   "p95": 360591,
+   "p99": 2472957,
+   "max": 33914168,
+   "n_ge_100k": 664,
+   "n_ge_1m": 101
+  }
+ ],
+ "genre_counts_members": [
+  {
+   "genre": "Puzzle",
+   "genre_id": 15,
+   "n": 1269,
+   "share_pct": 25.5,
+   "n_html5": 1227,
+   "median_members": 4875,
+   "p75_members": 20510,
+   "p90_members": 83416,
+   "p95_members": 177003,
+   "max_members": 3981719,
+   "sum_members": 59418440,
+   "max_members_title": "Где Отличие? ✅"
+  },
+  {
+   "genre": "Hyper-casual",
+   "genre_id": 10,
+   "n": 996,
+   "share_pct": 20.0,
+   "n_html5": 975,
+   "median_members": 7642,
+   "p75_members": 30332,
+   "p90_members": 94235,
+   "p95_members": 184681,
+   "max_members": 8295962,
+   "sum_members": 64394376,
+   "max_members_title": "Трагедия Белок"
+  },
+  {
+   "genre": "Tabletop game",
+   "genre_id": 17,
+   "n": 391,
+   "share_pct": 7.8,
+   "n_html5": 345,
+   "median_members": 8574,
+   "p75_members": 69863,
+   "p90_members": 390676,
+   "p95_members": 809937,
+   "max_members": 12621995,
+   "sum_members": 76305795,
+   "max_members_title": "Дурак [онлайн]"
+  },
+  {
+   "genre": "Arcade",
+   "genre_id": 27,
+   "n": 380,
+   "share_pct": 7.6,
+   "n_html5": 372,
+   "median_members": 4935,
+   "p75_members": 13873,
+   "p90_members": 39796,
+   "p95_members": 83396,
+   "max_members": 4416691,
+   "sum_members": 12721075,
+   "max_members_title": "Голодные Игры - ешь или съедят тебя"
+  },
+  {
+   "genre": "Simulator",
+   "genre_id": 12,
+   "n": 339,
+   "share_pct": 6.8,
+   "n_html5": 317,
+   "median_members": 12019,
+   "p75_members": 36704,
+   "p90_members": 144462,
+   "p95_members": 343500,
+   "max_members": 18041776,
+   "sum_members": 45087065,
+   "max_members_title": "Аватария"
+  },
+  {
+   "genre": "Three in a row",
+   "genre_id": 26,
+   "n": 318,
+   "share_pct": 6.4,
+   "n_html5": 306,
+   "median_members": 13608,
+   "p75_members": 51642,
+   "p90_members": 163260,
+   "p95_members": 335062,
+   "max_members": 26069750,
+   "sum_members": 66467229,
+   "max_members_title": "Сокровища Пиратов"
+  },
+  {
+   "genre": "Word game",
+   "genre_id": 28,
+   "n": 218,
+   "share_pct": 4.4,
+   "n_html5": 209,
+   "median_members": 8676,
+   "p75_members": 33312,
+   "p90_members": 196203,
+   "p95_members": 478073,
+   "max_members": 4000954,
+   "sum_members": 18823365,
+   "max_members_title": "Слово за слово"
+  },
+  {
+   "genre": "Strategy",
+   "genre_id": 14,
+   "n": 188,
+   "share_pct": 3.8,
+   "n_html5": 159,
+   "median_members": 12682,
+   "p75_members": 49298,
+   "p90_members": 169168,
+   "p95_members": 376596,
+   "max_members": 18477287,
+   "sum_members": 31906281,
+   "max_members_title": "Wormix"
+  },
+  {
+   "genre": "3D shooter",
+   "genre_id": 19,
+   "n": 165,
+   "share_pct": 3.3,
+   "n_html5": 154,
+   "median_members": 26159,
+   "p75_members": 63770,
+   "p90_members": 220986,
+   "p95_members": 360591,
+   "max_members": 8206649,
+   "sum_members": 30765656,
+   "max_members_title": "Блокада"
+  },
+  {
+   "genre": "Adventure",
+   "genre_id": 11,
+   "n": 162,
+   "share_pct": 3.2,
+   "n_html5": 153,
+   "median_members": 17582,
+   "p75_members": 56908,
+   "p90_members": 107437,
+   "p95_members": 227862,
+   "max_members": 9312650,
+   "sum_members": 23651260,
+   "max_members_title": "Метро: Война кланов"
+  },
+  {
+   "genre": "Racing",
+   "genre_id": 21,
+   "n": 160,
+   "share_pct": 3.2,
+   "n_html5": 156,
+   "median_members": 20230,
+   "p75_members": 58415,
+   "p90_members": 171381,
+   "p95_members": 248925,
+   "max_members": 5446569,
+   "sum_members": 17122828,
+   "max_members_title": "СтритРейсеры - настоящие уличные гонки!"
+  },
+  {
+   "genre": "RPG",
+   "genre_id": 18,
+   "n": 148,
+   "share_pct": 3.0,
+   "n_html5": 122,
+   "median_members": 36215,
+   "p75_members": 137234,
+   "p90_members": 632753,
+   "p95_members": 1541989,
+   "max_members": 5751572,
+   "sum_members": 41071015,
+   "max_members_title": "Mafia"
+  },
+  {
+   "genre": "Economic",
+   "genre_id": 16,
+   "n": 128,
+   "share_pct": 2.6,
+   "n_html5": 104,
+   "median_members": 32737,
+   "p75_members": 125204,
+   "p90_members": 1667484,
+   "p95_members": 3681847,
+   "max_members": 8556436,
+   "sum_members": 69280496,
+   "max_members_title": "Запорожье"
+  },
+  {
+   "genre": "Gambling",
+   "genre_id": 25,
+   "n": 95,
+   "share_pct": 1.9,
+   "n_html5": 75,
+   "median_members": 36382,
+   "p75_members": 217288,
+   "p90_members": 879135,
+   "p95_members": 1231176,
+   "max_members": 11975193,
+   "sum_members": 31484804,
+   "max_members_title": "World Poker Club - Покер"
+  },
+  {
+   "genre": "Communication",
+   "genre_id": 5,
+   "n": 28,
+   "share_pct": 0.6,
+   "n_html5": 26,
+   "median_members": 263568,
+   "p75_members": 837500,
+   "p90_members": 13558570,
+   "p95_members": 16897210,
+   "max_members": 33914168,
+   "sum_members": 85964707,
+   "max_members_title": "Целуй и Знакомься"
+  }
+ ],
+ "age_buckets": [
+  {
+   "age_bucket": "0-30d",
+   "n": 232,
+   "median_members": 813,
+   "p75_members": 2157,
+   "p90_members": 3876,
+   "max_members": 13732,
+   "in_growth_top100": 16,
+   "in_popular_week_top100": 0,
+   "in_popular_today_top100": 1,
+   "in_popular_week_top500": 18,
+   "median_best_rank_growth": 1086,
+   "median_best_rank_popular_week": 3427
+  },
+  {
+   "age_bucket": "31-90d",
+   "n": 382,
+   "median_members": 2363,
+   "p75_members": 4087,
+   "p90_members": 6899,
+   "max_members": 129265,
+   "in_growth_top100": 9,
+   "in_popular_week_top100": 2,
+   "in_popular_today_top100": 15,
+   "in_popular_week_top500": 26,
+   "median_best_rank_growth": 3133,
+   "median_best_rank_popular_week": 2878
+  },
+  {
+   "age_bucket": "91-365d",
+   "n": 736,
+   "median_members": 3881,
+   "p75_members": 9294,
+   "p90_members": 25281,
+   "max_members": 353762,
+   "in_growth_top100": 12,
+   "in_popular_week_top100": 8,
+   "in_popular_today_top100": 22,
+   "in_popular_week_top500": 69,
+   "median_best_rank_growth": 2607,
+   "median_best_rank_popular_week": 2466
+  },
+  {
+   "age_bucket": "1-3y",
+   "n": 1797,
+   "median_members": 8437,
+   "p75_members": 26676,
+   "p90_members": 76776,
+   "max_members": 1752031,
+   "in_growth_top100": 27,
+   "in_popular_week_top100": 15,
+   "in_popular_today_top100": 21,
+   "in_popular_week_top500": 117,
+   "median_best_rank_growth": 2314,
+   "median_best_rank_popular_week": 2562
+  },
+  {
+   "age_bucket": ">3y",
+   "n": 1838,
+   "median_members": 31686,
+   "p75_members": 132426,
+   "p90_members": 497498,
+   "max_members": 33914168,
+   "in_growth_top100": 36,
+   "in_popular_week_top100": 75,
+   "in_popular_today_top100": 41,
+   "in_popular_week_top500": 270,
+   "median_best_rank_growth": 2762,
+   "median_best_rank_popular_week": 2136
+  }
+ ],
+ "new_games_by_genre": [
+  {
+   "genre": "Puzzle",
+   "new_30d": 73,
+   "new_90d": 178,
+   "new_365d": 394,
+   "total": 1269,
+   "new_365d_pct_of_genre": 31.0,
+   "median_members_new_365d": 2187,
+   "p90_members_new_365d": 11069,
+   "max_members_new_365d": 184116,
+   "new_365d_in_growth_top500": 36,
+   "new_365d_in_popular_week_top500": 52
+  },
+  {
+   "genre": "Arcade",
+   "new_30d": 36,
+   "new_90d": 111,
+   "new_365d": 190,
+   "total": 380,
+   "new_365d_pct_of_genre": 50.0,
+   "median_members_new_365d": 2499,
+   "p90_members_new_365d": 10268,
+   "max_members_new_365d": 71793,
+   "new_365d_in_growth_top500": 21,
+   "new_365d_in_popular_week_top500": 8
+  },
+  {
+   "genre": "Hyper-casual",
+   "new_30d": 34,
+   "new_90d": 73,
+   "new_365d": 164,
+   "total": 996,
+   "new_365d_pct_of_genre": 16.5,
+   "median_members_new_365d": 1449,
+   "p90_members_new_365d": 8470,
+   "max_members_new_365d": 155178,
+   "new_365d_in_growth_top500": 11,
+   "new_365d_in_popular_week_top500": 9
+  },
+  {
+   "genre": "Simulator",
+   "new_30d": 14,
+   "new_90d": 42,
+   "new_365d": 117,
+   "total": 339,
+   "new_365d_pct_of_genre": 34.5,
+   "median_members_new_365d": 4158,
+   "p90_members_new_365d": 19726,
+   "max_members_new_365d": 353762,
+   "new_365d_in_growth_top500": 19,
+   "new_365d_in_popular_week_top500": 7
+  },
+  {
+   "genre": "Tabletop game",
+   "new_30d": 14,
+   "new_90d": 41,
+   "new_365d": 104,
+   "total": 391,
+   "new_365d_pct_of_genre": 26.6,
+   "median_members_new_365d": 2305,
+   "p90_members_new_365d": 9048,
+   "max_members_new_365d": 162686,
+   "new_365d_in_growth_top500": 7,
+   "new_365d_in_popular_week_top500": 7
+  },
+  {
+   "genre": "Word game",
+   "new_30d": 13,
+   "new_90d": 39,
+   "new_365d": 73,
+   "total": 218,
+   "new_365d_pct_of_genre": 33.5,
+   "median_members_new_365d": 3335,
+   "p90_members_new_365d": 13927,
+   "max_members_new_365d": 71116,
+   "new_365d_in_growth_top500": 8,
+   "new_365d_in_popular_week_top500": 6
+  },
+  {
+   "genre": "Three in a row",
+   "new_30d": 8,
+   "new_90d": 24,
+   "new_365d": 69,
+   "total": 318,
+   "new_365d_pct_of_genre": 21.7,
+   "median_members_new_365d": 3333,
+   "p90_members_new_365d": 25667,
+   "max_members_new_365d": 173954,
+   "new_365d_in_growth_top500": 6,
+   "new_365d_in_popular_week_top500": 5
+  },
+  {
+   "genre": "Strategy",
+   "new_30d": 14,
+   "new_90d": 29,
+   "new_365d": 58,
+   "total": 188,
+   "new_365d_pct_of_genre": 30.9,
+   "median_members_new_365d": 2989,
+   "p90_members_new_365d": 10971,
+   "max_members_new_365d": 28773,
+   "new_365d_in_growth_top500": 9,
+   "new_365d_in_popular_week_top500": 6
+  },
+  {
+   "genre": "RPG",
+   "new_30d": 7,
+   "new_90d": 20,
+   "new_365d": 40,
+   "total": 148,
+   "new_365d_pct_of_genre": 27.0,
+   "median_members_new_365d": 2462,
+   "p90_members_new_365d": 26070,
+   "max_members_new_365d": 57630,
+   "new_365d_in_growth_top500": 8,
+   "new_365d_in_popular_week_top500": 3
+  },
+  {
+   "genre": "Adventure",
+   "new_30d": 3,
+   "new_90d": 13,
+   "new_365d": 37,
+   "total": 162,
+   "new_365d_pct_of_genre": 22.8,
+   "median_members_new_365d": 3591,
+   "p90_members_new_365d": 23209,
+   "max_members_new_365d": 51191,
+   "new_365d_in_growth_top500": 2,
+   "new_365d_in_popular_week_top500": 1
+  },
+  {
+   "genre": "Economic",
+   "new_30d": 5,
+   "new_90d": 15,
+   "new_365d": 30,
+   "total": 128,
+   "new_365d_pct_of_genre": 23.4,
+   "median_members_new_365d": 2717,
+   "p90_members_new_365d": 36562,
+   "max_members_new_365d": 41342,
+   "new_365d_in_growth_top500": 5,
+   "new_365d_in_popular_week_top500": 6
+  },
+  {
+   "genre": "Racing",
+   "new_30d": 1,
+   "new_90d": 8,
+   "new_365d": 28,
+   "total": 160,
+   "new_365d_pct_of_genre": 17.5,
+   "median_members_new_365d": 5801,
+   "p90_members_new_365d": 35074,
+   "max_members_new_365d": 38556,
+   "new_365d_in_growth_top500": 2,
+   "new_365d_in_popular_week_top500": 0
+  },
+  {
+   "genre": "3D shooter",
+   "new_30d": 4,
+   "new_90d": 12,
+   "new_365d": 27,
+   "total": 165,
+   "new_365d_pct_of_genre": 16.4,
+   "median_members_new_365d": 5398,
+   "p90_members_new_365d": 20371,
+   "max_members_new_365d": 30564,
+   "new_365d_in_growth_top500": 0,
+   "new_365d_in_popular_week_top500": 0
+  },
+  {
+   "genre": "Gambling",
+   "new_30d": 5,
+   "new_90d": 7,
+   "new_365d": 14,
+   "total": 95,
+   "new_365d_pct_of_genre": 14.7,
+   "median_members_new_365d": 978,
+   "p90_members_new_365d": 27904,
+   "max_members_new_365d": 41647,
+   "new_365d_in_growth_top500": 3,
+   "new_365d_in_popular_week_top500": 2
+  },
+  {
+   "genre": "Communication",
+   "new_30d": 1,
+   "new_90d": 2,
+   "new_365d": 5,
+   "total": 28,
+   "new_365d_pct_of_genre": 17.9,
+   "median_members_new_365d": 6771,
+   "p90_members_new_365d": 28289,
+   "max_members_new_365d": 28289,
+   "new_365d_in_growth_top500": 1,
+   "new_365d_in_popular_week_top500": 1
+  }
+ ],
+ "new_games_top_members_365d": [
+  {
+   "title": "ProjectH",
+   "genre": "Simulator",
+   "published": "2026-01-16",
+   "age_days": 243,
+   "members_count": 353762,
+   "rank_growth_rate": 285,
+   "rank_popular_week": 309,
+   "rank_popular_today": 116
+  },
+  {
+   "title": "Тропиквиль",
+   "genre": "Puzzle",
+   "published": "2025-12-16",
+   "age_days": 274,
+   "members_count": 184116,
+   "rank_growth_rate": 107,
+   "rank_popular_week": 64,
+   "rank_popular_today": 32
+  },
+  {
+   "title": "Болты и гайки: сортировка",
+   "genre": "Puzzle",
+   "published": "2025-10-27",
+   "age_days": 324,
+   "members_count": 177003,
+   "rank_growth_rate": 80,
+   "rank_popular_week": 108,
+   "rank_popular_today": 307
+  },
+  {
+   "title": "Гранд Тур: Гонки Матч 2",
+   "genre": "Three in a row",
+   "published": "2025-12-26",
+   "age_days": 264,
+   "members_count": 173954,
+   "rank_growth_rate": 29,
+   "rank_popular_week": 221,
+   "rank_popular_today": 178
+  },
+  {
+   "title": "ТапТап Стрелка",
+   "genre": "Puzzle",
+   "published": "2026-04-02",
+   "age_days": 167,
+   "members_count": 169060,
+   "rank_growth_rate": 101,
+   "rank_popular_week": 34,
+   "rank_popular_today": 39
+  },
+  {
+   "title": "Морской бой 2025",
+   "genre": "Tabletop game",
+   "published": "2025-10-14",
+   "age_days": 337,
+   "members_count": 162686,
+   "rank_growth_rate": 430,
+   "rank_popular_week": 519,
+   "rank_popular_today": null
+  },
+  {
+   "title": "Имущество Джигана и Оксаны",
+   "genre": "Hyper-casual",
+   "published": "2026-03-30",
+   "age_days": 170,
+   "members_count": 155178,
+   "rank_growth_rate": null,
+   "rank_popular_week": 1606,
+   "rank_popular_today": 247
+  },
+  {
+   "title": "Мир Слияния",
+   "genre": "Puzzle",
+   "published": "2025-09-25",
+   "age_days": 356,
+   "members_count": 143777,
+   "rank_growth_rate": 264,
+   "rank_popular_week": 68,
+   "rank_popular_today": 29
+  },
+  {
+   "title": "Tap Gallery",
+   "genre": "Puzzle",
+   "published": "2026-03-03",
+   "age_days": 197,
+   "members_count": 141050,
+   "rank_growth_rate": 120,
+   "rank_popular_week": 191,
+   "rank_popular_today": 286
+  },
+  {
+   "title": "Яга: Зелья судьбы",
+   "genre": "Puzzle",
+   "published": "2026-06-24",
+   "age_days": 84,
+   "members_count": 129265,
+   "rank_growth_rate": 122,
+   "rank_popular_week": 93,
+   "rank_popular_today": 36
+  },
+  {
+   "title": "Кубики Онлайн",
+   "genre": "Tabletop game",
+   "published": "2026-05-26",
+   "age_days": 113,
+   "members_count": 107086,
+   "rank_growth_rate": 33,
+   "rank_popular_week": 80,
+   "rank_popular_today": 10
+  },
+  {
+   "title": "Сортировка Болтомания",
+   "genre": "Puzzle",
+   "published": "2025-10-13",
+   "age_days": 338,
+   "members_count": 96177,
+   "rank_growth_rate": 1397,
+   "rank_popular_week": 430,
+   "rank_popular_today": 230
+  },
+  {
+   "title": "GI: Снег заметает Снежную",
+   "genre": "Hyper-casual",
+   "published": "2026-08-10",
+   "age_days": 37,
+   "members_count": 92282,
+   "rank_growth_rate": 228,
+   "rank_popular_week": 144,
+   "rank_popular_today": 79
+  },
+  {
+   "title": "Стрелки: Очисти поле",
+   "genre": "Puzzle",
+   "published": "2026-05-25",
+   "age_days": 114,
+   "members_count": 91709,
+   "rank_growth_rate": 145,
+   "rank_popular_week": 70,
+   "rank_popular_today": 71
+  },
+  {
+   "title": "Разбери Стрелочки",
+   "genre": "Puzzle",
+   "published": "2026-04-16",
+   "age_days": 153,
+   "members_count": 81470,
+   "rank_growth_rate": 78,
+   "rank_popular_week": 95,
+   "rank_popular_today": 78
+  },
+  {
+   "title": "Маджонг Клуб Головоломок ✅",
+   "genre": "Tabletop game",
+   "published": "2026-02-12",
+   "age_days": 216,
+   "members_count": 79091,
+   "rank_growth_rate": 4548,
+   "rank_popular_week": 373,
+   "rank_popular_today": 1734
+  },
+  {
+   "title": "Мой Замок: Слияние и История",
+   "genre": "Puzzle",
+   "published": "2026-01-22",
+   "age_days": 237,
+   "members_count": 78091,
+   "rank_growth_rate": 40,
+   "rank_popular_week": 147,
+   "rank_popular_today": 88
+  },
+  {
+   "title": "Стрелочки",
+   "genre": "Puzzle",
+   "published": "2026-05-07",
+   "age_days": 132,
+   "members_count": 72211,
+   "rank_growth_rate": 761,
+   "rank_popular_week": 398,
+   "rank_popular_today": 438
+  },
+  {
+   "title": "Красный шарик Red Ball 4",
+   "genre": "Arcade",
+   "published": "2026-06-08",
+   "age_days": 100,
+   "members_count": 71793,
+   "rank_growth_rate": 130,
+   "rank_popular_week": 933,
+   "rank_popular_today": null
+  },
+  {
+   "title": "Словцы Игра в слова",
+   "genre": "Word game",
+   "published": "2025-10-07",
+   "age_days": 344,
+   "members_count": 71116,
+   "rank_growth_rate": 4924,
+   "rank_popular_week": 611,
+   "rank_popular_today": 238
+  },
+  {
+   "title": "Тайл Матч Три в ряд",
+   "genre": "Three in a row",
+   "published": "2026-05-22",
+   "age_days": 117,
+   "members_count": 59374,
+   "rank_growth_rate": 1504,
+   "rank_popular_week": 297,
+   "rank_popular_today": 341
+  },
+  {
+   "title": "Улитка Боб 3",
+   "genre": "Puzzle",
+   "published": "2025-12-17",
+   "age_days": 273,
+   "members_count": 58639,
+   "rank_growth_rate": 4216,
+   "rank_popular_week": 1810,
+   "rank_popular_today": null
+  },
+  {
+   "title": "Волшебные Бутылки",
+   "genre": "Puzzle",
+   "published": "2026-02-24",
+   "age_days": 204,
+   "members_count": 57962,
+   "rank_growth_rate": 25,
+   "rank_popular_week": 92,
+   "rank_popular_today": 27
+  },
+  {
+   "title": "Dark Genesis 2: New Era",
+   "genre": "RPG",
+   "published": "2025-12-29",
+   "age_days": 261,
+   "members_count": 57630,
+   "rank_growth_rate": 649,
+   "rank_popular_week": 432,
+   "rank_popular_today": 70
+  },
+  {
+   "title": "Красная зона: выживание",
+   "genre": "RPG",
+   "published": "2026-03-31",
+   "age_days": 169,
+   "members_count": 57609,
+   "rank_growth_rate": 67,
+   "rank_popular_week": 154,
+   "rank_popular_today": 13
+  },
+  {
+   "title": "Побег от Цунами ради Брейнрот",
+   "genre": "Arcade",
+   "published": "2026-01-20",
+   "age_days": 239,
+   "members_count": 55293,
+   "rank_growth_rate": 685,
+   "rank_popular_week": 538,
+   "rank_popular_today": 363
+  },
+  {
+   "title": "Найди все Отличия Онлайн",
+   "genre": "Puzzle",
+   "published": "2026-03-10",
+   "age_days": 190,
+   "members_count": 53127,
+   "rank_growth_rate": 194,
+   "rank_popular_week": 349,
+   "rank_popular_today": 57
+  },
+  {
+   "title": "99 Ночей В Лесу",
+   "genre": "Simulator",
+   "published": "2025-09-22",
+   "age_days": 359,
+   "members_count": 51678,
+   "rank_growth_rate": 1043,
+   "rank_popular_week": 1644,
+   "rank_popular_today": null
+  },
+  {
+   "title": "Honkai: Star Rail - 3 годика",
+   "genre": "Adventure",
+   "published": "2026-04-16",
+   "age_days": 153,
+   "members_count": 51191,
+   "rank_growth_rate": 727,
+   "rank_popular_week": 2074,
+   "rank_popular_today": null
+  },
+  {
+   "title": "Пазл Пасьянс: Ежедневный пазл",
+   "genre": "Puzzle",
+   "published": "2026-02-24",
+   "age_days": 204,
+   "members_count": 50909,
+   "rank_growth_rate": 4522,
+   "rank_popular_week": 204,
+   "rank_popular_today": 567
+  }
+ ],
+ "sort_tiers": [
+  {
+   "sort": "create_date",
+   "tier": "top10",
+   "apps": 10,
+   "median_members": 2161,
+   "p90_members": 34245,
+   "median_age_days": 750,
+   "new_90d": 0,
+   "new_365d": 2,
+   "official_community_pct": 80.0
+  },
+  {
+   "sort": "create_date",
+   "tier": "top100",
+   "apps": 100,
+   "median_members": 2208,
+   "p90_members": 34245,
+   "median_age_days": 492,
+   "new_90d": 17,
+   "new_365d": 39,
+   "official_community_pct": 76.0
+  },
+  {
+   "sort": "create_date",
+   "tier": "top500",
+   "apps": 498,
+   "median_members": 3076,
+   "p90_members": 35096,
+   "median_age_days": 608,
+   "new_90d": 72,
+   "new_365d": 171,
+   "official_community_pct": 81.7
+  },
+  {
+   "sort": "create_date",
+   "tier": "top1000",
+   "apps": 984,
+   "median_members": 2409,
+   "p90_members": 27117,
+   "median_age_days": 768,
+   "new_90d": 109,
+   "new_365d": 267,
+   "official_community_pct": 81.5
+  },
+  {
+   "sort": "create_date",
+   "tier": "all",
+   "apps": 4940,
+   "median_members": 9402,
+   "p90_members": 148560,
+   "median_age_days": 733,
+   "new_90d": 610,
+   "new_365d": 1339,
+   "official_community_pct": 83.8
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top10",
+   "apps": 10,
+   "median_members": 49186,
+   "p90_members": 12621995,
+   "median_age_days": 482,
+   "new_90d": 3,
+   "new_365d": 4,
+   "official_community_pct": 80.0
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "apps": 100,
+   "median_members": 170659,
+   "p90_members": 2749985,
+   "median_age_days": 595,
+   "new_90d": 25,
+   "new_365d": 37,
+   "official_community_pct": 86.0
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "apps": 499,
+   "median_members": 98650,
+   "p90_members": 910088,
+   "median_age_days": 699,
+   "new_90d": 74,
+   "new_365d": 138,
+   "official_community_pct": 85.4
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top1000",
+   "apps": 996,
+   "median_members": 57553,
+   "p90_members": 551685,
+   "median_age_days": 665,
+   "new_90d": 143,
+   "new_365d": 286,
+   "official_community_pct": 86.4
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "all",
+   "apps": 4841,
+   "median_members": 9449,
+   "p90_members": 150617,
+   "median_age_days": 735,
+   "new_90d": 597,
+   "new_365d": 1307,
+   "official_community_pct": 83.8
+  },
+  {
+   "sort": "popular",
+   "tier": "top10",
+   "apps": 10,
+   "median_members": 7965636,
+   "p90_members": 26069750,
+   "median_age_days": 4361,
+   "new_90d": 0,
+   "new_365d": 0,
+   "official_community_pct": 100.0
+  },
+  {
+   "sort": "popular",
+   "tier": "top100",
+   "apps": 100,
+   "median_members": 766202,
+   "p90_members": 8556436,
+   "median_age_days": 2719,
+   "new_90d": 0,
+   "new_365d": 4,
+   "official_community_pct": 99.0
+  },
+  {
+   "sort": "popular",
+   "tier": "top500",
+   "apps": 500,
+   "median_members": 137889,
+   "p90_members": 2054528,
+   "median_age_days": 1806,
+   "new_90d": 33,
+   "new_365d": 84,
+   "official_community_pct": 95.2
+  },
+  {
+   "sort": "popular",
+   "tier": "top1000",
+   "apps": 997,
+   "median_members": 17287,
+   "p90_members": 773399,
+   "median_age_days": 1024,
+   "new_90d": 105,
+   "new_365d": 257,
+   "official_community_pct": 88.1
+  },
+  {
+   "sort": "popular",
+   "tier": "all",
+   "apps": 3444,
+   "median_members": 8489,
+   "p90_members": 177743,
+   "median_age_days": 776,
+   "new_90d": 417,
+   "new_365d": 910,
+   "official_community_pct": 84.3
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top10",
+   "apps": 10,
+   "median_members": 41342,
+   "p90_members": 748011,
+   "median_age_days": 160,
+   "new_90d": 2,
+   "new_365d": 5,
+   "official_community_pct": 100.0
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "apps": 100,
+   "median_members": 124242,
+   "p90_members": 1705146,
+   "median_age_days": 665,
+   "new_90d": 16,
+   "new_365d": 38,
+   "official_community_pct": 95.0
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "apps": 500,
+   "median_members": 57630,
+   "p90_members": 878467,
+   "median_age_days": 782,
+   "new_90d": 55,
+   "new_365d": 132,
+   "official_community_pct": 90.2
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top1000",
+   "apps": 996,
+   "median_members": 22205,
+   "p90_members": 374643,
+   "median_age_days": 887,
+   "new_90d": 100,
+   "new_365d": 267,
+   "official_community_pct": 88.8
+  },
+  {
+   "sort": "popular_today",
+   "tier": "all",
+   "apps": 4067,
+   "median_members": 6544,
+   "p90_members": 120023,
+   "median_age_days": 715,
+   "new_90d": 552,
+   "new_365d": 1170,
+   "official_community_pct": 82.5
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top10",
+   "apps": 10,
+   "median_members": 5476480,
+   "p90_members": 26069750,
+   "median_age_days": 3074,
+   "new_90d": 0,
+   "new_365d": 0,
+   "official_community_pct": 100.0
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "apps": 100,
+   "median_members": 837500,
+   "p90_members": 8556436,
+   "median_age_days": 2546,
+   "new_90d": 2,
+   "new_365d": 10,
+   "official_community_pct": 97.0
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "apps": 500,
+   "median_members": 169168,
+   "p90_members": 1592563,
+   "median_age_days": 1220,
+   "new_90d": 44,
+   "new_365d": 113,
+   "official_community_pct": 90.2
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top1000",
+   "apps": 998,
+   "median_members": 87719,
+   "p90_members": 673840,
+   "median_age_days": 1066,
+   "new_90d": 80,
+   "new_365d": 231,
+   "official_community_pct": 88.4
+  },
+  {
+   "sort": "popular_week",
+   "tier": "all",
+   "apps": 4940,
+   "median_members": 9674,
+   "p90_members": 153899,
+   "median_age_days": 736,
+   "new_90d": 597,
+   "new_365d": 1329,
+   "official_community_pct": 83.9
+  },
+  {
+   "sort": "visitors",
+   "tier": "top10",
+   "apps": 10,
+   "median_members": 5476480,
+   "p90_members": 26069750,
+   "median_age_days": 3074,
+   "new_90d": 0,
+   "new_365d": 0,
+   "official_community_pct": 100.0
+  },
+  {
+   "sort": "visitors",
+   "tier": "top100",
+   "apps": 100,
+   "median_members": 697263,
+   "p90_members": 6054688,
+   "median_age_days": 2094,
+   "new_90d": 3,
+   "new_365d": 12,
+   "official_community_pct": 96.0
+  },
+  {
+   "sort": "visitors",
+   "tier": "top500",
+   "apps": 500,
+   "median_members": 177003,
+   "p90_members": 1547459,
+   "median_age_days": 1185,
+   "new_90d": 46,
+   "new_365d": 98,
+   "official_community_pct": 90.4
+  },
+  {
+   "sort": "visitors",
+   "tier": "top1000",
+   "apps": 998,
+   "median_members": 80962,
+   "p90_members": 679042,
+   "median_age_days": 847,
+   "new_90d": 116,
+   "new_365d": 264,
+   "official_community_pct": 88.6
+  },
+  {
+   "sort": "visitors",
+   "tier": "all",
+   "apps": 4937,
+   "median_members": 9433,
+   "p90_members": 147809,
+   "median_age_days": 729,
+   "new_90d": 611,
+   "new_365d": 1343,
+   "official_community_pct": 83.8
+  }
+ ],
+ "rank_vs_members_spearman_top500": [
+  {
+   "sort": "create_date",
+   "n": 498,
+   "spearman_rank_vs_members_rank": -0.132
+  },
+  {
+   "sort": "growth_rate",
+   "n": 499,
+   "spearman_rank_vs_members_rank": 0.187
+  },
+  {
+   "sort": "popular",
+   "n": 500,
+   "spearman_rank_vs_members_rank": 0.614
+  },
+  {
+   "sort": "popular_today",
+   "n": 500,
+   "spearman_rank_vs_members_rank": 0.17
+  },
+  {
+   "sort": "popular_week",
+   "n": 500,
+   "spearman_rank_vs_members_rank": 0.6
+  },
+  {
+   "sort": "visitors",
+   "n": 500,
+   "spearman_rank_vs_members_rank": 0.44
+  }
+ ],
+ "genre_in_top_sorts": [
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Puzzle",
+   "n_top": 19,
+   "n_all": 1269,
+   "share_top_pct": 19.0,
+   "share_all_pct": 25.5,
+   "lift": 0.75
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Simulator",
+   "n_top": 14,
+   "n_all": 339,
+   "share_top_pct": 14.0,
+   "share_all_pct": 6.8,
+   "lift": 2.06
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Arcade",
+   "n_top": 11,
+   "n_all": 380,
+   "share_top_pct": 11.0,
+   "share_all_pct": 7.6,
+   "lift": 1.44
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Tabletop game",
+   "n_top": 10,
+   "n_all": 391,
+   "share_top_pct": 10.0,
+   "share_all_pct": 7.8,
+   "lift": 1.27
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Three in a row",
+   "n_top": 10,
+   "n_all": 318,
+   "share_top_pct": 10.0,
+   "share_all_pct": 6.4,
+   "lift": 1.57
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Hyper-casual",
+   "n_top": 8,
+   "n_all": 996,
+   "share_top_pct": 8.0,
+   "share_all_pct": 20.0,
+   "lift": 0.4
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Gambling",
+   "n_top": 6,
+   "n_all": 95,
+   "share_top_pct": 6.0,
+   "share_all_pct": 1.9,
+   "lift": 3.15
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Communication",
+   "n_top": 4,
+   "n_all": 28,
+   "share_top_pct": 4.0,
+   "share_all_pct": 0.6,
+   "lift": 7.12
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Racing",
+   "n_top": 4,
+   "n_all": 160,
+   "share_top_pct": 4.0,
+   "share_all_pct": 3.2,
+   "lift": 1.25
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Economic",
+   "n_top": 3,
+   "n_all": 128,
+   "share_top_pct": 3.0,
+   "share_all_pct": 2.6,
+   "lift": 1.17
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "RPG",
+   "n_top": 3,
+   "n_all": 148,
+   "share_top_pct": 3.0,
+   "share_all_pct": 3.0,
+   "lift": 1.01
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Strategy",
+   "n_top": 3,
+   "n_all": 188,
+   "share_top_pct": 3.0,
+   "share_all_pct": 3.8,
+   "lift": 0.8
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Adventure",
+   "n_top": 2,
+   "n_all": 162,
+   "share_top_pct": 2.0,
+   "share_all_pct": 3.2,
+   "lift": 0.62
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "Word game",
+   "n_top": 2,
+   "n_all": 218,
+   "share_top_pct": 2.0,
+   "share_all_pct": 4.4,
+   "lift": 0.46
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top100",
+   "genre": "3D shooter",
+   "n_top": 1,
+   "n_all": 165,
+   "share_top_pct": 1.0,
+   "share_all_pct": 3.3,
+   "lift": 0.3
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Puzzle",
+   "n_top": 72,
+   "n_all": 1269,
+   "share_top_pct": 14.4,
+   "share_all_pct": 25.5,
+   "lift": 0.57
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Hyper-casual",
+   "n_top": 71,
+   "n_all": 996,
+   "share_top_pct": 14.2,
+   "share_all_pct": 20.0,
+   "lift": 0.71
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Simulator",
+   "n_top": 57,
+   "n_all": 339,
+   "share_top_pct": 11.4,
+   "share_all_pct": 6.8,
+   "lift": 1.68
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Arcade",
+   "n_top": 47,
+   "n_all": 380,
+   "share_top_pct": 9.4,
+   "share_all_pct": 7.6,
+   "lift": 1.24
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Tabletop game",
+   "n_top": 43,
+   "n_all": 391,
+   "share_top_pct": 8.6,
+   "share_all_pct": 7.8,
+   "lift": 1.1
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Three in a row",
+   "n_top": 31,
+   "n_all": 318,
+   "share_top_pct": 6.2,
+   "share_all_pct": 6.4,
+   "lift": 0.97
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Racing",
+   "n_top": 29,
+   "n_all": 160,
+   "share_top_pct": 5.8,
+   "share_all_pct": 3.2,
+   "lift": 1.81
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Word game",
+   "n_top": 23,
+   "n_all": 218,
+   "share_top_pct": 4.6,
+   "share_all_pct": 4.4,
+   "lift": 1.05
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "3D shooter",
+   "n_top": 21,
+   "n_all": 165,
+   "share_top_pct": 4.2,
+   "share_all_pct": 3.3,
+   "lift": 1.27
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Adventure",
+   "n_top": 20,
+   "n_all": 162,
+   "share_top_pct": 4.0,
+   "share_all_pct": 3.2,
+   "lift": 1.23
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Economic",
+   "n_top": 20,
+   "n_all": 128,
+   "share_top_pct": 4.0,
+   "share_all_pct": 2.6,
+   "lift": 1.56
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Gambling",
+   "n_top": 19,
+   "n_all": 95,
+   "share_top_pct": 3.8,
+   "share_all_pct": 1.9,
+   "lift": 2.0
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Strategy",
+   "n_top": 19,
+   "n_all": 188,
+   "share_top_pct": 3.8,
+   "share_all_pct": 3.8,
+   "lift": 1.01
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "RPG",
+   "n_top": 16,
+   "n_all": 148,
+   "share_top_pct": 3.2,
+   "share_all_pct": 3.0,
+   "lift": 1.08
+  },
+  {
+   "sort": "growth_rate",
+   "tier": "top500",
+   "genre": "Communication",
+   "n_top": 11,
+   "n_all": 28,
+   "share_top_pct": 2.2,
+   "share_all_pct": 0.6,
+   "lift": 3.92
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Puzzle",
+   "n_top": 19,
+   "n_all": 1269,
+   "share_top_pct": 19.0,
+   "share_all_pct": 25.5,
+   "lift": 0.75
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Tabletop game",
+   "n_top": 13,
+   "n_all": 391,
+   "share_top_pct": 13.0,
+   "share_all_pct": 7.8,
+   "lift": 1.66
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Economic",
+   "n_top": 12,
+   "n_all": 128,
+   "share_top_pct": 12.0,
+   "share_all_pct": 2.6,
+   "lift": 4.67
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Gambling",
+   "n_top": 12,
+   "n_all": 95,
+   "share_top_pct": 12.0,
+   "share_all_pct": 1.9,
+   "lift": 6.3
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Three in a row",
+   "n_top": 12,
+   "n_all": 318,
+   "share_top_pct": 12.0,
+   "share_all_pct": 6.4,
+   "lift": 1.88
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Simulator",
+   "n_top": 8,
+   "n_all": 339,
+   "share_top_pct": 8.0,
+   "share_all_pct": 6.8,
+   "lift": 1.18
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Strategy",
+   "n_top": 8,
+   "n_all": 188,
+   "share_top_pct": 8.0,
+   "share_all_pct": 3.8,
+   "lift": 2.12
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "RPG",
+   "n_top": 7,
+   "n_all": 148,
+   "share_top_pct": 7.0,
+   "share_all_pct": 3.0,
+   "lift": 2.36
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Communication",
+   "n_top": 4,
+   "n_all": 28,
+   "share_top_pct": 4.0,
+   "share_all_pct": 0.6,
+   "lift": 7.12
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Adventure",
+   "n_top": 2,
+   "n_all": 162,
+   "share_top_pct": 2.0,
+   "share_all_pct": 3.2,
+   "lift": 0.62
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Arcade",
+   "n_top": 1,
+   "n_all": 380,
+   "share_top_pct": 1.0,
+   "share_all_pct": 7.6,
+   "lift": 0.13
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Hyper-casual",
+   "n_top": 1,
+   "n_all": 996,
+   "share_top_pct": 1.0,
+   "share_all_pct": 20.0,
+   "lift": 0.05
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top100",
+   "genre": "Word game",
+   "n_top": 1,
+   "n_all": 218,
+   "share_top_pct": 1.0,
+   "share_all_pct": 4.4,
+   "lift": 0.23
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Puzzle",
+   "n_top": 83,
+   "n_all": 1269,
+   "share_top_pct": 16.6,
+   "share_all_pct": 25.5,
+   "lift": 0.65
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Tabletop game",
+   "n_top": 51,
+   "n_all": 391,
+   "share_top_pct": 10.2,
+   "share_all_pct": 7.8,
+   "lift": 1.3
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Three in a row",
+   "n_top": 50,
+   "n_all": 318,
+   "share_top_pct": 10.0,
+   "share_all_pct": 6.4,
+   "lift": 1.57
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "RPG",
+   "n_top": 48,
+   "n_all": 148,
+   "share_top_pct": 9.6,
+   "share_all_pct": 3.0,
+   "lift": 3.23
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Simulator",
+   "n_top": 37,
+   "n_all": 339,
+   "share_top_pct": 7.4,
+   "share_all_pct": 6.8,
+   "lift": 1.09
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Economic",
+   "n_top": 33,
+   "n_all": 128,
+   "share_top_pct": 6.6,
+   "share_all_pct": 2.6,
+   "lift": 2.57
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Word game",
+   "n_top": 31,
+   "n_all": 218,
+   "share_top_pct": 6.2,
+   "share_all_pct": 4.4,
+   "lift": 1.42
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Hyper-casual",
+   "n_top": 28,
+   "n_all": 996,
+   "share_top_pct": 5.6,
+   "share_all_pct": 20.0,
+   "lift": 0.28
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Strategy",
+   "n_top": 27,
+   "n_all": 188,
+   "share_top_pct": 5.4,
+   "share_all_pct": 3.8,
+   "lift": 1.43
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Gambling",
+   "n_top": 26,
+   "n_all": 95,
+   "share_top_pct": 5.2,
+   "share_all_pct": 1.9,
+   "lift": 2.73
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Arcade",
+   "n_top": 23,
+   "n_all": 380,
+   "share_top_pct": 4.6,
+   "share_all_pct": 7.6,
+   "lift": 0.6
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Adventure",
+   "n_top": 17,
+   "n_all": 162,
+   "share_top_pct": 3.4,
+   "share_all_pct": 3.2,
+   "lift": 1.05
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Communication",
+   "n_top": 16,
+   "n_all": 28,
+   "share_top_pct": 3.2,
+   "share_all_pct": 0.6,
+   "lift": 5.7
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "3D shooter",
+   "n_top": 15,
+   "n_all": 165,
+   "share_top_pct": 3.0,
+   "share_all_pct": 3.3,
+   "lift": 0.91
+  },
+  {
+   "sort": "popular_today",
+   "tier": "top500",
+   "genre": "Racing",
+   "n_top": 15,
+   "n_all": 160,
+   "share_top_pct": 3.0,
+   "share_all_pct": 3.2,
+   "lift": 0.93
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Puzzle",
+   "n_top": 20,
+   "n_all": 1269,
+   "share_top_pct": 20.0,
+   "share_all_pct": 25.5,
+   "lift": 0.79
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Tabletop game",
+   "n_top": 17,
+   "n_all": 391,
+   "share_top_pct": 17.0,
+   "share_all_pct": 7.8,
+   "lift": 2.17
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Three in a row",
+   "n_top": 16,
+   "n_all": 318,
+   "share_top_pct": 16.0,
+   "share_all_pct": 6.4,
+   "lift": 2.51
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Economic",
+   "n_top": 13,
+   "n_all": 128,
+   "share_top_pct": 13.0,
+   "share_all_pct": 2.6,
+   "lift": 5.06
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Gambling",
+   "n_top": 11,
+   "n_all": 95,
+   "share_top_pct": 11.0,
+   "share_all_pct": 1.9,
+   "lift": 5.77
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Communication",
+   "n_top": 7,
+   "n_all": 28,
+   "share_top_pct": 7.0,
+   "share_all_pct": 0.6,
+   "lift": 12.46
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Simulator",
+   "n_top": 5,
+   "n_all": 339,
+   "share_top_pct": 5.0,
+   "share_all_pct": 6.8,
+   "lift": 0.74
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Word game",
+   "n_top": 3,
+   "n_all": 218,
+   "share_top_pct": 3.0,
+   "share_all_pct": 4.4,
+   "lift": 0.69
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Adventure",
+   "n_top": 2,
+   "n_all": 162,
+   "share_top_pct": 2.0,
+   "share_all_pct": 3.2,
+   "lift": 0.62
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Strategy",
+   "n_top": 2,
+   "n_all": 188,
+   "share_top_pct": 2.0,
+   "share_all_pct": 3.8,
+   "lift": 0.53
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Arcade",
+   "n_top": 1,
+   "n_all": 380,
+   "share_top_pct": 1.0,
+   "share_all_pct": 7.6,
+   "lift": 0.13
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Hyper-casual",
+   "n_top": 1,
+   "n_all": 996,
+   "share_top_pct": 1.0,
+   "share_all_pct": 20.0,
+   "lift": 0.05
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "RPG",
+   "n_top": 1,
+   "n_all": 148,
+   "share_top_pct": 1.0,
+   "share_all_pct": 3.0,
+   "lift": 0.34
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top100",
+   "genre": "Racing",
+   "n_top": 1,
+   "n_all": 160,
+   "share_top_pct": 1.0,
+   "share_all_pct": 3.2,
+   "lift": 0.31
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Puzzle",
+   "n_top": 125,
+   "n_all": 1269,
+   "share_top_pct": 25.0,
+   "share_all_pct": 25.5,
+   "lift": 0.98
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Tabletop game",
+   "n_top": 63,
+   "n_all": 391,
+   "share_top_pct": 12.6,
+   "share_all_pct": 7.8,
+   "lift": 1.61
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Hyper-casual",
+   "n_top": 57,
+   "n_all": 996,
+   "share_top_pct": 11.4,
+   "share_all_pct": 20.0,
+   "lift": 0.57
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Three in a row",
+   "n_top": 49,
+   "n_all": 318,
+   "share_top_pct": 9.8,
+   "share_all_pct": 6.4,
+   "lift": 1.54
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Economic",
+   "n_top": 34,
+   "n_all": 128,
+   "share_top_pct": 6.8,
+   "share_all_pct": 2.6,
+   "lift": 2.65
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Gambling",
+   "n_top": 27,
+   "n_all": 95,
+   "share_top_pct": 5.4,
+   "share_all_pct": 1.9,
+   "lift": 2.83
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Word game",
+   "n_top": 24,
+   "n_all": 218,
+   "share_top_pct": 4.8,
+   "share_all_pct": 4.4,
+   "lift": 1.1
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Simulator",
+   "n_top": 22,
+   "n_all": 339,
+   "share_top_pct": 4.4,
+   "share_all_pct": 6.8,
+   "lift": 0.65
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Strategy",
+   "n_top": 21,
+   "n_all": 188,
+   "share_top_pct": 4.2,
+   "share_all_pct": 3.8,
+   "lift": 1.11
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "RPG",
+   "n_top": 20,
+   "n_all": 148,
+   "share_top_pct": 4.0,
+   "share_all_pct": 3.0,
+   "lift": 1.35
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Arcade",
+   "n_top": 16,
+   "n_all": 380,
+   "share_top_pct": 3.2,
+   "share_all_pct": 7.6,
+   "lift": 0.42
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Communication",
+   "n_top": 15,
+   "n_all": 28,
+   "share_top_pct": 3.0,
+   "share_all_pct": 0.6,
+   "lift": 5.34
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Racing",
+   "n_top": 11,
+   "n_all": 160,
+   "share_top_pct": 2.2,
+   "share_all_pct": 3.2,
+   "lift": 0.69
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "Adventure",
+   "n_top": 10,
+   "n_all": 162,
+   "share_top_pct": 2.0,
+   "share_all_pct": 3.2,
+   "lift": 0.62
+  },
+  {
+   "sort": "popular_week",
+   "tier": "top500",
+   "genre": "3D shooter",
+   "n_top": 6,
+   "n_all": 165,
+   "share_top_pct": 1.2,
+   "share_all_pct": 3.3,
+   "lift": 0.36
+  }
+ ],
+ "official_community": [
+  {
+   "slice": "all",
+   "n": 4985,
+   "with_official_community": 4178,
+   "pct": 83.8,
+   "group_type_group": 2526,
+   "group_type_page": 1652
+  },
+  {
+   "slice": "popular_week_top100",
+   "n": 100,
+   "with_official_community": 97,
+   "pct": 97.0,
+   "group_type_group": 71,
+   "group_type_page": 26
+  },
+  {
+   "slice": "growth_rate_top100",
+   "n": 100,
+   "with_official_community": 86,
+   "pct": 86.0,
+   "group_type_group": 62,
+   "group_type_page": 24
+  },
+  {
+   "slice": "new_365d",
+   "n": 1350,
+   "with_official_community": 1000,
+   "pct": 74.1,
+   "group_type_group": 710,
+   "group_type_page": 290
+  }
+ ],
+ "official_community_by_genre": [
+  {
+   "genre": "Puzzle",
+   "n": 1269,
+   "official_community_pct": 79.6,
+   "median_members_with": 6487,
+   "median_members_without": 2035
+  },
+  {
+   "genre": "Hyper-casual",
+   "n": 996,
+   "official_community_pct": 85.8,
+   "median_members_with": 10357,
+   "median_members_without": 1868
+  },
+  {
+   "genre": "Tabletop game",
+   "n": 391,
+   "official_community_pct": 82.1,
+   "median_members_with": 10907,
+   "median_members_without": 3626
+  },
+  {
+   "genre": "Arcade",
+   "n": 380,
+   "official_community_pct": 72.4,
+   "median_members_with": 5247,
+   "median_members_without": 3067
+  },
+  {
+   "genre": "Simulator",
+   "n": 339,
+   "official_community_pct": 86.4,
+   "median_members_with": 13806,
+   "median_members_without": 3210
+  },
+  {
+   "genre": "Three in a row",
+   "n": 318,
+   "official_community_pct": 88.1,
+   "median_members_with": 16009,
+   "median_members_without": 4452
+  },
+  {
+   "genre": "Word game",
+   "n": 218,
+   "official_community_pct": 83.5,
+   "median_members_with": 9737,
+   "median_members_without": 3523
+  },
+  {
+   "genre": "Strategy",
+   "n": 188,
+   "official_community_pct": 89.4,
+   "median_members_with": 13739,
+   "median_members_without": 8341
+  },
+  {
+   "genre": "3D shooter",
+   "n": 165,
+   "official_community_pct": 86.7,
+   "median_members_with": 27201,
+   "median_members_without": 17652
+  },
+  {
+   "genre": "Adventure",
+   "n": 162,
+   "official_community_pct": 90.1,
+   "median_members_with": 18350,
+   "median_members_without": 9200
+  },
+  {
+   "genre": "Racing",
+   "n": 160,
+   "official_community_pct": 81.3,
+   "median_members_with": 25244,
+   "median_members_without": 9689
+  },
+  {
+   "genre": "RPG",
+   "n": 148,
+   "official_community_pct": 93.2,
+   "median_members_with": 40537,
+   "median_members_without": 3495
+  },
+  {
+   "genre": "Economic",
+   "n": 128,
+   "official_community_pct": 93.0,
+   "median_members_with": 33395,
+   "median_members_without": 4233
+  },
+  {
+   "genre": "Gambling",
+   "n": 95,
+   "official_community_pct": 95.8,
+   "median_members_with": 36251,
+   "median_members_without": 36810
+  },
+  {
+   "genre": "Communication",
+   "n": 28,
+   "official_community_pct": 96.4,
+   "median_members_with": 263568,
+   "median_members_without": 367748
+  }
+ ],
+ "rank_instability_duplicates": [
+  {
+   "sort": "create_date",
+   "dup_rows_rank_1_1000": 1,
+   "dup_rows_rank_1001_2000": 1,
+   "dup_rows_rank_2001_plus": 76
+  },
+  {
+   "sort": "growth_rate",
+   "dup_rows_rank_1_1000": 0,
+   "dup_rows_rank_1001_2000": 83,
+   "dup_rows_rank_2001_plus": 179
+  },
+  {
+   "sort": "popular",
+   "dup_rows_rank_1_1000": 503,
+   "dup_rows_rank_1001_2000": 990,
+   "dup_rows_rank_2001_plus": 1058
+  },
+  {
+   "sort": "popular_today",
+   "dup_rows_rank_1_1000": 421,
+   "dup_rows_rank_1001_2000": 626,
+   "dup_rows_rank_2001_plus": 521
+  },
+  {
+   "sort": "popular_week",
+   "dup_rows_rank_1_1000": 0,
+   "dup_rows_rank_1001_2000": 0,
+   "dup_rows_rank_2001_plus": 72
+  },
+  {
+   "sort": "visitors",
+   "dup_rows_rank_1_1000": 0,
+   "dup_rows_rank_1001_2000": 15,
+   "dup_rows_rank_2001_plus": 65
+  }
+ ],
+ "top_growth_top30": [
+  {
+   "best_rank": 1,
+   "title": "Дурак [онлайн]",
+   "genre": "Tabletop game",
+   "members_count": 12621995,
+   "published": "2017-03-23",
+   "age_days": 3464
+  },
+  {
+   "best_rank": 2,
+   "title": "Морское сражение: Пираты 3D",
+   "genre": "Arcade",
+   "members_count": 8495,
+   "published": "2026-09-03",
+   "age_days": 13
+  },
+  {
+   "best_rank": 3,
+   "title": "Магнат",
+   "genre": "Tabletop game",
+   "members_count": 3329112,
+   "published": "2019-04-07",
+   "age_days": 2719
+  },
+  {
+   "best_rank": 4,
+   "title": "Смертельный Спуск",
+   "genre": "Racing",
+   "members_count": 1422920,
+   "published": "2025-05-22",
+   "age_days": 482
+  },
+  {
+   "best_rank": 5,
+   "title": "VK Game Test Tool",
+   "genre": "Strategy",
+   "members_count": 49186,
+   "published": "2025-01-29",
+   "age_days": 595
+  },
+  {
+   "best_rank": 6,
+   "title": "Пазлы Онлайн",
+   "genre": "Tabletop game",
+   "members_count": 6509,
+   "published": "2026-09-08",
+   "age_days": 8
+  },
+  {
+   "best_rank": 7,
+   "title": "Туда-Сюда: Распутай Рисунок",
+   "genre": "Puzzle",
+   "members_count": 21922,
+   "published": "2026-08-14",
+   "age_days": 33
+  },
+  {
+   "best_rank": 8,
+   "title": "Лабиринт Стрелок Пазл",
+   "genre": "Puzzle",
+   "members_count": 37107,
+   "published": "2026-02-24",
+   "age_days": 204
+  },
+  {
+   "best_rank": 9,
+   "title": "Тайна Особняка",
+   "genre": "Puzzle",
+   "members_count": 748011,
+   "published": "2024-11-20",
+   "age_days": 665
+  },
+  {
+   "best_rank": 10,
+   "title": "Сокровища Пиратов",
+   "genre": "Three in a row",
+   "members_count": 26069750,
+   "published": "2013-09-17",
+   "age_days": 4747
+  },
+  {
+   "best_rank": 11,
+   "title": "Целуй и Знакомься",
+   "genre": "Communication",
+   "members_count": 33914168,
+   "published": "2012-10-01",
+   "age_days": 5098
+  },
+  {
+   "best_rank": 12,
+   "title": "Гравитационная Дыра",
+   "genre": "Arcade",
+   "members_count": 26941,
+   "published": "2025-03-07",
+   "age_days": 558
+  },
+  {
+   "best_rank": 13,
+   "title": "VK Покер Онлайн",
+   "genre": "Gambling",
+   "members_count": 13732,
+   "published": "2026-08-17",
+   "age_days": 30
+  },
+  {
+   "best_rank": 14,
+   "title": "Дурак онлайн | Карточная игра",
+   "genre": "Tabletop game",
+   "members_count": 1607903,
+   "published": "2023-05-12",
+   "age_days": 1223
+  },
+  {
+   "best_rank": 15,
+   "title": "Слово Чушпана Жизнь На Районе",
+   "genre": "Adventure",
+   "members_count": 91245,
+   "published": "2025-08-25",
+   "age_days": 387
+  },
+  {
+   "best_rank": 16,
+   "title": "НУБИМАНИЯ",
+   "genre": "Hyper-casual",
+   "members_count": 341449,
+   "published": "2022-11-28",
+   "age_days": 1388
+  },
+  {
+   "best_rank": 17,
+   "title": "Рецепт Счастья",
+   "genre": "Puzzle",
+   "members_count": 513456,
+   "published": "2024-07-30",
+   "age_days": 778
+  },
+  {
+   "best_rank": 18,
+   "title": "Камни в ряд онлайн!",
+   "genre": "Three in a row",
+   "members_count": 878467,
+   "published": "2022-09-17",
+   "age_days": 1460
+  },
+  {
+   "best_rank": 19,
+   "title": "Долина Сладостей",
+   "genre": "Three in a row",
+   "members_count": 5476480,
+   "published": "2014-08-29",
+   "age_days": 4401
+  },
+  {
+   "best_rank": 20,
+   "title": "Подпрыгивающий Алл",
+   "genre": "Puzzle",
+   "members_count": 375645,
+   "published": "2024-05-03",
+   "age_days": 866
+  },
+  {
+   "best_rank": 21,
+   "title": "Король Пинбола",
+   "genre": "Hyper-casual",
+   "members_count": 130950,
+   "published": "2025-02-17",
+   "age_days": 576
+  },
+  {
+   "best_rank": 22,
+   "title": "Тайна Фонаря",
+   "genre": "Three in a row",
+   "members_count": 439753,
+   "published": "2025-08-28",
+   "age_days": 384
+  },
+  {
+   "best_rank": 23,
+   "title": "Виселица",
+   "genre": "Word game",
+   "members_count": 235226,
+   "published": "2025-06-30",
+   "age_days": 443
+  },
+  {
+   "best_rank": 24,
+   "title": "Ёлочка 2026",
+   "genre": "Adventure",
+   "members_count": 1752031,
+   "published": "2024-10-30",
+   "age_days": 686
+  },
+  {
+   "best_rank": 25,
+   "title": "Волшебные Бутылки",
+   "genre": "Puzzle",
+   "members_count": 57962,
+   "published": "2026-02-24",
+   "age_days": 204
+  },
+  {
+   "best_rank": 26,
+   "title": "Зал секретов: Поиск предметов",
+   "genre": "Puzzle",
+   "members_count": 6205,
+   "published": "2026-09-14",
+   "age_days": 2
+  },
+  {
+   "best_rank": 27,
+   "title": "Бутылочка💋виртуальный флирт",
+   "genre": "Communication",
+   "members_count": 13558570,
+   "published": "2011-02-14",
+   "age_days": 5693
+  },
+  {
+   "best_rank": 28,
+   "title": "Кулинарный город",
+   "genre": "Simulator",
+   "members_count": 3286,
+   "published": "2026-07-02",
+   "age_days": 76
+  },
+  {
+   "best_rank": 29,
+   "title": "Гранд Тур: Гонки Матч 2",
+   "genre": "Three in a row",
+   "members_count": 173954,
+   "published": "2025-12-26",
+   "age_days": 264
+  },
+  {
+   "best_rank": 30,
+   "title": "Рыбалка Онлайн",
+   "genre": "Simulator",
+   "members_count": 551685,
+   "published": "2023-08-14",
+   "age_days": 1129
+  }
+ ],
+ "top_popular_today_top30": [
+  {
+   "best_rank": 1,
+   "title": "Тайна Особняка",
+   "genre": "Puzzle",
+   "members_count": 748011,
+   "published": "2024-11-20",
+   "age_days": 665
+  },
+  {
+   "best_rank": 2,
+   "title": "Claw Master",
+   "genre": "Strategy",
+   "members_count": 22349,
+   "published": "2026-07-27",
+   "age_days": 51
+  },
+  {
+   "best_rank": 3,
+   "title": "Ёлочка 2026",
+   "genre": "Adventure",
+   "members_count": 1752031,
+   "published": "2024-10-30",
+   "age_days": 686
+  },
+  {
+   "best_rank": 4,
+   "title": "Кластелин Волец",
+   "genre": "Strategy",
+   "members_count": 25929,
+   "published": "2025-02-19",
+   "age_days": 574
+  },
+  {
+   "best_rank": 5,
+   "title": "Атлантида: Затерянный Рай",
+   "genre": "Economic",
+   "members_count": 33593,
+   "published": "2026-06-26",
+   "age_days": 82
+  },
+  {
+   "best_rank": 6,
+   "title": "Ларец Слотов",
+   "genre": "Gambling",
+   "members_count": 27904,
+   "published": "2026-04-09",
+   "age_days": 160
+  },
+  {
+   "best_rank": 7,
+   "title": "Рецепт Счастья",
+   "genre": "Puzzle",
+   "members_count": 513456,
+   "published": "2024-07-30",
+   "age_days": 778
+  },
+  {
+   "best_rank": 8,
+   "title": "Три семерки Игровые автоматы",
+   "genre": "Gambling",
+   "members_count": 257299,
+   "published": "2022-10-16",
+   "age_days": 1431
+  },
+  {
+   "best_rank": 9,
+   "title": "Остров Слияний",
+   "genre": "Economic",
+   "members_count": 41342,
+   "published": "2026-06-15",
+   "age_days": 93
+  },
+  {
+   "best_rank": 10,
+   "title": "Кубики Онлайн",
+   "genre": "Tabletop game",
+   "members_count": 107086,
+   "published": "2026-05-26",
+   "age_days": 113
+  },
+  {
+   "best_rank": 11,
+   "title": "\"Империя Удачи\" - Слоты",
+   "genre": "Gambling",
+   "members_count": 134306,
+   "published": "2024-04-19",
+   "age_days": 880
+  },
+  {
+   "best_rank": 12,
+   "title": "Дурак онлайн | Карточная игра",
+   "genre": "Tabletop game",
+   "members_count": 1607903,
+   "published": "2023-05-12",
+   "age_days": 1223
+  },
+  {
+   "best_rank": 13,
+   "title": "Красная зона: выживание",
+   "genre": "RPG",
+   "members_count": 57609,
+   "published": "2026-03-31",
+   "age_days": 169
+  },
+  {
+   "best_rank": 14,
+   "title": "Клуб Слотов",
+   "genre": "Gambling",
+   "members_count": 217288,
+   "published": "2021-07-29",
+   "age_days": 1875
+  },
+  {
+   "best_rank": 15,
+   "title": "World Poker Club Lite - Покер",
+   "genre": "Gambling",
+   "members_count": 393972,
+   "published": "2025-01-16",
+   "age_days": 608
+  },
+  {
+   "best_rank": 16,
+   "title": "Пиратские корабли",
+   "genre": "Adventure",
+   "members_count": 16322,
+   "published": "2026-07-27",
+   "age_days": 51
+  },
+  {
+   "best_rank": 17,
+   "title": "Аквамир 2",
+   "genre": "Simulator",
+   "members_count": 99393,
+   "published": "2025-07-21",
+   "age_days": 422
+  },
+  {
+   "best_rank": 18,
+   "title": "Кисс Ми💋виртуальный флирт",
+   "genre": "Communication",
+   "members_count": 676551,
+   "published": "2019-07-10",
+   "age_days": 2625
+  },
+  {
+   "best_rank": 19,
+   "title": "Игровые автоматы Счастливчик",
+   "genre": "Gambling",
+   "members_count": 41647,
+   "published": "2025-10-10",
+   "age_days": 341
+  },
+  {
+   "best_rank": 20,
+   "title": "Империя Гоблинов: кликер игра",
+   "genre": "Simulator",
+   "members_count": 375614,
+   "published": "2023-10-13",
+   "age_days": 1069
+  },
+  {
+   "best_rank": 21,
+   "title": "Тайна Фонаря",
+   "genre": "Three in a row",
+   "members_count": 439753,
+   "published": "2025-08-28",
+   "age_days": 384
+  },
+  {
+   "best_rank": 22,
+   "title": "ФлиртUp - Выбирашки",
+   "genre": "Communication",
+   "members_count": 28289,
+   "published": "2026-05-19",
+   "age_days": 120
+  },
+  {
+   "best_rank": 23,
+   "title": "Камни в ряд онлайн!",
+   "genre": "Three in a row",
+   "members_count": 878467,
+   "published": "2022-09-17",
+   "age_days": 1460
+  },
+  {
+   "best_rank": 24,
+   "title": "Гастро Таун",
+   "genre": "Three in a row",
+   "members_count": 17404,
+   "published": "2026-07-20",
+   "age_days": 58
+  },
+  {
+   "best_rank": 25,
+   "title": "Печать Демонов",
+   "genre": "RPG",
+   "members_count": 12479,
+   "published": "2026-08-07",
+   "age_days": 40
+  },
+  {
+   "best_rank": 26,
+   "title": "Лагуна фермеров",
+   "genre": "Economic",
+   "members_count": 26871,
+   "published": "2022-06-29",
+   "age_days": 1540
+  },
+  {
+   "best_rank": 27,
+   "title": "Волшебные Бутылки",
+   "genre": "Puzzle",
+   "members_count": 57962,
+   "published": "2026-02-24",
+   "age_days": 204
+  },
+  {
+   "best_rank": 28,
+   "title": "Магия Цвета ✨",
+   "genre": "Puzzle",
+   "members_count": 13336,
+   "published": "2026-06-05",
+   "age_days": 103
+  },
+  {
+   "best_rank": 29,
+   "title": "Мир Слияния",
+   "genre": "Puzzle",
+   "members_count": 143777,
+   "published": "2025-09-25",
+   "age_days": 356
+  },
+  {
+   "best_rank": 30,
+   "title": "Пасьянс Урожай Удачи: Три Пик",
+   "genre": "Tabletop game",
+   "members_count": 12077,
+   "published": "2026-06-23",
+   "age_days": 85
+  }
+ ]
+}

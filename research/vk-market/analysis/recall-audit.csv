@@ -1,0 +1,268 @@
+sample,bucket,app_id,title,genre,verdict,note
+negative_puzzleish,,54743461,Найди пару: Соедини плитки,Puzzle,tn,
+negative_puzzleish,,54721944,КРУШИ ШАРАМИ,Hyper-casual,tn,
+negative_puzzleish,,7799929,Jungle Jump,Hyper-casual,tn,
+negative_puzzleish,,7972762,Sleepyheads - Sleep Well,Puzzle,tn,
+negative_puzzleish,,7927904,Разрушающий мяч,Hyper-casual,tn,
+negative_puzzleish,,51643315,Супер Болтун,Hyper-casual,tn,
+negative_puzzleish,,54705504,GI: Снег заметает Снежную,Hyper-casual,tn,
+negative_puzzleish,,8193867,Меняй форму!,Hyper-casual,tn,
+negative_puzzleish,arrow_tapaway,54425355,Сложная головоломка: шарики,Puzzle,fn_borderline,"tap a balloon to release it upward; tap-away-like order puzzle, no arrow words"
+negative_puzzleish,,54657622,Маджонг Бласт,Puzzle,tn,
+negative_puzzleish,,53825510,Загадочный лифт,Puzzle,tn,
+negative_puzzleish,,54727057,Стикеры-Пасьянс,Puzzle,tn,
+negative_puzzleish,,51558273,Поиск Отличий,Puzzle,tn,
+negative_puzzleish,,51451060,Танки 2D: Танковая Война,Hyper-casual,tn,
+negative_puzzleish,,53040962,Викторина: угадай футболиста,Puzzle,tn,
+negative_puzzleish,,51417446,Скользить на палке,Hyper-casual,tn,
+negative_puzzleish,,53061146,Виселица: Новый уровень,Puzzle,tn,
+negative_puzzleish,,7185946,Unicorn In Space,Hyper-casual,tn,
+negative_puzzleish,,52876413,Эксперт По Подключению,Puzzle,tn,
+negative_puzzleish,,53952775,Отель: Жемчужина СССР!,Puzzle,tn,
+negative_puzzleish,,8175283,Копатель,Hyper-casual,tn,
+negative_puzzleish,,51802949,Тест 50 по фильмах СССР,Puzzle,tn,
+negative_puzzleish,,53506685,Ловкий Рыжик,Hyper-casual,tn,
+negative_puzzleish,,51729442,Приключения Шарика,Hyper-casual,tn,
+negative_puzzleish,,54645151,Один удар,Hyper-casual,tn,
+negative_puzzleish,merge,54311799,Дели Бросай,Puzzle,fn_borderline,"number drop where divisible neighbours collapse; 2048-like, no merge words"
+negative_puzzleish,,54739790,Феникс: Волшебные блоки,Puzzle,tn,
+negative_puzzleish,,51935793,Найди 3: Маджонг,Hyper-casual,tn,
+negative_puzzleish,,51678886,Стакан Сока,Puzzle,tn,
+negative_puzzleish,,52366114,Word Search & Quiz,Puzzle,tn,
+negative_puzzleish,,51818022,Пазлы: собирай вместе,Puzzle,tn,
+negative_puzzleish,,51919401,Блоки Фараона - Разблокируй!,Puzzle,tn,
+negative_puzzleish,,51480216,НУБИМАНИЯ,Hyper-casual,tn,
+negative_puzzleish,,54762397,Найдоку: Поиск котят,Puzzle,tn,
+negative_puzzleish,,6650148,Прокрастинация,Hyper-casual,tn,
+negative_puzzleish,,51651635,Русалочка: Вода жизни,Puzzle,tn,
+negative_puzzleish,,51858390,Ragdoll Throw Challenge,Hyper-casual,tn,
+negative_puzzleish,,51570872,Block Puzzle: Clay World,Puzzle,tn,
+negative_puzzleish,,51700150,Туалетный Скибиди Хаос: Битва,Hyper-casual,tn,
+negative_puzzleish,,51785668,Паркур Для Похудения,Hyper-casual,tn,
+negative_puzzleish,,52187897,Нота Такта,Hyper-casual,tn,
+negative_puzzleish,,8188877,Подбери цвет!,Hyper-casual,tn,
+negative_puzzleish,,52705953,Снежный Кулак,Hyper-casual,tn,
+negative_puzzleish,,8213489,Epic Roll - Раннер,Hyper-casual,tn,
+negative_puzzleish,,51442312,Коснитесь Tыквы,Hyper-casual,tn,
+negative_puzzleish,,51427589,Голодный чувак,Hyper-casual,tn,
+negative_puzzleish,,6097354,Приключения Флига,Hyper-casual,tn,
+negative_puzzleish,,8211902,Мастер Портной,Hyper-casual,tn,
+negative_puzzleish,,51582293,Fruit смешать,Hyper-casual,tn,
+negative_puzzleish,,8202275,Flappy Bird - Флэппи Бёрд,Hyper-casual,tn,
+negative_puzzleish,,8140590,Пересечения,Puzzle,tn,
+negative_puzzleish,,51941634,Совмести цвет шара и куба,Hyper-casual,tn,
+negative_puzzleish,,51643296,Дорога К Зволюции,Hyper-casual,tn,
+negative_puzzleish,merge,52016391,Рецепт Счастья,Puzzle,fn,"""в жанре соединяй предметы"" (merge-2); fixed after audit: pattern соединя* предмет"
+negative_puzzleish,,53863334,Цветные кубы: Битва за поле,Puzzle,tn,
+negative_puzzleish,,52705168,Ленивый Тетрис,Puzzle,tn,
+negative_puzzleish,,8219745,3030,Puzzle,tn,
+negative_puzzleish,bubble,51818175,iliO,Hyper-casual,fn_borderline,"""стрельба геометрическими фигурами ... выбивать одинаковые""; possibly bubble-shooter-like"
+negative_puzzleish,,54628206,Слово Мозаика,Puzzle,tn,
+negative_puzzleish,,51760811,Цветной Судоку,Puzzle,tn,
+negative_puzzleish,,54419911,Плитки найди пару!,Puzzle,tn,
+negative_puzzleish,,52187788,Косметологическая Клиника,Hyper-casual,tn,
+negative_puzzleish,,54522377,Пилиция,Hyper-casual,tn,
+negative_puzzleish,,54617333,Чапаев: последний бой!,Hyper-casual,tn,
+negative_puzzleish,,52942691,Snakes for Survival IO,Hyper-casual,tn,
+negative_puzzleish,,51628669,головоломка - КОТЯТА,Puzzle,tn,
+negative_puzzleish,,51647190,Пельмешка в бегах,Hyper-casual,tn,
+negative_puzzleish,,54735671,Джелли Блок: Собирай ряды!,Puzzle,tn,
+negative_puzzleish,,8180112,Jumpy! Наследие цыпленка,Hyper-casual,tn,
+negative_puzzleish,,54469522,Маджонг соединяй плитки,Puzzle,tn,
+negative_puzzleish,,51731323,Спаси пса,Puzzle,tn,
+negative_puzzleish,,54253477,Блоки с Поворотом,Hyper-casual,tn,
+negative_puzzleish,,54428273,Кибер взломщик,Puzzle,tn,
+negative_puzzleish,,51850907,Hero Rescue,Hyper-casual,tn,
+negative_puzzleish,,53666802,💥 ГВОЗДИ-УБИЙЦЫ: КОГТИ АДА!,Hyper-casual,tn,
+negative_puzzleish,,52236671,Грибные блоки,Puzzle,tn,
+negative_puzzleish,,51450281,Тренер монстров,Hyper-casual,tn,
+negative_puzzleish,,51895548,Маджонг - Волшебные острова,Puzzle,tn,
+negative_puzzleish,,51495454,Ледяной Bызов,Hyper-casual,tn,
+negative_puzzleish,,51918010,Великий Побег Рыбы,Puzzle,tn,
+negative_other,,54635319,Путь усиления: Вызов,Arcade,tn,
+negative_other,,54669672,Косынка: Карточный Пасьянс,Tabletop game,tn,
+negative_other,,53428275,Ёжик в лесном лабиринте 3D,Arcade,tn,
+negative_other,,54456170,Классический пасьянс,Tabletop game,tn,
+negative_other,,54478968,Коллекция онлайн-пасьянсов,Tabletop game,tn,
+negative_other,,53395319,Доведи Училку! Школа!,Arcade,tn,
+negative_other,,54737524,Змейка онлайн,Arcade,tn,
+negative_other,,54463716,Шахматные задачи,Tabletop game,tn,
+negative_other,,54587046,Слова из Слова,Word game,tn,
+negative_other,,51773566,Маджонг Онлайн,Tabletop game,tn,
+negative_other,,52937582,Морской Бой: Квиз-Эпопея,Strategy,tn,
+negative_other,,51568326,Мастер Коробки,Arcade,tn,
+negative_other,,51932737,Битва Героев: РПГ Приключения,Arcade,tn,
+negative_other,,54568502,Зонк: Ва-Банк,Tabletop game,tn,
+negative_other,,52807246,ГТА Разрушение Авто,Simulator,tn,
+negative_other,,52724647,Слот Машина - Фрукты,Gambling,tn,
+negative_other,,54645817,Арена Легенд,RPG,tn,
+negative_other,,54752943,Куриный Побег,Arcade,tn,
+negative_other,,54675505,Зомби Выживание,Arcade,tn,
+negative_other,,54656057,Скорость по Клавиатуре Обби,Arcade,tn,
+negative_other,,54084922,Филворды: Ловец Слов,Word game,tn,
+negative_other,,52825865,WordWaves: поиск слов,Word game,tn,
+negative_other,,51729469,Bеселые Гонки,Racing,tn,
+negative_other,,54599526,Шахматы Делюкс,Tabletop game,tn,
+negative_other,,54663751,Американский Бильярд Онлайн,Tabletop game,tn,
+negative_other,,53572033,Нубики строят защиту от зомби,Arcade,tn,
+negative_other,,7182176,Тактика войны,Strategy,tn,
+negative_other,,53257293,Бу Испугался: Побег из Дурки,Adventure,tn,
+negative_other,,2255775,Аватария,Simulator,tn,
+negative_other,,51643671,Настольный футбол,Tabletop game,tn,
+negative_other,,7942569,Пасьянс Свободная Ячейка,Tabletop game,tn,
+negative_other,,6464304,Мой Футбол,Simulator,tn,
+negative_other,,5937983,Коты Против,Strategy,tn,
+negative_other,,51989600,Шашки онлайн турнир,Tabletop game,tn,
+negative_other,,51792265,Колобол,Arcade,tn,
+negative_other,,7951898,Москва 41,Adventure,tn,
+negative_other,,54688080,ArtemGame,Arcade,tn,
+negative_other,,51450243,Приручение Охоты,Economic,tn,
+negative_other,,51921063,Разрушай кубики,Arcade,tn,
+negative_other,,51836600,Зашифрованные слова,Word game,tn,
+negative_theme,,51675749,Схвати Вора,Puzzle,tn,
+negative_theme,,7916925,Числовой пазл 2048: топ брикс,Puzzle,tn,
+negative_theme,,53429364,Пробка на дороге,Puzzle,tn,
+negative_theme,,7545925,Веревки,Puzzle,tn,
+negative_theme,,7897687,Арифметика: сложение чисел,Puzzle,tn,
+negative_theme,,52876418,Устранить Супервызов,Three in a row,tn,
+negative_theme,,52876136,Блок Мастер,Puzzle,tn,
+negative_theme,,51556357,Нарисуй путь: король парковки,Puzzle,tn,
+negative_theme,,51815327,Слова в пузырях,Word game,tn,
+negative_theme,,54729341,Муравьи-фуражиры 3D,Puzzle,tn,
+negative_theme,,6746221,ЛОМОНОСОВ,Puzzle,tn,
+negative_theme,,8119662,Головоломки со спичками,Puzzle,tn,
+negative_theme,,8219783,Три в ряд: кольца!,Hyper-casual,tn,
+negative_theme,,8005097,Покрась Лабиринт,Hyper-casual,tn,
+negative_theme,,6812327,Долина Самоцветов: Три в ряд,Three in a row,tn,
+negative_theme,,7724619,Идеальный лес,Puzzle,tn,
+negative_theme,,6460384,Верните Сатоши,Puzzle,tn,
+negative_theme,,52916564,Джонг Маджонг,Puzzle,tn,
+negative_theme,,51836808,Спасите Даму,Puzzle,tn,
+negative_theme,,51418493,Слова из слова,Puzzle,tn,
+negative_theme,,51499101,Тортики : Соединяй сладости,Puzzle,tn,
+negative_theme,,51588799,Сапёр,Puzzle,tn,
+negative_theme,,54290482,Грядки перемен,Hyper-casual,tn,
+negative_theme,,2470001,Зверята,Puzzle,tn,
+negative_theme,,53012445,Ящички,Puzzle,tn,
+negative_theme,,54583313,Гайки и Болты - Сортировка!,Puzzle,tn,
+negative_theme,,7772630,Мини судоку: реши головоломку,Puzzle,tn,
+negative_theme,,51813860,Зумбла в космосе,Three in a row,tn,
+negative_theme,,51489675,Снежный Беспредел 2023,Three in a row,tn,
+negative_theme,,7683769,Дом мечты: три в ряд,Three in a row,tn,
+negative_theme,,4245114,2048: Покорители лиг!,Puzzle,tn,
+negative_theme,,52753042,Сортировка жидкости в колбах,Puzzle,tn,
+negative_theme,,54642802,Лапкино: Три в ряд,Three in a row,tn,
+negative_theme,,54657624,Сортируй Стрелки,Puzzle,tn,
+negative_theme,,8218814,Соединяй: 2048🔥,Puzzle,tn,
+negative_theme,,51918751,Шарики в колбах,Three in a row,tn,
+negative_theme,,52701377,Мердж Сладкоежка Три в ряд,Hyper-casual,tn,
+negative_theme,,54057879,Блоки разнообразие фигурок,Puzzle,tn,
+negative_theme,,7508385,Двойка,Puzzle,tn,
+negative_theme,,52203018,Фруктовый Бум,Hyper-casual,tn,
+negative_theme,,53620297,Классические Пазлы,Puzzle,tn,
+negative_theme,,54438665,Стрелочки,Puzzle,tn,
+negative_theme,,54627082,Полный Порядок,Puzzle,tn,
+negative_theme,,7802433,Плитки,Puzzle,tn,
+negative_theme,,51859868,Honkai: Star Rail - Тик-Так,Puzzle,tn,
+negative_theme,,53184846,Натуральный сок  три в ряд,Three in a row,tn,
+negative_theme,,54651801,Кубики 2048: Гекса Слияние,Puzzle,tn,
+negative_theme,,51493180,РОЖДЕСТВЕНСКИЕ ПАЗЛЫ,Puzzle,tn,
+negative_theme,,53937485,Фантазия Пазлов,Puzzle,tn,
+negative_theme,,51729468,Сесть На Свое Место,Puzzle,tn,
+negative_theme,,8140600,Заполнить,Puzzle,tn,
+negative_theme,,54713030,Квакушки,Puzzle,tn,
+negative_theme,,52302181,Счастливого Торта,Puzzle,tn,
+negative_theme,,8161279,Шарики 2048,Puzzle,tn,
+negative_theme,,6787076,Каверзный тест,Puzzle,tn,
+negative_theme,,53614048,Cash Clean Simulator,Simulator,tn,
+negative_theme,,54258496,Мастер Полок: Сортировка 3D,Hyper-casual,tn,
+negative_theme,,54574325,Светильники 300 уровней,Puzzle,tn,
+negative_theme,,53071590,Горшочки,Puzzle,tn,
+negative_theme,,54051783,Numberzilla,Three in a row,tn,
+positive_strong,arrow_tapaway,54723170,Стрелки - Найди выход,Puzzle,tp,
+positive_strong,arrow_tapaway,54643096,Распутай змей,Puzzle,tp,snake escape = tap-away variant
+positive_strong,arrow_tapaway,54531151,Arrow Escape Стрелки Лабиринт,Puzzle,tp,
+positive_strong,arrow_tapaway,54673391,Стрелки - Открой Картинку,Puzzle,tp,
+positive_strong,arrow_tapaway,54539273,Разбери Стрелочки,Puzzle,tp,
+positive_strong,arrow_tapaway,54489790,ТапТап Стрелка,Puzzle,unclear,description mixes arrow maze/rotation wording
+positive_weak,arrow_tapaway,51559466,Зелёный Лабиринт,Adventure,fp,generic maze
+positive_weak,arrow_tapaway,54107973,Вопрос дня,Puzzle,fp,"""распутывать вопросы"" wording"
+positive_weak,arrow_tapaway,51937967,Мастер клубков,Hyper-casual,fp,"untangle wires; adjacent, not arrow"
+positive_strong,sort,51475309,Сортировка Шариков,Puzzle,tp,
+positive_strong,sort,54702048,PixelSort Puzzle,Puzzle,tp,
+positive_strong,sort,52740328,Сортировка вещей в шкафу,Three in a row,tp,goods sort
+positive_strong,sort,51740272,Шарики Дзен,Arcade,unclear,"zen balls, pour/connect wording"
+positive_strong,sort,53369519,Монетки,Puzzle,tp,
+positive_strong,sort,51559734,2048 Пазл,Puzzle,tp,sort+merge hybrid
+positive_weak,sort,51891603,Пробирочки,Hyper-casual,tp,water sort
+positive_weak,sort,52326680,Тарелочки,Puzzle,tp,
+positive_weak,sort,54754375,Маджонг: Чайники,Puzzle,fp,mahjong with shelf slot
+positive_strong,screw,52135775,Крути Шурупы,Puzzle,tp,
+positive_strong,screw,54662458,Болты Сортировка,Puzzle,tp,
+positive_strong,screw,52977265,Болтики: Сортировка,Puzzle,tp,nuts sort
+positive_strong,screw,51918009,Войны Роботов,Racing,fp,"robot combat, nuts as parts"
+positive_strong,screw,52232890,Болты,Puzzle,tp,
+positive_strong,screw,54691906,Выкрути винты: Птичий парк,Puzzle,tp,
+positive_strong,bubble,53444760,Цветные Шарики,Puzzle,tp,
+positive_strong,bubble,8114033,Bubbles-Monsters,Hyper-casual,unclear,"tap-pop bubbles, not shooter"
+positive_strong,bubble,51719736,Шарики Зума Стрелялки,Three in a row,tp,zuma family
+positive_strong,bubble,8146064,Взрывай пузыри,Three in a row,tp,
+positive_strong,bubble,54417237,Fusion,Hyper-casual,fp,lines-like jump puzzle
+positive_strong,bubble,51568330,Пузырьки Конфет,Three in a row,tp,
+positive_weak,bubble,53685412,Мир Шариков,Three in a row,unclear,"""механика пузырей"" without rules"
+positive_weak,bubble,54734398,Final Pop: Турнир,Puzzle,fp,nim-like pop game
+positive_weak,bubble,51976171,Ам Ням - Перережь Верёвку,Puzzle,fp,cut the rope
+positive_strong,merge,51836847,Еда Челлендж,Three in a row,tp,
+positive_strong,merge,54290482,Грядки перемен,Hyper-casual,tp,
+positive_strong,merge,52924131,Шары,Three in a row,tp,
+positive_strong,merge,51869653,Мерж Детектив - Скрытая Тайна,Economic,tp,
+positive_strong,merge,53421234,Кубики 2048,Hyper-casual,tp,
+positive_strong,merge,54463871,Блок шутер 2048,Puzzle,tp,
+positive_weak,merge,7965168,Магия Парка Развлечений,Three in a row,fp,collapse/blast
+positive_weak,merge,51921437,Сортировка По Полочкам!,Puzzle,fp,"goods sort, not merge"
+positive_weak,merge,8168881,Соединяйка,Three in a row,fp,pair connect
+positive_strong,match3,52291860,Тайна Самоцветов - Три в ряд,Three in a row,tp,
+positive_strong,match3,52444661,Таинственный Лес - три в ряд,Three in a row,tp,
+positive_strong,match3,8054181,Candy Monster - три в ряд,Three in a row,tp,
+positive_strong,match3,7580568,Огород мечты: три в ряд,Three in a row,tp,
+positive_strong,match3,53184846,Натуральный сок  три в ряд,Three in a row,tp,
+positive_strong,match3,54509847,Карточный Матч,Puzzle,fp,card pairs/memory
+positive_weak,match3,8146064,Взрывай пузыри,Three in a row,fp,bubble shooter in Three in a row genre
+positive_weak,match3,51729446,Повернул Bинт,Three in a row,fp,screw puzzle in Three in a row genre
+positive_weak,match3,8215960,Семейный Городок,Three in a row,tp,story match-3
+positive_strong,puzzle_combat_roguelite,8122822,Мэри Ран,Hyper-casual,fp,platformer; puzzle signal came from broad hidden-object title rule
+positive_strong,puzzle_combat_roguelite,5170657,Star Wars Heroes,Three in a row,tp,match-3 RPG fighting
+positive_strong,puzzle_combat_roguelite,51567810,Копатели,Adventure,fp,"co-op roguelike, puzzle signal spurious"
+positive_strong,puzzle_combat_roguelite,54626694,Игра в числа: чиселки,Puzzle,fp,"PvP mode of a number puzzle, no combat"
+positive_strong,puzzle_combat_roguelite,51729254,Hell Sweep,Hyper-casual,tp,roguelike with merge
+positive_strong,puzzle_combat_roguelite,8133714,Небеса,Three in a row,tp,match-3 with battles
+positive_weak,puzzle_combat_roguelite,51505551,Нубик Киллер,Puzzle,unclear,physics shooting puzzle vs zombies
+positive_weak,puzzle_combat_roguelite,6830710,🍒Сахарные Герои: три-в-ряд,Three in a row,fp,"""Герои"" as characters"
+positive_weak,puzzle_combat_roguelite,52675454,Стратегия войны,Strategy,fp,"war strategy, no puzzle"
+positive_strong,magic_fantasy_puzzle,54298965,Математическое зелье,Puzzle,tp,potion theme
+positive_strong,magic_fantasy_puzzle,54208303,Save the Mermaid,Puzzle,tp,mermaid
+positive_strong,magic_fantasy_puzzle,52813474,Магическая сортировка,Three in a row,tp,
+positive_strong,magic_fantasy_puzzle,54556519,Вайфу пазл,Hyper-casual,unclear,witch mention in anime tile puzzle
+positive_strong,magic_fantasy_puzzle,54703143,Релакс игра - Аптека алхимика,Puzzle,tp,
+positive_strong,magic_fantasy_puzzle,53526998,Остров питомцев,Puzzle,tp,
+positive_weak,magic_fantasy_puzzle,51807679,Затерянный город - Три в ряд,Three in a row,fp,"""мистическ"" in lost-city match-3; treasure, not magic"
+positive_weak,magic_fantasy_puzzle,54636684,Три в ряд - Сказочный лес,Three in a row,tp,fairy forest
+positive_weak,magic_fantasy_puzzle,54757390,Гномье королевство,Puzzle,tp,gnomes
+positive_strong,romance_love_puzzle,7139584,🌈Секреты Шармляндии,Three in a row,fp,"""любов"" as friendship/generic"
+positive_strong,romance_love_puzzle,53016679,Маджонг Солитер,Tabletop game,fp,romantic travel locations
+positive_strong,romance_love_puzzle,54730918,YORU: Пазлы Нео-Токио,Puzzle,unclear,story may include romance
+positive_strong,romance_love_puzzle,7749645,Влюблённые шарики,Puzzle,tp,
+positive_strong,romance_love_puzzle,51863322,Доп2 для Взрослых-Дорисуй,Hyper-casual,tp,
+positive_strong,romance_love_puzzle,52697346,Три в Ряд - Для взрослых,Three in a row,tp,story with bride
+positive_weak,romance_love_puzzle,51730791,ДОП: Добавь деталь в Лавстори,Puzzle,tp,love story DOP
+positive_weak,romance_love_puzzle,8011344,Спаси Героя и Принцессу 👸,Puzzle,tp,lovers rescue
+positive_weak,romance_love_puzzle,51913388,Пара Букв,Word game,fp,"""пара"" = pairs"
+positive_strong,treasure_adventure_puzzle,54707984,Пиратские Сокровища,Puzzle,tp,
+positive_strong,treasure_adventure_puzzle,53584246,Тайна Фонаря,Three in a row,fp,"""сундук"" as reward; dark-city theme"
+positive_strong,treasure_adventure_puzzle,52897974,Лапки прочь - я ищу,Hyper-casual,unclear,hidden objects with treasure words
+positive_strong,treasure_adventure_puzzle,4249938,Тайны Прошлого: Наследие!,Three in a row,tp,archaeology
+positive_strong,treasure_adventure_puzzle,53938398,Поиск Предметов: Дело Эмили,Puzzle,fp,detective
+positive_strong,treasure_adventure_puzzle,8205529,Клад: Найди слова,Word game,tp,treasure framing
+positive_weak,treasure_adventure_puzzle,54145457,Поиск предметов: СССР,Puzzle,fp,USSR hidden objects
+positive_weak,treasure_adventure_puzzle,52207936,Поиск Предметов: Коллекция,Puzzle,fp,hidden objects
+positive_weak,treasure_adventure_puzzle,51778258,Новогоднее Приключение,Puzzle,fp,New Year trip
