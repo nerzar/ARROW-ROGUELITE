@@ -40,6 +40,8 @@ STATUS: AGREED FOR EXPLORATION
 
 К концу run один удачный tap может запускать зрелищную цепочку эффектов. Игрок должен видеть рост силы без чтения цифр.
 
+Подробная рабочая визуальная эволюция стрелы зафиксирована в `docs/ARROW-VISUAL-PROGRESSION.md`.
+
 ## 3. Game feel / animation language
 
 STATUS: AGREED FOR EXPLORATION
