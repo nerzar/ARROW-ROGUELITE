@@ -1,11 +1,11 @@
-# Заметки Magic Arrow
+# Заметки Arrow-Roguelite
 
 Короткий буфер важных идей и подтверждённых временных договорённостей. Это не архив и не полный дизайн-документ.
 
 ### N-001 — Рабочее название
 STATUS: AGREED FOR NOW
 
-Суть: рабочее название проекта — **Magic Arrow**.
+Суть: рабочее название проекта — **Arrow-Roguelite**, как имя папки/репозитория `ARROW-ROGUELITE`. Старое рабочее имя Magic Arrow больше не использовать как основное название проекта.
 Подтвердил: USER
 
 ### N-002 — Сначала исследование
@@ -72,7 +72,7 @@ STATUS: AGREED FOR EXPLORATION
 ### N-012 — Отдельные фичи не считаем уникальностью
 STATUS: FACT / DESIGN GUARDRAIL
 
-Суть: актуальная проверка 16.09.2026 нашла Arrow Crypt (arrow puzzle + roguelite/runes/bosses), arrow puzzle spiral defense (arrow combat + bosses), Arrow Escape (deflectors/ice/locks/portals) и snake-like arrow animation в Arrows Tap Away. Ricochet распространён в Archero. Рабочий differentiator Magic Arrow ищем в связке directional puzzle + реальные projectile за пределами поля + внешние цели по сторонам + rotation + boss-driven transformations.
+Суть: актуальная проверка 16.09.2026 нашла Arrow Crypt (arrow puzzle + roguelite/runes/bosses), arrow puzzle spiral defense (arrow combat + bosses), Arrow Escape (deflectors/ice/locks/portals) и snake-like arrow animation в Arrows Tap Away. Ricochet распространён в Archero. Рабочий differentiator Arrow-Roguelite ищем в связке directional puzzle + реальные projectile за пределами поля + внешние цели по сторонам + rotation + boss-driven transformations.
 Источник: публичные страницы Google Play/референсов, проверка 16.09.2026.
 
 ### N-013 — Направление раскрывается на mini-boss пролога
@@ -80,3 +80,9 @@ STATUS: AGREED FOR NOW
 
 Суть: первые 3 коротких encounter пролога используют одну активную сторону и поочерёдно учат Tap Away, projectile и hit budget. **Направление не должно становиться отдельным ресурсом раньше времени.** На mini-boss в конце пролога цель впервые меняет сторону/уязвимый сектор; игрок сталкивается с нехваткой стрел нужного направления и там же впервые получает Rotate. После победы Rotate становится частью run-kit, а полноценный Act I уже строится вокруг multi-side combat.
 Подтвердил: USER — «направление становится ресурсом на первом мини боссе / боссе... конец пролога минибосс..и на нем уже дают возможность повертеться».
+
+### N-014 — Не писать Arrow core с нуля без аудита готовых наработок
+STATUS: AGREED FOR NOW
+
+Суть: перед реализацией board model, level builder, generator и solver сначала изучить существующие open-source реализации и определить, что можно безопасно переиспользовать/портировать. Приоритетные источники: `andrepucas/arrow-escape-2026` (visual builder/data baking, но лицензия пока не подтверждена), `gtxPrime/arrow-escape` (LevelGeneratorV2 + solver, но README заявляет MIT при отсутствии LICENSE/GitHub license metadata — до подтверждения только reference), `sergev/goarrows` (явная MIT-лицензия, generator + solvability verifier/solver).
+Подтвердил: USER — предложил использовать готовые наработки вместо повторной реализации с нуля.
