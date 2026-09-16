@@ -21,16 +21,16 @@ STATUS: AGREED FOR NOW
 Подтвердил: USER
 
 ### N-004 — Стрелка как игровой объект
-STATUS: IDEA
+STATUS: AGREED FOR NOW
 
-Суть: после выхода из Tap Away-поля стрелка продолжает полёт и может попадать во внешние цели — врагов, бонусы, сундуки, механизмы и т.п.; поверх рассматривается roguelite-система наград и синергий.
-Подтвердил: not confirmed as final design
+Суть: после выхода из Tap Away-поля стрелка продолжает полёт и становится реальным projectile, который поражает внешние цели. Направление стрелки связывает puzzle с расположением мобов/боссов вокруг поля.
+Подтвердил: USER — текущий концепт со стрелками как оружием, мобами/боссами и сильными трансформациями нравится; направление развиваем дальше.
 
-### N-005 — Темы не выбраны
-STATUS: IDEA
+### N-005 — Тема пока рабочая, не финальная
+STATUS: AGREED FOR NOW
 
-Суть: monsters / magic adventure / Cupid / treasure / cute monsters и другие упаковки одной механики должны сравниваться после исследования аудитории.
-Подтвердил: not confirmed
+Суть: magic/fantasy combat сейчас является наиболее естественной рабочей упаковкой для boss powers, змей, молний, relics и визуальной эскалации. Окончательную тему всё ещё сверяем с данными VK; core не должен жёстко зависеть от monster wrapper.
+Подтвердил: USER — концепт нравится; финальная тема ещё не зафиксирована отдельным решением.
 
 ### N-006 — Ассетный бюджет
 STATUS: AGREED FOR NOW
@@ -41,6 +41,36 @@ STATUS: AGREED FOR NOW
 ### N-007 — VK API smoke facts
 STATUS: AGREED FOR NOW
 
-Суть: локальный smoke test сервисного VK API прошёл; `apps.getCatalog`, `apps.get`, `users.get`, `groups.getMembers` доступны, сортировки работают; фактический extended-ответ не вернул MAU. Raw JSON остаётся локальным. До интеграции в main исходный commit находится в локальной ветке `vk-api-smoke-test`.
-Источник: отчёт Claude Opus, commit `c603241` (пока локальный на момент записи)
+Суть: smoke test сервисного VK API прошёл; `apps.getCatalog`, `apps.get`, `users.get`, `groups.getMembers` доступны, сортировки работают; фактический extended-ответ не вернул MAU. Raw JSON остаётся локальным. Smoke test уже принят и влит в main.
+Источник: Claude Opus, исходный commit `c603241`
 Подтвердил: USER — «там все норм»
+
+### N-008 — Boss reward меняет правила
+STATUS: AGREED FOR NOW
+
+Суть: сильная награда после босса должна менять поведение последующих стрел/забега, а не быть только числовым бонусом. Пример: permanent Ricochet, Serpent Form, Chain, Rotation Power.
+Подтвердил: USER — привёл permanent Ricochet как желаемый пример и одобрил развитие идеи.
+
+### N-009 — Поворот центральной фигуры
+STATUS: AGREED FOR EXPLORATION
+
+Суть: исследовать ограниченный поворот центрального поля как способ менять доступные направления стрел и перераспределять боевой ресурс между сторонами арены.
+Подтвердил: USER — предложил возможность крутить главную фигуру со стрелками.
+
+### N-010 — Визуальные трансформации стрел
+STATUS: AGREED FOR EXPLORATION
+
+Суть: boss phases и upgrades могут физически/визуально превращать стрелы — например в змей, электрические или неоновые projectile. Визуальная форма должна по возможности отражать реальное изменение механики.
+Подтвердил: USER — предложил превращение стрел в змей и смену неоновых эффектов.
+
+### N-011 — Data-driven content
+STATUS: AGREED FOR EXPLORATION
+
+Суть: HP, archetypes, bosses, arrow forms, relics, upgrades и encounters проектировать как данные (`content/*.json` или эквивалент), отдельно от core-логики. Для дизайна использовать понятные hit-units: одна базовая стрела = одна единица попадания; точные runtime-числа определяются после прототипа.
+Подтвердил: USER — запросил базу данных/структуру для урона, жизни мобов и предметов; одобрил предложенное направление.
+
+### N-012 — Отдельные фичи не считаем уникальностью
+STATUS: FACT / DESIGN GUARDRAIL
+
+Суть: актуальная проверка 16.09.2026 нашла Arrow Crypt (arrow puzzle + roguelite/runes/bosses), arrow puzzle spiral defense (arrow combat + bosses), Arrow Escape (deflectors/ice/locks/portals) и snake-like arrow animation в Arrows Tap Away. Ricochet распространён в Archero. Рабочий differentiator Magic Arrow ищем в связке directional puzzle + реальные projectile за пределами поля + внешние цели по сторонам + rotation + boss-driven transformations.
+Источник: публичные страницы Google Play/референсов, проверка 16.09.2026.
