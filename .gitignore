@@ -1,0 +1,15 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# VK API raw/smoke artifacts
+artifacts/
+data/raw/
+
+# Common local files
+.DS_Store
+Thumbs.db
+node_modules/
+__pycache__/
+*.pyc
