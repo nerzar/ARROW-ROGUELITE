@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arrow core debug viewer</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f4f4f2; --fg: #1d1d1b; --muted: #777; --panel: #fff; --line: #ccc; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #19191b; --fg: #e8e8e6; --muted: #999; --panel: #242427; --line: #444; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header label { display: inline-flex; gap: 4px; align-items: center; }
+  input[type=number] { width: 110px; }
+  button { min-width: 30px; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; padding: 12px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  #wrap { background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; min-height: 300px; padding: 8px; }
+  canvas { max-width: 100%; touch-action: manipulation; }
+  aside { background: var(--panel); border: 1px solid var(--line); padding: 10px; overflow: auto; }
+  pre { margin: 0; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
+  .row { display: flex; gap: 6px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  #msg { min-height: 1.4em; font-weight: 600; }
+  .muted { color: var(--muted); }
+  input[type=range] { flex: 1; min-width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <label>preset <select id="preset"></select></label>
+  <label>seed <input id="seed" type="number" min="0" step="1"></label>
+  <button id="prevSeed" title="← seed-1">◀</button>
+  <button id="nextSeed" title="→ seed+1">▶</button>
+  <button id="randSeed" title="R">rand</button>
+  <label><input id="showSteps" type="checkbox" checked> solution #</label>
+  <label><input id="showFree" type="checkbox" checked> free</label>
+  <label><input id="colorLayers" type="checkbox"> color by layer</label>
+  <label><input id="showRay" type="checkbox" checked> hover ray</label>
+</header>
+<main>
+  <div>
+    <div class="row">
+      <button id="stepFirst" title="Home">⏮</button>
+      <button id="stepPrev" title="[">◀</button>
+      <input id="step" type="range" min="0" value="0">
+      <button id="stepNext" title="]">▶</button>
+      <button id="stepLast" title="End">⏭</button>
+      <span id="stepLabel" class="muted"></span>
+    </div>
+    <div id="wrap"><canvas id="board"></canvas></div>
+    <div id="msg"></div>
+    <div class="muted">Число у хвоста — номер шага в сохранённом решении (не id). Клик по стрелке — попытка убрать (игровой режим). Слайдер — состояние после первых k ходов сохранённого решения. Клавиши: ←/→ seed, [ / ] шаг, R случайный seed.</div>
+  </div>
+  <aside>
+    <pre id="info"></pre>
+  </aside>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
