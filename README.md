@@ -12,7 +12,8 @@ HTML5-игра под VK Games / VK Mini Apps с возможностью дал
 
 Ключевые подтверждённые gameplay-правила:
 
-- `docs/COMBAT-RULES.md` — HP игрока, пошаговое давление врагов, `ATTACK IN N`, урон за blocked tap, interrupt, deadlines и правило мгновенной победы после выполнения главной цели encounter.
+- `docs/COMBAT-RULES.md` — HP игрока, пошаговое давление врагов, `ATTACK IN N`, урон за blocked tap, interrupt, deadlines и условия победы encounter;
+- `docs/BALANCE-SYSTEM.md` — единая система оценки оружия/предметов через DU, HP Saved, Turns Gained, Flexibility, Charges и Turn Cost; baseline v0.1 для первых предметов.
 
 Подробности:
 
@@ -82,3 +83,4 @@ Boss fights должны менять правила, а сильные boss rew
 
 Для любой game/gameplay/core-задачи агент должен сначала прочитать `docs/GAME-CONCEPT.md`.
 Для задач, затрагивающих бой, HP, врагов, таймеры, interrupt или условия победы, дополнительно прочитать `docs/COMBAT-RULES.md`.
+Для задач про оружие, предметы, relics, economy of power или численный tuning — дополнительно прочитать `docs/BALANCE-SYSTEM.md`.
