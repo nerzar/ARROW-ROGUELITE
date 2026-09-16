@@ -1,0 +1,819 @@
+{
+ "snapshot_date": "2026-09-16",
+ "run_id": "20260916T163154Z",
+ "api_version": "5.199",
+ "collector_version": "0.1.0",
+ "captured_from": "2026-09-16T16:31:55.010Z",
+ "captured_to": "2026-09-16T16:49:48.687Z",
+ "discovery": {
+  "sorts": {
+   "popular_today": {
+    "complete": true,
+    "pages": 51,
+    "rows": 4973,
+    "unique_app_ids": 4067,
+    "duplicate_rows": 906,
+    "duplicated_app_ids": 662,
+    "count_reported_values": [
+     5029,
+     5030
+    ],
+    "short_non_final_pages": [
+     {
+      "offset": 600,
+      "items": 98
+     },
+     {
+      "offset": 800,
+      "items": 99
+     },
+     {
+      "offset": 900,
+      "items": 99
+     },
+     {
+      "offset": 1300,
+      "items": 98
+     },
+     {
+      "offset": 1500,
+      "items": 99
+     },
+     {
+      "offset": 1900,
+      "items": 98
+     },
+     {
+      "offset": 2000,
+      "items": 99
+     },
+     {
+      "offset": 2100,
+      "items": 98
+     },
+     {
+      "offset": 2800,
+      "items": 99
+     },
+     {
+      "offset": 3000,
+      "items": 99
+     },
+     {
+      "offset": 3100,
+      "items": 99
+     },
+     {
+      "offset": 4000,
+      "items": 99
+     },
+     {
+      "offset": 4100,
+      "items": 97
+     },
+     {
+      "offset": 4200,
+      "items": 99
+     },
+     {
+      "offset": 4800,
+      "items": 73
+     },
+     {
+      "offset": 4900,
+      "items": 94
+     }
+    ],
+    "rows_with_catalog_position": 1197,
+    "first_captured_at": "2026-09-16T16:31:55.010Z",
+    "last_captured_at": "2026-09-16T16:33:23.132Z"
+   },
+   "popular_week": {
+    "complete": true,
+    "pages": 51,
+    "rows": 4976,
+    "unique_app_ids": 4940,
+    "duplicate_rows": 36,
+    "duplicated_app_ids": 36,
+    "count_reported_values": [
+     5029,
+     5030
+    ],
+    "short_non_final_pages": [
+     {
+      "offset": 900,
+      "items": 98
+     },
+     {
+      "offset": 1300,
+      "items": 99
+     },
+     {
+      "offset": 1900,
+      "items": 98
+     },
+     {
+      "offset": 2000,
+      "items": 99
+     },
+     {
+      "offset": 2800,
+      "items": 97
+     },
+     {
+      "offset": 3000,
+      "items": 99
+     },
+     {
+      "offset": 3100,
+      "items": 99
+     },
+     {
+      "offset": 4000,
+      "items": 99
+     },
+     {
+      "offset": 4100,
+      "items": 97
+     },
+     {
+      "offset": 4200,
+      "items": 99
+     },
+     {
+      "offset": 4800,
+      "items": 72
+     },
+     {
+      "offset": 4900,
+      "items": 95
+     }
+    ],
+    "rows_with_catalog_position": 936,
+    "first_captured_at": "2026-09-16T16:33:24.182Z",
+    "last_captured_at": "2026-09-16T16:34:37.466Z"
+   },
+   "visitors": {
+    "complete": true,
+    "pages": 51,
+    "rows": 4977,
+    "unique_app_ids": 4937,
+    "duplicate_rows": 40,
+    "duplicated_app_ids": 40,
+    "count_reported_values": [
+     5029,
+     5030
+    ],
+    "short_non_final_pages": [
+     {
+      "offset": 700,
+      "items": 99
+     },
+     {
+      "offset": 900,
+      "items": 99
+     },
+     {
+      "offset": 1900,
+      "items": 98
+     },
+     {
+      "offset": 2200,
+      "items": 99
+     },
+     {
+      "offset": 2400,
+      "items": 99
+     },
+     {
+      "offset": 3100,
+      "items": 98
+     },
+     {
+      "offset": 3600,
+      "items": 99
+     },
+     {
+      "offset": 3700,
+      "items": 97
+     },
+     {
+      "offset": 3800,
+      "items": 99
+     },
+     {
+      "offset": 4000,
+      "items": 99
+     },
+     {
+      "offset": 4100,
+      "items": 99
+     },
+     {
+      "offset": 4300,
+      "items": 99
+     },
+     {
+      "offset": 4400,
+      "items": 96
+     },
+     {
+      "offset": 4500,
+      "items": 85
+     },
+     {
+      "offset": 4700,
+      "items": 99
+     },
+     {
+      "offset": 4800,
+      "items": 98
+     },
+     {
+      "offset": 4900,
+      "items": 90
+     }
+    ],
+    "rows_with_catalog_position": 951,
+    "first_captured_at": "2026-09-16T16:34:38.516Z",
+    "last_captured_at": "2026-09-16T16:35:56.261Z"
+   },
+   "growth_rate": {
+    "complete": true,
+    "pages": 51,
+    "rows": 4972,
+    "unique_app_ids": 4841,
+    "duplicate_rows": 131,
+    "duplicated_app_ids": 131,
+    "count_reported_values": [
+     5029,
+     5030
+    ],
+    "short_non_final_pages": [
+     {
+      "offset": 300,
+      "items": 99
+     },
+     {
+      "offset": 500,
+      "items": 99
+     },
+     {
+      "offset": 900,
+      "items": 98
+     },
+     {
+      "offset": 1200,
+      "items": 99
+     },
+     {
+      "offset": 1400,
+      "items": 99
+     },
+     {
+      "offset": 1500,
+      "items": 99
+     },
+     {
+      "offset": 1600,
+      "items": 99
+     },
+     {
+      "offset": 1800,
+      "items": 98
+     },
+     {
+      "offset": 1900,
+      "items": 97
+     },
+     {
+      "offset": 2000,
+      "items": 99
+     },
+     {
+      "offset": 2500,
+      "items": 98
+     },
+     {
+      "offset": 2600,
+      "items": 99
+     },
+     {
+      "offset": 2700,
+      "items": 99
+     },
+     {
+      "offset": 2900,
+      "items": 99
+     },
+     {
+      "offset": 3400,
+      "items": 99
+     },
+     {
+      "offset": 3500,
+      "items": 99
+     },
+     {
+      "offset": 3800,
+      "items": 99
+     },
+     {
+      "offset": 4300,
+      "items": 99
+     },
+     {
+      "offset": 4800,
+      "items": 97
+     },
+     {
+      "offset": 4900,
+      "items": 76
+     }
+    ],
+    "rows_with_catalog_position": 957,
+    "first_captured_at": "2026-09-16T16:35:57.311Z",
+    "last_captured_at": "2026-09-16T16:38:04.399Z"
+   },
+   "create_date": {
+    "complete": true,
+    "pages": 51,
+    "rows": 4981,
+    "unique_app_ids": 4940,
+    "duplicate_rows": 41,
+    "duplicated_app_ids": 37,
+    "count_reported_values": [
+     5029,
+     5030
+    ],
+    "short_non_final_pages": [
+     {
+      "offset": 100,
+      "items": 98
+     },
+     {
+      "offset": 600,
+      "items": 97
+     },
+     {
+      "offset": 700,
+      "items": 99
+     },
+     {
+      "offset": 800,
+      "items": 91
+     },
+     {
+      "offset": 900,
+      "items": 99
+     },
+     {
+      "offset": 1000,
+      "items": 78
+     },
+     {
+      "offset": 1400,
+      "items": 99
+     },
+     {
+      "offset": 1800,
+      "items": 99
+     },
+     {
+      "offset": 1900,
+      "items": 99
+     },
+     {
+      "offset": 2400,
+      "items": 99
+     },
+     {
+      "offset": 2600,
+      "items": 99
+     },
+     {
+      "offset": 4900,
+      "items": 97
+     }
+    ],
+    "rows_with_catalog_position": 942,
+    "first_captured_at": "2026-09-16T16:38:05.450Z",
+    "last_captured_at": "2026-09-16T16:39:39.086Z"
+   },
+   "popular": {
+    "complete": true,
+    "pages": 51,
+    "rows": 4973,
+    "unique_app_ids": 3444,
+    "duplicate_rows": 1529,
+    "duplicated_app_ids": 1022,
+    "count_reported_values": [
+     5029,
+     5030
+    ],
+    "short_non_final_pages": [
+     {
+      "offset": 800,
+      "items": 99
+     },
+     {
+      "offset": 900,
+      "items": 98
+     },
+     {
+      "offset": 1500,
+      "items": 98
+     },
+     {
+      "offset": 1700,
+      "items": 96
+     },
+     {
+      "offset": 1900,
+      "items": 98
+     },
+     {
+      "offset": 2700,
+      "items": 99
+     },
+     {
+      "offset": 2800,
+      "items": 91
+     },
+     {
+      "offset": 2900,
+      "items": 98
+     },
+     {
+      "offset": 3000,
+      "items": 77
+     },
+     {
+      "offset": 3200,
+      "items": 99
+     },
+     {
+      "offset": 3300,
+      "items": 99
+     },
+     {
+      "offset": 3500,
+      "items": 99
+     },
+     {
+      "offset": 4000,
+      "items": 99
+     },
+     {
+      "offset": 4500,
+      "items": 99
+     },
+     {
+      "offset": 4900,
+      "items": 97
+     }
+    ],
+    "rows_with_catalog_position": 1905,
+    "first_captured_at": "2026-09-16T16:39:40.136Z",
+    "last_captured_at": "2026-09-16T16:41:05.564Z"
+   }
+  },
+  "unique_app_ids_all_sorts": 4985,
+  "unique_app_ids_total_incl_genre_pass": 4985,
+  "genre_pass": null,
+  "genre_id_probe": {
+   "catalog_count": 5030,
+   "observed_genre_ids": [
+    5,
+    10,
+    11,
+    12,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    21,
+    25,
+    26,
+    27,
+    28
+   ],
+   "probes": {
+    "5": {
+     "genre_id": 5,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "10": {
+     "genre_id": 10,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "11": {
+     "genre_id": 11,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "12": {
+     "genre_id": 12,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "14": {
+     "genre_id": 14,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "15": {
+     "genre_id": 15,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "16": {
+     "genre_id": 16,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "17": {
+     "genre_id": 17,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "18": {
+     "genre_id": 18,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "19": {
+     "genre_id": 19,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "21": {
+     "genre_id": 21,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "25": {
+     "genre_id": 25,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "26": {
+     "genre_id": 26,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "27": {
+     "genre_id": 27,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    },
+    "28": {
+     "genre_id": 28,
+     "probe": true,
+     "error_code": null,
+     "count": 5030
+    }
+   },
+   "genre_id_filter_effective": false
+  },
+  "repeat_pages_unfiltered_genre_param": {
+   "sort": "create_date",
+   "captured_from": "2026-09-16T16:51:57.908Z",
+   "captured_to": "2026-09-16T17:01:57.908Z",
+   "by_genre_id_param": {
+    "5": {
+     "pages": 51,
+     "rows": 4981,
+     "count_reported": [
+      5029,
+      5030
+     ],
+     "distinct_item_genre_ids": 15
+    },
+    "10": {
+     "pages": 51,
+     "rows": 4979,
+     "count_reported": [
+      5029,
+      5030
+     ],
+     "distinct_item_genre_ids": 15
+    },
+    "11": {
+     "pages": 51,
+     "rows": 4981,
+     "count_reported": [
+      5029,
+      5030
+     ],
+     "distinct_item_genre_ids": 15
+    },
+    "12": {
+     "pages": 51,
+     "rows": 4983,
+     "count_reported": [
+      5029,
+      5030
+     ],
+     "distinct_item_genre_ids": 15
+    },
+    "14": {
+     "pages": 51,
+     "rows": 4980,
+     "count_reported": [
+      5029,
+      5030
+     ],
+     "distinct_item_genre_ids": 15
+    },
+    "15": {
+     "pages": 51,
+     "rows": 4980,
+     "count_reported": [
+      5029,
+      5030
+     ],
+     "distinct_item_genre_ids": 15
+    },
+    "16": {
+     "pages": 51,
+     "rows": 4979,
+     "count_reported": [
+      5029,
+      5030
+     ],
+     "distinct_item_genre_ids": 15
+    },
+    "17": {
+     "pages": 23,
+     "rows": 2258,
+     "count_reported": [
+      5029,
+      5030
+     ],
+     "distinct_item_genre_ids": 15
+    }
+   },
+   "unique_app_ids": 4985,
+   "app_ids_not_in_six_sorts": 0
+  },
+  "unique_app_ids_per_sort": {
+   "popular_today": 4067,
+   "popular_week": 4940,
+   "visitors": 4937,
+   "growth_rate": 4841,
+   "create_date": 4940,
+   "popular": 3444
+  },
+  "app_ids_only_in_one_sort": {
+   "popular_today": 0,
+   "popular_week": 0,
+   "visitors": 0,
+   "growth_rate": 0,
+   "create_date": 0,
+   "popular": 0
+  },
+  "app_ids_in_all_sorts": 2880,
+  "max_count_reported": 5030
+ },
+ "details": {
+  "requested_ids": 4985,
+  "apps_with_details": 4985,
+  "missing_details": 0,
+  "missing_detail_app_ids": [],
+  "details_not_in_discovery": [],
+  "source_counts": {
+   "batch": 4785,
+   "single": 200
+  },
+  "errors": [],
+  "field_presence": {
+   "author_owner_id": 4985,
+   "author_url": 4985,
+   "background_loader_color": 49,
+   "banner_1120": 4985,
+   "banner_560": 4985,
+   "catalog_position": 948,
+   "description": 4985,
+   "genre": 4985,
+   "genre_id": 4985,
+   "has_vk_connect": 4985,
+   "hide_tabbar": 4985,
+   "icon_139": 4985,
+   "icon_150": 4985,
+   "icon_278": 4985,
+   "icon_75": 4985,
+   "id": 4985,
+   "international": 4985,
+   "is_calls_available": 4985,
+   "is_in_catalog": 4985,
+   "is_installed": 4985,
+   "is_new": 224,
+   "is_plugin": 4985,
+   "is_splash_screen_enabled": 4985,
+   "is_vkui_internal": 4985,
+   "leaderboard_type": 4985,
+   "loader_icon": 49,
+   "members_count": 4985,
+   "mini_apps_web_call_api_form_data": 4985,
+   "mobile_controls_type": 4985,
+   "mobile_view_support_type": 4985,
+   "need_policy_confirmation": 4985,
+   "published_date": 4985,
+   "screen_name": 4985,
+   "screen_orientation": 4700,
+   "screenshots": 4931,
+   "section": 4985,
+   "splash_screen": 65,
+   "support_url": 4985,
+   "title": 4985,
+   "type": 4985,
+   "webview_url": 4985
+  },
+  "mau_like_fields_present": [],
+  "official_group_resolved": 4178,
+  "author_owner_id_negative": 4178,
+  "author_owner_id_positive": 807,
+  "members_count": {
+   "n": 4985,
+   "min": 2,
+   "p25": 2571,
+   "median": 9541,
+   "p75": 37201,
+   "p90": 152615,
+   "max": 33914168,
+   "zeros": 0
+  },
+  "published_date_range": [
+   "2009-07-30T07:03:25Z",
+   "2026-09-16T14:42:44Z"
+  ],
+  "type_counts": {
+   "html5_game": 4700,
+   "game": 285
+  },
+  "section_counts": {
+   "Puzzle": 1269,
+   "Hyper-casual": 996,
+   "Tabletop games": 391,
+   "Arcade": 380,
+   "Simulators": 339,
+   "Three in a row": 318,
+   "Word games": 218,
+   "Strategy": 188,
+   "3D shooters": 165,
+   "Adventure": 162,
+   "Racing": 160,
+   "RPG": 148,
+   "Economic": 128,
+   "Gambling": 95,
+   "Communication": 28
+  },
+  "genre_counts": {
+   "15:Puzzle": 1269,
+   "10:Hyper-casual": 996,
+   "17:Tabletop game": 391,
+   "27:Arcade": 380,
+   "12:Simulator": 339,
+   "26:Three in a row": 318,
+   "28:Word game": 218,
+   "14:Strategy": 188,
+   "19:3D shooter": 165,
+   "11:Adventure": 162,
+   "21:Racing": 160,
+   "18:RPG": 148,
+   "16:Economic": 128,
+   "25:Gambling": 95,
+   "5:Communication": 28
+  },
+  "international_true": 3,
+  "catalog_position": {
+   "n": 948,
+   "min": 1,
+   "p25": 239,
+   "median": 475.5,
+   "p75": 711,
+   "p90": 854,
+   "max": 952,
+   "zeros": 0
+  }
+ }
+}

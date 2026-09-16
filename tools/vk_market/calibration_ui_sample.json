@@ -1,0 +1,30 @@
+{
+  "captured_at": "2026-09-16T16:27:13Z",
+  "source_url": "https://vk.ru/games",
+  "method": "Manual read of the public, logged-out VK Games page in a browser. Labels copied as displayed ('N игроков'). app_id taken from the card link when the card has one; otherwise matched later by exact, unique title in apps.get.",
+  "items": [
+    {"app_id": null, "title": "Целуй и Знакомься", "ui_label": "34M", "block": "Популярные"},
+    {"app_id": null, "title": "Сокровища Пиратов", "ui_label": "26M", "block": "Для вас"},
+    {"app_id": null, "title": "Аватария", "ui_label": "18M", "block": "Для вас"},
+    {"app_id": null, "title": "Любовь 💘", "ui_label": "17M", "block": "Популярные"},
+    {"app_id": null, "title": "Дурак [онлайн]", "ui_label": "13M", "block": "Для вас"},
+    {"app_id": null, "title": "Метро: Война кланов", "ui_label": "9M", "block": "Популярные"},
+    {"app_id": null, "title": "Монеточка", "ui_label": "6M", "block": "Для вас"},
+    {"app_id": 1895587, "title": null, "ui_label": "5M", "block": "catalog card"},
+    {"app_id": null, "title": "Ёжики", "ui_label": "2M", "block": "Для вас"},
+    {"app_id": 4241302, "title": null, "ui_label": "2M", "block": "catalog card"},
+    {"app_id": 5648811, "title": null, "ui_label": "1M", "block": "Общение"},
+    {"app_id": 52438621, "title": "Тайна Особняка", "ui_label": "750K", "block": "Для вас"},
+    {"app_id": 52238050, "title": null, "ui_label": "560K", "block": "Гонки"},
+    {"app_id": 53466657, "title": null, "ui_label": "240K", "block": "Набирают популярность"},
+    {"app_id": 54236952, "title": null, "ui_label": "160K", "block": "Набирают популярность"},
+    {"app_id": 53321885, "title": null, "ui_label": "110K", "block": "Набирают популярность"},
+    {"app_id": 52914976, "title": null, "ui_label": "63K", "block": "Набирают популярность"},
+    {"app_id": 53825760, "title": null, "ui_label": "52K", "block": "Набирают популярность"},
+    {"app_id": 53543089, "title": null, "ui_label": "18K", "block": "Набирают популярность"},
+    {"app_id": 53629016, "title": null, "ui_label": "10K", "block": "Гонки"},
+    {"app_id": 54716044, "title": null, "ui_label": "6K", "block": "Новинки"},
+    {"app_id": 54754375, "title": null, "ui_label": "4K", "block": "Новинки"},
+    {"app_id": 54716610, "title": null, "ui_label": "1K", "block": "Новинки"}
+  ]
+}
