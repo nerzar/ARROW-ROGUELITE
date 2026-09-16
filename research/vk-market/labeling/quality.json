@@ -1,0 +1,59 @@
+{
+  "sample_n": 100,
+  "agreement": {
+    "primary_mechanic": {
+      "n": 100,
+      "agree": 100,
+      "rate": 1.0
+    },
+    "primary_theme": {
+      "n": 100,
+      "agree": 100,
+      "rate": 1.0
+    },
+    "combat": {
+      "n": 100,
+      "agree": 100,
+      "rate": 1.0
+    },
+    "roguelite": {
+      "n": 100,
+      "agree": 100,
+      "rate": 1.0
+    },
+    "arrow_tapaway": {
+      "n": 100,
+      "agree": 100,
+      "rate": 1.0
+    }
+  },
+  "thresholds": {
+    "primary_mechanic_min": 0.9,
+    "arrow_tapaway_min": 0.95
+  },
+  "thresholds_pass": true,
+  "arrow_tapaway_yes_review": [
+    {
+      "app_id": "54335423",
+      "main": "yes",
+      "repeat": "yes",
+      "main_mechanic": "arrow_tapaway",
+      "repeat_mechanic": "arrow_tapaway"
+    },
+    {
+      "app_id": "54706915",
+      "main": "yes",
+      "repeat": "yes",
+      "main_mechanic": "arrow_tapaway",
+      "repeat_mechanic": "arrow_tapaway"
+    },
+    {
+      "app_id": "54732019",
+      "main": "yes",
+      "repeat": "yes",
+      "main_mechanic": "arrow_tapaway",
+      "repeat_mechanic": "arrow_tapaway"
+    }
+  ],
+  "repeat_source": "C:\\Users\\nerza\\Projects\\ARROW-ROGUELITE\\artifacts\\vk-labeling\\repeat\\labels_repeat.csv"
+}
