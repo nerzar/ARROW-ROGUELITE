@@ -6,15 +6,17 @@
 
 | Task | Кто делает | Статус | Ветка |
 |---|---|---|---|
-| EXP-002 — локальная аналитика + taxonomy рынка VK | Claude Opus | DONE — ждёт решения пользователя | `exp/EXP-002-market-analytics-taxonomy` |
+| EXP-004 — массовая разметка рынка под Magic Arrow | Muse Spark 1.3 | READY | `exp/EXP-004-magic-arrow-market-labeling` |
 
 ## Дальше
 
 | Task | Кому лучше отдать | От чего зависит |
 |---|---|---|
-| EXP-003 — разбор 2–4 Arrow/Tap Away референсов | Claude Sonnet или Opus | shortlist после EXP-002 |
-| EXP-004 — массовая разметка рынка | Claude Sonnet + Opus review | принять EXP-002 + утвердить taxonomy A1/A2/A3 |
-| EXP-005 — демография официальных сообществ shortlist | Claude Opus | shortlist + утверждённая методика выборки |
+| EXP-003 — ручной/визуальный разбор ближайших Arrow/Tap Away референсов | Gemini Flash 3.8, когда освободится от Drawer | shortlist из EXP-004 |
+| EXP-005 — демография официальных сообществ shortlist | отдельный исследовательский агент / Claude при свободных лимитах | shortlist из EXP-004 |
+| EXP-006 — итоговая коммерческая карта: Magic Arrow + 2–3 fallback механики | архитектор + аналитический агент | EXP-004/005 |
+
+Параллельно другой рабочий трек может разрабатывать Magic Arrow. Исследовательские задачи не должны менять игровые/design документы без отдельного решения пользователя.
 
 ## Правило
 
