@@ -6,14 +6,14 @@
 
 | Task | Кто делает | Статус | Ветка |
 |---|---|---|---|
-| EXP-002 — локальная аналитика + taxonomy рынка VK | Claude Opus | READY | `exp/EXP-002-market-analytics-taxonomy` |
+| EXP-002 — локальная аналитика + taxonomy рынка VK | Claude Opus | DONE — ждёт решения пользователя | `exp/EXP-002-market-analytics-taxonomy` |
 
 ## Дальше
 
 | Task | Кому лучше отдать | От чего зависит |
 |---|---|---|
 | EXP-003 — разбор 2–4 Arrow/Tap Away референсов | Claude Sonnet или Opus | shortlist после EXP-002 |
-| EXP-004 — массовая тематическая разметка выбранного корпуса | Claude Sonnet / Muse Spark 1.3 | taxonomy + candidate set из EXP-002 |
+| EXP-004 — массовая разметка рынка | Claude Sonnet + Opus review | принять EXP-002 + утвердить taxonomy A1/A2/A3 |
 | EXP-005 — демография официальных сообществ shortlist | Claude Opus | shortlist + утверждённая методика выборки |
 
 ## Правило
