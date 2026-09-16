@@ -1,13 +1,13 @@
 # TASK: EXP-004 — массовая разметка рынка под Magic Arrow
 
-STATUS: READY
+STATUS: DONE
 TYPE: EXP
 SIZE: L
 AGENT: Muse Spark 1.3
 BASE_BRANCH: main
 BRANCH: exp/EXP-004-magic-arrow-market-labeling
 START_SHA: 94aca1411204fc802645bf9cd88b00c1ab05015c
-RESULT_SHA:
+RESULT_SHA: cb51666023dca3eb01d54c531004bf16b059acf7
 
 ## Зачем
 
@@ -212,24 +212,57 @@ EXP-002 принят и влит в main.
 
 ## Готово, если
 
-- [ ] corpus воспроизводим и размер объяснён;
-- [ ] все строки corpus получили label или явный error/unknown;
-- [ ] checkpoint/resume работает;
-- [ ] schema validation PASS;
-- [ ] blind repeat quality check выполнен;
-- [ ] `arrow_tapaway=yes` проверены отдельно;
-- [ ] построены Magic Arrow neighbors;
-- [ ] построена сравнительная таблица mechanics;
-- [ ] факты отделены от inference/unknown;
-- [ ] secret scan PASS;
-- [ ] нет изменений design/game файлов.
+- [x] corpus воспроизводим и размер объяснён;
+- [x] все строки corpus получили label или явный error/unknown;
+- [x] checkpoint/resume работает;
+- [x] schema validation PASS;
+- [x] blind repeat quality check выполнен;
+- [x] `arrow_tapaway=yes` проверены отдельно;
+- [x] построены Magic Arrow neighbors;
+- [x] построена сравнительная таблица mechanics;
+- [x] факты отделены от inference/unknown;
+- [x] secret scan PASS;
+- [x] нет изменений design/game файлов.
 
 ## Финал
 
 Заполнить `RESULT`, `VERIFY`, `FOUND`, поставить `STATUS: DONE` или `BLOCKED`, записать `RESULT_SHA`, commit + push этой же ветки. Не merge в main. Остановиться.
 
-RESULT:
+RESULT: корпус 1665 (union A–E 1465 + control 200, seed=42); размечено 1665/1665
+(67 чанков, semantic labeling моделью, unknown без подтверждения).
+QC: schema PASS; blind repeat 100 строк — agreement 100% по primary_mechanic,
+primary_theme, combat, roguelite, arrow_tapaway (пороги 90%/95% пройдены);
+35 arrow_tapaway=yes проверены отдельно + keyword-recall (167 хитов) без пропусков;
+control 100 строк — пропущенных механик нет.
+Аналитика DuckDB: arrow_tapaway=35, все combat=none и roguelite=no;
+external_targets=1, mobs/bosses/run_upgrades=0; projectile_continues=25,
+direction=33, rotation=7. Overlap≥2: 53 игры (34 arrow + 19 других).
+Крупнейшие arrow: 54579291 (91709), 51871737 (88702, find из control),
+54579195 (72211). 28/35 свежие ≤365d; свежих ≥100k нет.
+Формула Magic Arrow (arrow + внешние цели/мобы + roguelite) в корпусе
+по описаниям не встречается ни разу. Таблица mechanics — в mechanic-market.csv.
+STATUS: DONE.
 
 VERIFY:
+- `python -m tools.vk_labeling validate` → SCHEMA VALIDATION: PASS
+  (1665 строк, 0 missing, 0 extra).
+- `python -m tools.vk_labeling quality` → QUALITY: PASS
+  (sample 100, seed=1234; agreement 100% mechanic / 100% arrow).
+- `python -m tools.vk_labeling analytics` → neighbors 53, mechanics 16.
+- START_SHA 94aca1411204fc802645bf9cd88b00c1ab05015c — предок HEAD (проверено
+  через merge-base); ветка exp/EXP-004-magic-arrow-market-labeling, без rebase.
+- secret scan: 0 секретов в коммитящихся файлах (1 ложное срабатывание слова
+  «secrets» в отчёте); chunks/descriptions/DuckDB/checkpoints не коммитятся
+  (artifacts/ в .gitignore); max evidence 75 символов.
+- `git diff --stat` по трекаемым файлам: только task-файл; game/design не тронуты.
 
 FOUND:
+- Keyword retrieval EXP-002 пропустил 51871737 «Разбери Кубик» (2-е место среди
+  arrow по members=88702): в title/description нет слова «стрел» —
+  найден только через control/ranks. Кандидат для EXP-003 shortlist.
+- Починены по ходу 3 бага собственных инструментов: путь upsert (писал мимо
+  репозитория), `con.description` после fetchall в analytics
+  (переход на rel.columns), dispatch quality (`argv2 or None`).
+  Сдвиги колонок в ранних чанках (24 строки) выявлены через validate
+  и исправлены поименно; опечатки 4 app_id исправлены.
+- donors.md в корне — чужой untracked-файл, не трогал и не коммитил.
