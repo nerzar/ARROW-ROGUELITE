@@ -6,7 +6,7 @@ SIZE: L
 AGENT: Claude Opus
 BASE_BRANCH: main
 BRANCH: build/BUILD-001-vk-market-collector
-START_SHA: a588cb3b57a5c6fe0b300d6b2ae72bf195238ed2
+START_SHA: 3605f86a4f5a4836a0bc5f71540964be7a24c90f
 RESULT_SHA:
 
 ## Что нужно сделать
