@@ -17,6 +17,12 @@ npm run gen -- --preset hard --seed 42     # ASCII + метрики одного
 npm run bench -- --count 10000             # отчёт в bench-results/latest.json
 npm run cli -- verify level.json           # проверить уровень из файла
 npm run viewer                             # http://localhost:5177/viewer/#preset=medium&seed=1
+
+# EXP-008: prologue mini-boss (см. EXP-008-REPORT.md)
+npm run cli -- analyze --preset medium --seed 2908          # seed analyzer
+npm run cli -- shortlist --count 3000                       # encounters/shortlist.json
+npm run cli -- encounter encounters/prologue-miniboss.json  # validator
+# viewer: http://localhost:5177/viewer/encounter.html
 ```
 
 Node ≥ 20.

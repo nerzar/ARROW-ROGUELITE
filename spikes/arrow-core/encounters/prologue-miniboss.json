@@ -1,0 +1,22 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "medium",
+    "seed": 2908,
+    "levelHash": "8788e588"
+  },
+  "encounter": {
+    "id": "prologue_miniboss_provisional",
+    "title": "Prologue mini-boss — PROVISIONAL (shortlist #1, seed 2908)",
+    "notes": "EXP-008 demo only, not chosen by the user. Phase 1: boss on the right, 4 of 9 E arrows are free at start. Phase 2: boss moves up; the board has a single N arrow for 5 hp, so the fight is provably lost without Rotate (max 5/9). Rotate cw turns 8 W arrows to N, ccw turns the remaining E arrows to N; both win.",
+    "boss": {
+      "id": "miniboss_placeholder",
+      "phases": [
+        { "side": "E", "hpUnits": 4, "label": "familiar side (→)" },
+        { "side": "N", "hpUnits": 5, "grantRotate": 1, "label": "moves up: few ↑ arrows, Rotate granted" }
+      ]
+    },
+    "rotate": { "allow": ["cw", "ccw"] }
+  }
+}

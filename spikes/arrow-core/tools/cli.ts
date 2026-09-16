@@ -1,16 +1,23 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { performance } from 'node:perf_hooks'
+import { scanShortlist } from './shortlist.js'
 import {
+  analyzeSeed,
   BoardTopology,
   computeMetrics,
   type DifficultyMetrics,
   DIR_NAMES,
+  encounterFromJson,
+  encounterToJson,
+  formatEncounterReport,
+  formatSeedAnalysis,
   generateLevel,
   type GeneratorParams,
   hashString,
   type Level,
   levelFromJson,
+  type Dir,
   levelHash,
   levelToJson,
   PRESET_NAMES,
@@ -18,6 +25,7 @@ import {
   type PresetName,
   replayOrder,
   solveBoard,
+  validateEncounter,
   verifyLevel,
 } from '../src/index.js'
 
@@ -25,6 +33,12 @@ const HELP = `arrow-core spike CLI
 
   gen    --preset <name> --seed <n|text> [--json] [--out file]
   verify <level.json>
+  analyze --preset <name> --seed <n> [--json] [--out file]
+         seed analyzer: arrows / initial free by N E S W, direction sequence, per-step dirs, branch points
+  encounter <encounter.json> [--budget 2000000] [--json]
+         validator: win? win without Rotate? win with <= k Rotate? example winning sequence
+  shortlist [--preset medium] [--start 1] [--count 3000] [--side1 E] [--side2 N]
+         [--min-arrows 12] [--max-arrows 24] [--top 10] [--out encounters/shortlist.json]
   bench  [--count 10000] [--presets tiny,easy,medium,hard,expert] [--seed 1]
          [--extra huge:500,xl:100,strict:1000|none] [--out bench-results/latest.json]
 
@@ -106,6 +120,109 @@ function cmdVerify(pos: string[]): void {
   const solved = solveBoard(level)
   console.log({ file, hash: levelHash(level), errors, solverSolvable: solved.solvable, stuck: solved.stuck })
   if (errors.length > 0 || !solved.solvable) process.exitCode = 1
+}
+
+function cmdAnalyze(opt: Record<string, string>): void {
+  const presetName = opt.preset ?? 'medium'
+  const seed = parseSeed(opt.seed, 1)
+  const res = generateLevel(preset(presetName), seed)
+  if (!res.ok || !res.level) throw new Error(`preset ${presetName} seed ${seed}: generation failed`)
+  const a = analyzeSeed(res.level)
+  if (opt.out) {
+    mkdirSync(dirname(opt.out), { recursive: true })
+    writeFileSync(opt.out, JSON.stringify({ preset: presetName, levelHash: levelHash(res.level), analysis: a }, null, 2))
+  }
+  if (opt.json) {
+    console.log(JSON.stringify({ preset: presetName, levelHash: levelHash(res.level), analysis: a }))
+    return
+  }
+  console.log(renderAscii(res.level))
+  console.log(`
+preset ${presetName}  hash ${levelHash(res.level)}  (ASCII label = step in stored solution)`)
+  console.log(formatSeedAnalysis(a))
+}
+
+function cmdEncounter(pos: string[], opt: Record<string, string>): void {
+  const file = pos[0]
+  if (!file) throw new Error('encounter <encounter.json>')
+  const { file: enc, level } = encounterFromJson(JSON.parse(readFileSync(file, 'utf8')))
+  const t0 = performance.now()
+  const report = validateEncounter(level, enc.encounter, { nodeBudget: Number(opt.budget ?? 2_000_000) })
+  const ms = performance.now() - t0
+  if (opt.json) {
+    console.log(JSON.stringify({ file, board: enc.board, report }))
+    return
+  }
+  console.log(renderAscii(level))
+  console.log(`
+${file}: ${enc.encounter.title ?? enc.encounter.id}  board ${enc.board.preset} seed ${enc.board.seed} hash ${enc.board.levelHash}`)
+  console.log(`rotate allow: ${enc.encounter.rotate.allow.map((t) => (t === 1 ? 'cw' : 'ccw')).join(', ')}   validated in ${ms.toFixed(1)} ms
+`)
+  console.log(formatEncounterReport(report))
+  if (!report.win.win || !report.win.proven || !report.winWithoutRotate.proven) process.exitCode = 1
+}
+
+const sideOf = (s: string | undefined, fallback: Dir): Dir => {
+  if (s === undefined) return fallback
+  const d = DIR_NAMES.indexOf(s.toUpperCase())
+  if (d < 0) throw new Error(`bad side ${s}`)
+  return d as Dir
+}
+
+function cmdShortlist(opt: Record<string, string>): void {
+  const presetName = opt.preset ?? 'medium'
+  preset(presetName)
+  const o = {
+    preset: presetName as PresetName,
+    start: parseSeed(opt.start, 1),
+    count: Number(opt.count ?? 3000),
+    side1: sideOf(opt.side1, 1),
+    side2: sideOf(opt.side2, 0),
+    minArrows: Number(opt['min-arrows'] ?? 12),
+    maxArrows: Number(opt['max-arrows'] ?? 24),
+    top: Number(opt.top ?? 10),
+  }
+  const t0 = performance.now()
+  const res = scanShortlist(o, (i) => process.stderr.write(`
+scanned ${i}/${o.count}`))
+  const sec = (performance.now() - t0) / 1000
+  process.stderr.write(`
+scanned ${o.count}/${o.count} in ${sec.toFixed(1)}s
+`)
+  const out = opt.out ?? 'encounters/shortlist.json'
+  mkdirSync(dirname(out), { recursive: true })
+  writeFileSync(
+    out,
+    JSON.stringify(
+      {
+        generatedBy: 'npm run cli -- shortlist',
+        options: { ...o, side1: DIR_NAMES[o.side1], side2: DIR_NAMES[o.side2] },
+        scanned: res.scanned,
+        passed: res.passed,
+        candidates: res.candidates.map((c) => ({ ...c, file: encounterToJson(c.file) })),
+      },
+      null,
+      2,
+    ),
+  )
+  console.log(
+    `${presetName} seeds ${o.start}..${o.start + o.count - 1}: ${res.passed} boards pass ` +
+      `"win with 1 Rotate, no win without" for ${DIR_NAMES[o.side1]} -> ${DIR_NAMES[o.side2]}
+`,
+  )
+  const side2 = DIR_NAMES[o.side2]
+  console.log(`| rank | seed | score | arrows | N/E/S/W | free0 N/E/S/W | hp | no-Rotate max | ${side2}-facing at ph.2 | after Rotate | cw / ccw wins | greedy win | sloppy ph.1 ok |`)
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|')
+  for (const c of res.candidates) {
+    console.log(
+      `| ${c.rank} | ${c.seed} | ${c.score} | ${c.arrows} | ${c.dirCounts.join('/')} | ${c.initialFree.join('/')} | ` +
+        `${c.hp[0]}+${c.hp[1]} | ${c.maxHitsWithoutRotate}/${c.hp[0] + c.hp[1]} | ${c.onSideAtPhase2} | ${c.rotateSupplyAtPhase2} | ` +
+        `${Object.values(c.turnWin).map((v) => `${Math.round(v * 100)}%`).join(' / ')} | ` +
+        `${Math.round(c.greedyWin * 100)}% | ${Math.round(c.sloppyWinnable * 100)}% |`,
+    )
+  }
+  console.log(`
+json: ${out}`)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -346,6 +463,9 @@ try {
   if (cmd === 'gen') cmdGen(opt)
   else if (cmd === 'verify') cmdVerify(pos)
   else if (cmd === 'bench') cmdBench(opt)
+  else if (cmd === 'analyze') cmdAnalyze(opt)
+  else if (cmd === 'encounter') cmdEncounter(pos, opt)
+  else if (cmd === 'shortlist') cmdShortlist(opt)
   else console.log(HELP)
 } catch (e) {
   console.error((e as Error).message)

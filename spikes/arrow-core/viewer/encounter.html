@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini-boss debug viewer</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f4f4f2; --fg: #1d1d1b; --muted: #777; --panel: #fff; --line: #ccc; --good: #1a7f37; --bad: #c62828; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #19191b; --fg: #e8e8e6; --muted: #999; --panel: #242427; --line: #444; --good: #5cc475; --bad: #ef6b6b; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header label { display: inline-flex; gap: 4px; align-items: center; }
+  header a { color: inherit; }
+  select { max-width: 100%; }
+  input[type=number] { width: 70px; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #wrap { background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; padding: 8px; }
+  canvas { max-width: 100%; touch-action: manipulation; }
+  aside { background: var(--panel); border: 1px solid var(--line); padding: 10px; overflow: auto; }
+  pre { margin: 0; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
+  .row { display: flex; gap: 6px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  button { padding: 5px 10px; font: inherit; }
+  button.big { font-size: 15px; padding: 8px 14px; }
+  #msg { min-height: 1.6em; font-weight: 600; font-size: 14px; }
+  .muted { color: var(--muted); }
+  .good { color: var(--good); }
+  .bad { color: var(--bad); }
+  h3 { margin: 12px 0 4px; font-size: 13px; }
+  details summary { cursor: pointer; margin: 8px 0 4px; font-weight: 600; }
+  fieldset { border: 1px solid var(--line); margin: 8px 0 0; padding: 6px 8px; }
+</style>
+</head>
+<body>
+<header>
+  <strong>Mini-boss</strong>
+  <label>encounter <select id="pick"></select></label>
+  <label><input id="colorDirs" type="checkbox"> цвет по стороне арены</label>
+  <label><input id="showSteps" type="checkbox"> id стрелок</label>
+  <label><input id="liveCheck" type="checkbox" checked> проверять достижимость победы</label>
+  <a href="./">seed viewer</a>
+</header>
+<main>
+  <div>
+    <div class="row">
+      <button id="rotCcw" class="big" title="Q">⟲ Rotate ccw</button>
+      <button id="rotCw" class="big" title="E">Rotate cw ⟳</button>
+      <button id="undo" title="Z / Backspace">undo</button>
+      <button id="reset" title="R">reset</button>
+      <button id="hint" title="H">hint</button>
+      <span id="charges" class="muted"></span>
+    </div>
+    <div id="wrap"><canvas id="arena"></canvas></div>
+    <div id="msg"></div>
+    <div class="muted">Клик по стрелке — выпустить её. Стрелка летит в сторону арены, куда смотрит сейчас (с учётом поворота доски), и бьёт босса, если он на этой стороне. 1 попадание = 1 hit-unit. Rotate выдаётся, когда босс меняет сторону. Клавиши: Q/E — Rotate, Z — undo, R — reset, H — hint.</div>
+  </div>
+  <aside>
+    <pre id="status"></pre>
+    <h3>Ходы</h3>
+    <pre id="log"></pre>
+    <details>
+      <summary>Ручная сборка encounter (любой seed)</summary>
+      <fieldset>
+        <div class="row">
+          <label>preset <select id="cPreset"></select></label>
+          <label>seed <input id="cSeed" type="number" min="0" step="1"></label>
+        </div>
+        <div class="row">
+          <label>фаза 1 <select id="cSide1"></select></label>
+          <label>hp <input id="cHp1" type="number" min="1" step="1"></label>
+        </div>
+        <div class="row">
+          <label>фаза 2 <select id="cSide2"></select></label>
+          <label>hp <input id="cHp2" type="number" min="1" step="1"></label>
+          <label>Rotate <input id="cRot" type="number" min="0" step="1"></label>
+        </div>
+        <div class="row">
+          <label><input id="cCw" type="checkbox" checked> cw</label>
+          <label><input id="cCcw" type="checkbox" checked> ccw</label>
+          <button id="cApply">применить</button>
+        </div>
+      </fieldset>
+    </details>
+    <details open>
+      <summary>Validator (от старта)</summary>
+      <pre id="report"></pre>
+    </details>
+    <details>
+      <summary>Seed analyzer</summary>
+      <pre id="analysis"></pre>
+    </details>
+  </aside>
+</main>
+<script type="module" src="./encounter.js"></script>
+</body>
+</html>

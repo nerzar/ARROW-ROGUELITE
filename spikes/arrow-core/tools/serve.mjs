@@ -6,7 +6,7 @@ import { extname, join, normalize, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const port = Number(process.env.PORT ?? 5177)
+const port = Number(process.env.PORT ?? process.argv[2] ?? 5177)
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.map': 'application/json', '.json': 'application/json', '.css': 'text/css' }
 
 createServer(async (req, res) => {
@@ -29,5 +29,6 @@ createServer(async (req, res) => {
     res.writeHead(404).end('not found')
   }
 }).listen(port, '127.0.0.1', () => {
-  console.log(`arrow-core viewer: http://localhost:${port}/viewer/#preset=medium&seed=1`)
+  console.log(`arrow-core viewer: http://localhost:${port}/viewer/#preset=medium&seed=1
+ mini-boss:         http://localhost:${port}/viewer/encounter.html`)
 })
