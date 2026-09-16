@@ -1,13 +1,13 @@
 # TASK: EXP-002 — локальная аналитика + taxonomy рынка VK
 
-STATUS: READY
+STATUS: DONE
 TYPE: EXP
 SIZE: L
 AGENT: Claude Opus
 BASE_BRANCH: main
 BRANCH: exp/EXP-002-market-analytics-taxonomy
 START_SHA: 267d404c80e1da0d61e2a0f7489a66afafd602de
-RESULT_SHA:
+RESULT_SHA: f6fddcb548b5e24db532275b787d7d0a74ffa4f4
 
 ## Что нужно сделать
 
@@ -162,15 +162,15 @@ BUILD-001 принят. Доступно:
 
 ## Готово, если
 
-- [ ] DuckDB/Parquet эксперимент воспроизводим и не тащит binary data в Git;
-- [ ] есть рекомендация, нужен ли такой слой дальше;
-- [ ] есть базовые статистики рынка из первого snapshot;
-- [ ] есть `taxonomy-v0.md` с правилами и неоднозначностями;
-- [ ] есть широкий `candidate-set.csv` / аналог с причиной попадания;
-- [ ] проверен recall на случайной negative sample;
-- [ ] есть план массовой LLM-разметки без попытки скормить 4 985 игр одной сессии;
-- [ ] нет продуктового решения о теме/аудитории Magic Arrow;
-- [ ] нет секретов и user-level данных.
+- [x] DuckDB/Parquet эксперимент воспроизводим и не тащит binary data в Git;
+- [x] есть рекомендация, нужен ли такой слой дальше;
+- [x] есть базовые статистики рынка из первого snapshot;
+- [x] есть `taxonomy-v0.md` с правилами и неоднозначностями;
+- [x] есть широкий `candidate-set.csv` / аналог с причиной попадания;
+- [x] проверен recall на случайной negative sample;
+- [x] есть план массовой LLM-разметки без попытки скормить 4 985 игр одной сессии;
+- [x] нет продуктового решения о теме/аудитории Magic Arrow;
+- [x] нет секретов и user-level данных.
 
 ## Коммитимые результаты
 
@@ -206,9 +206,29 @@ BUILD-001 принят. Доступно:
 ## Итог
 
 RESULT:
+- `tools/vk_analytics/` (`python -m tools.vk_analytics build|baseline|candidates|audit`): пересобираемая локальная `artifacts/vk-analytics/magic-arrow.duckdb` + `parquet/*.parquet` из snapshot `apps.csv`/`rankings.csv` и локального `apps_full.csv`; `analysis.sql` (14 именованных запросов); keyword/genre retrieval; seeded выборка для аудита.
+- `research/vk-market/analysis/`: `EXP-002-REPORT.md`, `market-baseline.json`, `taxonomy-v0.md`, `candidate-set.csv` (2 681 строк `(bucket, app_id)`, 1 646 уникальных приложений; в 10 обязательных bucket — 1 185), `recall-audit.csv` (267 строк с вердиктами).
+- Рекомендация (не решение): CSV в Git как канонический формат + DuckDB локально как пересобираемый кеш; Parquet отдельным слоем пока не нужен — пересмотреть при нескольких snapshot или таблице LLM-разметки.
+- Размеры: CSV 21.99 MB → Parquet с теми же колонками 6.81 MB, рабочие таблицы 3.25 MB, DuckDB-файл 6.04 MB. Сборка ~0.3 с.
+- Baseline: Puzzle 25.5% каталога и 29% игр за 365 дней, но в top100 popular_week/popular_today/growth_rate lift ≈ 0.75–0.79; top100 popular_week крупные и старые (median members 838k, возраст ~7 лет), growth_rate/popular_today слабо связаны с members (Spearman 0.19/0.17); official community у 83.8%.
+- Buckets (всего / strong): arrow 95/34, sort 168/149, screw 35/35, bubble 91/84, merge 302/247, match3 372/221, puzzle+combat/roguelite 176/115, magic/fantasy 204/171, romance/love 38/30, treasure/adventure 212/109.
+- Аудит: negative 80 puzzle-жанр → 1 явный промах (исправлен) + 3 пограничных; 40 прочих жанров → 0; 60 theme negative → 0. Positive: mechanic strong 30 TP / 3 FP / 3 unclear; weak 3/11/1; theme strong 14/7/3; weak 4/7/1.
+- Схема массовой LLM-разметки: в отчёте, раздел E (весь корпус batch по 20, JSON schema, needs_review, gold set ~250 игр вслепую Opus-ом, стратифицированные precision/recall).
 
 VERIFY:
+1. `rm -rf artifacts/vk-analytics && python -m tools.vk_analytics build` → `ok: true`; apps 4 985 (уникальных 4 985), rankings 29 852, app_text 4 985; id/title расхождений 0, id рейтинга вне apps 0.
+2. `baseline` 3 раза подряд и после пересборки с нуля — одинаковый md5 (`1b26a718…`); после добавления tiebreak в ORDER BY. `candidates` после пересборки байт в байт совпадает.
+3. Row counts совпадают с BUILD-001 (4 985 / 29 852).
+4. Parquet против CSV: 6.81 MB против 21.99 MB (те же колонки); regex по описаниям 51 ms против 208 ms.
+5. candidate-set: дублей `(bucket, app_id)` 0, `app_id` вне snapshot 0.
+6. Ручной аудит positive и negative — `recall-audit.csv`, итоги в отчёте, раздел D.
+7. `python -m tools.vk_market scan tools/vk_analytics research/vk-market/analysis` → SECRET SCAN: PASS. В коммите только текст (11 файлов, ~0.7 MB); `.duckdb`/`.parquet` лежат под игнорируемым `artifacts/`; `.gitignore` не менялся.
 
 FOUND:
+- Решения пользователя до массовой разметки: taxonomy A1 (гайки по болтам: sort или screw), A2 (zuma), A3 (collapse/blast).
+- В каталоге есть не-игры и служебные приложения: «VK Game Test Tool» (#5 growth_rate), жанр Communication (флирт и знакомства) лидирует по lift в popular-выдачах. Для игровых сравнений их стоит фильтровать отдельным правилом.
+- Многие описания содержат SEO-списки жанров («если вам нравятся: сортировка, 2048…») — keyword-методы на них ошибаются.
+- Python-клиент DuckDB без пакета `pytz` не отдаёт `TIMESTAMPTZ`; в коде время приводится к `TIMESTAMP`/`VARCHAR`.
+- Аудит проведён на правилах до исправления merge-паттерна (+4 строки merge); повторный запуск `audit --seed 2` даст немного другую выборку.
 
 После завершения: `STATUS: DONE`, `RESULT_SHA`, commit, push task-ветки, остановиться. Не merge в `main`.
