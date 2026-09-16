@@ -1,0 +1,27 @@
+{
+  "utils.getServerTime": {
+    "service_token": "PASS",
+    "error_code": null,
+    "notes": ""
+  },
+  "apps.getCatalog": {
+    "service_token": "PASS",
+    "error_code": null,
+    "notes": ""
+  },
+  "apps.get": {
+    "service_token": "PASS",
+    "error_code": null,
+    "notes": ""
+  },
+  "users.get": {
+    "service_token": "PASS",
+    "error_code": null,
+    "notes": ""
+  },
+  "groups.getMembers": {
+    "service_token": "PASS",
+    "error_code": null,
+    "notes": "group_id source: apps.get author_owner_id == groups[0].id, is_closed=0"
+  }
+}
