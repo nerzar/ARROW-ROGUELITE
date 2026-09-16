@@ -74,3 +74,9 @@ STATUS: FACT / DESIGN GUARDRAIL
 
 Суть: актуальная проверка 16.09.2026 нашла Arrow Crypt (arrow puzzle + roguelite/runes/bosses), arrow puzzle spiral defense (arrow combat + bosses), Arrow Escape (deflectors/ice/locks/portals) и snake-like arrow animation в Arrows Tap Away. Ricochet распространён в Archero. Рабочий differentiator Magic Arrow ищем в связке directional puzzle + реальные projectile за пределами поля + внешние цели по сторонам + rotation + boss-driven transformations.
 Источник: публичные страницы Google Play/референсов, проверка 16.09.2026.
+
+### N-013 — Направление раскрывается на mini-boss пролога
+STATUS: AGREED FOR NOW
+
+Суть: первые 3 коротких encounter пролога используют одну активную сторону и поочерёдно учат Tap Away, projectile и hit budget. **Направление не должно становиться отдельным ресурсом раньше времени.** На mini-boss в конце пролога цель впервые меняет сторону/уязвимый сектор; игрок сталкивается с нехваткой стрел нужного направления и там же впервые получает Rotate. После победы Rotate становится частью run-kit, а полноценный Act I уже строится вокруг multi-side combat.
+Подтвердил: USER — «направление становится ресурсом на первом мини боссе / боссе... конец пролога минибосс..и на нем уже дают возможность повертеться».
