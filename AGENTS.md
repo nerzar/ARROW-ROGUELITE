@@ -9,6 +9,8 @@
 
 Если задача касается game design, gameplay, puzzle core, combat, контента, progression, monetization, renderer или игровой архитектуры — дополнительно прочитай `docs/GAME-CONCEPT.md`.
 
+Если задача затрагивает бой, HP игрока, врагов, enemy timers, interrupt, deadlines, blocked taps или условия победы encounter — дополнительно прочитай `docs/COMBAT-RULES.md`.
+
 Подробные design-документы (`FIRST-RUN-HYPOTHESIS.md`, `CONTENT-SYSTEM.md`, `DESIGN-HYPOTHESES.md`) читай только если они нужны для конкретной задачи или task-файл прямо на них ссылается. Не перечитывай весь research без необходимости.
 
 Выполни только назначенную задачу.
