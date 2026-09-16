@@ -1,0 +1,23 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "medium",
+    "seed": 1571,
+    "levelHash": "60b50974"
+  },
+  "encounter": {
+    "id": "cp_e5",
+    "title": "Combat pressure 5 — mini-boss (seed 1571)",
+    "boss": {
+      "id": "miniboss_placeholder",
+      "phases": [
+        { "side": "E", "hpUnits": 4, "attackTimer": { "interval": 6, "damage": 1 }, "label": "familiar side" },
+        { "side": "N", "hpUnits": 5, "grantRotate": 1, "attackTimer": { "interval": 3, "damage": 1 }, "label": "moved: direction becomes a resource, fresh attack window" }
+      ]
+    },
+    "rotate": { "allow": ["cw", "ccw"], "advancesTurn": false },
+    "blockedTapDamage": 1,
+    "notes": "EXP-010 provisional, not user-approved. Same board/phases/seed as EXP-009's mini-boss (medium 1571, E 4hp -> N 5hp +1 Rotate), now with player HP and attack timers layered on per docs/COMBAT-RULES.md 10 encounter 5. attackTimer numbers are a first-pass tuning, deliberately gentle in phase 1 (interval 6, dmg 1: 4 phase-1 hits take exactly 4 turns, so 0 unavoidable phase-1 damage) and tighter in phase 2 (interval 3, dmg 1, fresh window on phase change). rotate.advancesTurn=false is Gemini's suggestion (relayed by the user), not a settled design decision -- flip it to see the alternative. Verified (see spikes/arrow-core/EXP-010-REPORT.md) at the entry HP the intended prologue chain actually produces (10 max HP - 6 unavoidable from cp-e4 = 4): under natural (hit-first) phase-1 play, Rotate cw is a dead end that empties the board with the player dead (0 HP) before the boss is finished; Rotate ccw wins with 3 HP to spare. minDamageToWin proves the true minimum unavoidable damage on any winning path is 1. This cw/ccw asymmetry is entry-HP dependent: from ~5+ HP entering, cw stops being fatal (the board still clears alive, which is now also a valid win per docs/COMBAT-RULES.md 8) -- the 'wrong Rotate loses' moment specifically depends on the player having already spent HP earlier in the chain, which is intentional given the chain's numbers, but fragile and worth a human playtest."
+  }
+}

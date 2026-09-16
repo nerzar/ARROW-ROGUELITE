@@ -118,6 +118,47 @@ export function analyzeSeed(level: Level, order: readonly number[] = level.solut
   }
 }
 
+/**
+ * EXP-010: fast, order-dependent timing facts for one side, along the *canonical* (generator)
+ * solve order only — a cheap pre-filter for shortlisting E3/E4-style timed encounters, not a proof.
+ * The real, exhaustive "does a no-damage path exist / what is the minimum unavoidable damage"
+ * question — over every possible play order, with the actual attackTimer wired in — is answered by
+ * `minDamageToWin` in encounter-solver.ts; this only tells a scanner "is this seed even worth trying".
+ */
+export interface TimedSideAnalysis {
+  side: Dir
+  /** Turn (1-based) at which this side first has a free arrow along the analyzed order; -1 if never. */
+  earliestHitTurn: number
+  /** Turns (1-based) at which at least one arrow of this side is free — legal "hit or interrupt" turns. */
+  hitOpportunityTurns: number[]
+  /** Largest gap in turns between one opportunity and the next (or from turn 1 to the first one). */
+  maxGap: number
+  /** Total turns to fully clear the board along the analyzed order (docs/COMBAT-RULES.md 11). */
+  boardClearTurns: number
+  /** Would a countdown of this length always have had a chance to land a hit, along this order? */
+  fitsCountdown(countdown: number): boolean
+}
+
+export function hitTiming(a: SeedAnalysis, side: Dir): TimedSideAnalysis {
+  const hitOpportunityTurns = a.steps.filter((s) => s.freeBefore[side] > 0).map((s) => s.step)
+  const earliestHitTurn = hitOpportunityTurns[0] ?? -1
+  let maxGap = 0
+  if (earliestHitTurn > 0) {
+    maxGap = earliestHitTurn - 1
+    for (let i = 1; i < hitOpportunityTurns.length; i++) {
+      maxGap = Math.max(maxGap, hitOpportunityTurns[i] - hitOpportunityTurns[i - 1])
+    }
+  }
+  return {
+    side,
+    earliestHitTurn,
+    hitOpportunityTurns,
+    maxGap,
+    boardClearTurns: a.steps.length,
+    fitsCountdown: (countdown: number) => earliestHitTurn > 0 && maxGap <= countdown,
+  }
+}
+
 export const fmtDirs = (c: readonly number[]): string => DIR_NAMES.map((n, d) => `${n}${c[d]}`).join(' ')
 
 /** Plain-text report for the CLI. */

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Combat pressure prologue viewer</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f4f4f2; --fg: #1d1d1b; --muted: #777; --panel: #fff; --line: #ccc; --good: #1a7f37; --bad: #c62828; --hp: #c62828; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #19191b; --fg: #e8e8e6; --muted: #999; --panel: #242427; --line: #444; --good: #5cc475; --bad: #ef6b6b; --hp: #ef6b6b; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header label { display: inline-flex; gap: 4px; align-items: center; }
+  header a { color: inherit; }
+  select { max-width: 100%; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #wrap { position: relative; background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; padding: 8px; transition: box-shadow 0.15s ease; }
+  #wrap.hit { box-shadow: inset 0 0 0 6px var(--hp); }
+  canvas { max-width: 100%; touch-action: manipulation; transition: opacity 0.4s ease; }
+  aside { background: var(--panel); border: 1px solid var(--line); padding: 10px; overflow: auto; }
+  pre { margin: 0; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
+  .row { display: flex; gap: 6px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  button { padding: 5px 10px; font: inherit; }
+  button.big { font-size: 15px; padding: 8px 14px; }
+  #msg { min-height: 1.6em; font-weight: 600; font-size: 14px; }
+  .muted { color: var(--muted); }
+  .good { color: var(--good); }
+  .bad { color: var(--bad); }
+  h3 { margin: 12px 0 4px; font-size: 13px; }
+  details summary { cursor: pointer; margin: 8px 0 4px; font-weight: 600; }
+  .steps { display: flex; gap: 4px; }
+  .steps span { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+  .steps span.done { background: var(--good); border-color: var(--good); color: #fff; }
+  .steps span.now { border-color: var(--fg); color: var(--fg); font-weight: 700; }
+  .hp { display: inline-flex; gap: 5px; align-items: center; font-weight: 700; }
+  .hp .pips { display: inline-flex; gap: 2px; }
+  .hp .pip { width: 10px; height: 14px; border: 1px solid var(--hp); border-radius: 2px; }
+  .hp .pip.full { background: var(--hp); }
+  #overlay {
+    position: absolute; inset: 0; display: none; place-items: center; text-align: center;
+    background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(1px);
+  }
+  #overlay.show { display: grid; }
+  #overlay .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 24px; }
+  #overlay .card h2 { margin: 0 0 8px; font-size: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <strong>Combat prologue</strong>
+  <span class="steps" id="steps"></span>
+  <span id="stepTitle" class="muted"></span>
+  <span class="hp">HP <span id="hpText"></span> <span class="pips" id="hpPips"></span></span>
+  <label>seed candidate <select id="pick"></select></label>
+  <button id="restartStep">restart encounter</button>
+  <button id="restartAll">restart prologue</button>
+  <label><input id="liveCheck" checked type="checkbox"> проверять достижимость победы</label>
+  <a href="./prologue.html">gray prologue (EXP-009)</a>
+</header>
+<main>
+  <div>
+    <div class="row">
+      <button id="rotCcw" class="big" title="Q">⟲ Rotate ccw</button>
+      <button id="rotCw" class="big" title="E">Rotate cw ⟳</button>
+      <button id="undo" title="Z / Backspace">undo</button>
+      <button id="hint" title="H">hint</button>
+      <span id="charges" class="muted"></span>
+    </div>
+    <div id="wrap">
+      <canvas id="arena"></canvas>
+      <div id="overlay"><div class="card">
+        <h2 id="overlayTitle"></h2>
+        <div id="overlayBody" class="muted"></div>
+        <div class="row" style="justify-content:center; margin-top:10px">
+          <button id="overlayNext" class="big"></button>
+        </div>
+      </div></div>
+    </div>
+    <div id="msg"></div>
+    <div class="muted">Клик по стрелке — выпустить её. Заблокированная стрелка не тратит ход, но может стоить HP. У врага может быть счётчик ATTACK IN N рядом с ним. Клавиши: Q/E — Rotate, Z — undo, H — hint.</div>
+  </div>
+  <aside>
+    <pre id="status"></pre>
+    <h3>Ходы</h3>
+    <pre id="log"></pre>
+    <details open>
+      <summary>Почему этот seed / provisional numbers</summary>
+      <pre id="why"></pre>
+    </details>
+    <details>
+      <summary>Validator (от старта текущего encounter)</summary>
+      <pre id="report"></pre>
+    </details>
+    <details>
+      <summary>Seed analyzer</summary>
+      <pre id="analysis"></pre>
+    </details>
+  </aside>
+</main>
+<script type="module" src="./cp-prologue.js"></script>
+</body>
+</html>
