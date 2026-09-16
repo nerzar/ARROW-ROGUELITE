@@ -6,7 +6,7 @@ SIZE: L
 AGENT: Claude Opus
 BASE_BRANCH: main
 BRANCH: exp/EXP-002-market-analytics-taxonomy
-START_SHA: TBD after task + board commit
+START_SHA: 267d404c80e1da0d61e2a0f7489a66afafd602de
 RESULT_SHA:
 
 ## Что нужно сделать
@@ -52,7 +52,7 @@ BUILD-001 принят. Доступно:
 Через SQL/DuckDB посчитать как минимум:
 - количество приложений по `genre` / `genre_id`;
 - распределение `members_count`: median / p75 / p90 / p95 / max по жанрам;
-- новые игры по `published_date` (например 30/90/365 дней) и их `members_count`/rank distributions;
+- новые игры по `published_date` (например 30/90/365 дней) и их `members_count`/rank distributions`;
 - top / median показатели по `popular_today`, `popular_week`, `growth_rate`, `create_date`, `popular`, учитывая известную нестабильность глубоких ranks;
 - пересечение жанров с верхними частями growth/popular выдач;
 - долю приложений с official community.
