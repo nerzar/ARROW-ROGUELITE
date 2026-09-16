@@ -11,6 +11,8 @@
 
 Если задача затрагивает бой, HP игрока, врагов, enemy timers, interrupt, deadlines, blocked taps или условия победы encounter — дополнительно прочитай `docs/COMBAT-RULES.md`.
 
+Если задача затрагивает оружие, предметы, relics, numerical tuning, power budget, charges или баланс наград — дополнительно прочитай `docs/BALANCE-SYSTEM.md`.
+
 Подробные design-документы (`FIRST-RUN-HYPOTHESIS.md`, `CONTENT-SYSTEM.md`, `DESIGN-HYPOTHESES.md`) читай только если они нужны для конкретной задачи или task-файл прямо на них ссылается. Не перечитывай весь research без необходимости.
 
 Выполни только назначенную задачу.
