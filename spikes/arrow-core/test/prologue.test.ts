@@ -12,8 +12,8 @@ describe('EXP-009 gray prologue encounters 1-3 (single target, no Rotate)', () =
   ] as const) {
     it(`encounter ${step}: provisional board is winnable and matches its hp`, () => {
       const { file: enc, level } = encounterFromJson(load(file))
-      expect(enc.encounter.boss.phases).toHaveLength(1)
-      expect(enc.encounter.boss.phases[0].hpUnits).toBe(hp)
+      expect(enc.encounter.boss!.phases).toHaveLength(1)
+      expect(enc.encounter.boss!.phases[0].hpUnits).toBe(hp)
       expect(enc.encounter.rotate.allow).toHaveLength(0)
       const r = findWin(EncounterState.fromLevel(level, enc.encounter))
       expect(r).toMatchObject({ win: true, proven: true })
@@ -36,7 +36,7 @@ describe('EXP-009 gray prologue encounter 4 (mini-boss, seed 1571)', () => {
   it('matches the user-chosen board and phases exactly', () => {
     const { file: enc } = encounterFromJson(load('prologue-e4-miniboss.json'))
     expect(enc.board).toMatchObject({ preset: 'medium', seed: 1571 })
-    expect(enc.encounter.boss.phases).toEqual([
+    expect(enc.encounter.boss!.phases).toEqual([
       { side: 1, hpUnits: 4, label: 'familiar side' },
       { side: 0, hpUnits: 5, grantRotate: 1, label: 'moved: direction becomes a resource' },
     ])

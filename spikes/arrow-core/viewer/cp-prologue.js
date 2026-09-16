@@ -32,7 +32,7 @@ const STEPS = [
   { key: 'e1', title: 'Encounter 1 — puzzle-shot', file: '../encounters/cp-e1.json', shortlist: null },
   { key: 'e2', title: 'Encounter 2 — mistakes cost HP', file: '../encounters/cp-e2.json', shortlist: null },
   { key: 'e3', title: 'Encounter 3 — time has a cost', file: '../encounters/cp-e3.json', shortlist: '../encounters/cp-e3-shortlist.json' },
-  { key: 'e4', title: 'Encounter 4 — the same size, harder', file: '../encounters/cp-e4.json', shortlist: '../encounters/cp-e4-shortlist.json' },
+  { key: 'e4', title: 'Encounter 4 — two enemies at once', file: '../encounters/cp-e4.json', shortlist: null },
   { key: 'e5', title: 'Encounter 5 — mini-boss', file: '../encounters/cp-e5.json', shortlist: null },
 ]
 
@@ -92,6 +92,7 @@ let shownAngle = 0
 let rotAnim = null
 let shots = []
 let bossFlash = 0
+let enemyFlash = {} // EXP-010b: per-enemy-id hit-flash timestamp, keyed like def.enemies[i].id
 let geo = null
 let overlayTimer = 0
 
@@ -149,6 +150,7 @@ function renderStepsBar() {
 function resetLocalUi() {
   log = []
   shots = []
+  enemyFlash = {}
   rotAnim = null
   shownAngle = 0
   flash = { blocked: -1, blocker: -1 }
@@ -156,9 +158,14 @@ function resetLocalUi() {
   ui.canvas.style.opacity = '1'
   ui.wrap.classList.remove('hit')
   const s = run.encounter
-  ui.msg.textContent = def.boss.phases.length > 1
-    ? `Босс ${SIDE_RU[s.bossSide]}. Бей стрелками, которые туда смотрят.`
-    : `Цель ${SIDE_RU[s.bossSide]}. Бей стрелками, которые туда смотрят.`
+  if (def.enemies) {
+    const names = s.enemies.map((e) => `${e.label ?? e.id} ${SIDE_RU[e.side]}`).join(', ')
+    ui.msg.textContent = `Враги одновременно: ${names}. У каждого свой таймер атаки — следи за приоритетом.`
+  } else {
+    ui.msg.textContent = def.boss.phases.length > 1
+      ? `Босс ${SIDE_RU[s.bossSide]}. Бей стрелками, которые туда смотрят.`
+      : `Цель ${SIDE_RU[s.bossSide]}. Бей стрелками, которые туда смотрят.`
+  }
   afterAction()
 }
 
@@ -192,10 +199,11 @@ function tap(id) {
     return
   }
   flash = { blocked: -1, blocker: -1 }
-  shots.push({ id, cells: level.arrows[id].cells, dir: local, hit: r.hit, t0: performance.now() })
-  let text = `#${id} ${ARROWS[r.arenaDir]} ${r.hit ? 'попадание' : 'мимо'} · HP цели ${s.hp}/${s.totalHp}`
+  shots.push({ id, cells: level.arrows[id].cells, dir: local, arenaDir: r.arenaDir, hit: r.hit, t0: performance.now() })
+  const attackDetail = r.enemyAttacks && r.enemyAttacks.length ? r.enemyAttacks.map((a) => `${a.id} -${a.damage}`).join(', ') : `-${r.enemyDamage}`
+  let text = `#${id} ${ARROWS[r.arenaDir]} ${r.hit ? 'попадание' : 'мимо'} · HP целей ${s.hp}/${s.totalHp}`
   if (r.enemyAttacked) {
-    text += ` · ВРАГ АТАКУЕТ: -${r.enemyDamage} HP (${r.playerHp})`
+    text += ` · ВРАГ АТАКУЕТ: ${attackDetail} (HP игрока ${r.playerHp})`
     flashHit()
   }
   if (r.interrupted) text += ' · подготовка сбита'
@@ -206,7 +214,7 @@ function tap(id) {
   } else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
   ui.msg.innerHTML = r.playerDead ? `<span class="bad">${text}</span>` : text
   log.push(`${formatAction({ kind: 'tap', id })}  ${DIR_NAMES[local]}→${DIR_NAMES[r.arenaDir]}  ${r.hit ? 'HIT' : 'miss'}  hp ${s.hp}` +
-    (r.enemyAttacked ? `  ENEMY -${r.enemyDamage} (player ${r.playerHp})` : '') +
+    (r.enemyAttacked ? `  ENEMY ${attackDetail} (player ${r.playerHp})` : '') +
     (r.phaseAfter !== r.phaseBefore ? (r.won ? '  WIN' : `  → phase ${r.phaseAfter + 1} (${DIR_NAMES[s.bossSide]})${r.granted ? ` +Rotate ${r.granted}` : ''}`) : ''))
   afterAction()
   if (r.won) scheduleWin()
@@ -351,6 +359,10 @@ function frame(now) {
   for (const sh of shots) if (sh.hit && now - sh.t0 > 220 && !sh.flashed) {
     sh.flashed = true
     bossFlash = now
+    if (def.enemies) {
+      const hitEnemy = s.enemies.find((e) => e.side === sh.arenaDir)
+      if (hitEnemy) enemyFlash[hitEnemy.id] = now
+    }
   }
   if (shots.length) animating = true
   if (now - bossFlash < 220) animating = true
@@ -395,7 +407,8 @@ function render(now = performance.now()) {
   ctx.fillRect(0, 0, g.size, g.size)
 
   drawSides(col, s)
-  drawBoss(col, s, now)
+  if (def.enemies) drawEnemies(col, s, now)
+  else drawBoss(col, s, now)
 
   ctx.save()
   ctx.setTransform(new DOMMatrix().scale(dpr, dpr).multiply(boardMatrix(shownAngle)))
@@ -410,6 +423,10 @@ function render(now = performance.now()) {
   renderPanel()
 }
 
+function isLiveTargetSide(s, d) {
+  return def.enemies ? s.enemies.some((e) => e.side === d && !e.dead) : d === s.bossSide
+}
+
 function drawSides(col, s) {
   const g = geo
   const alive = s.aliveByArenaDir()
@@ -421,14 +438,64 @@ function drawSides(col, s) {
     const r = g.bossR + 1.05 * g.cell
     const x = g.cx + DX[d] * r
     const y = g.cy + DY[d] * r
-    const isBoss = d === s.bossSide
-    ctx.fillStyle = isBoss ? col.text : col.muted
+    ctx.fillStyle = isLiveTargetSide(s, d) ? col.text : col.muted
     const text = `${ARROWS[d]} ${alive[d]} (своб. ${free[d]})`
     ctx.save()
     ctx.translate(x, y)
     if (d === 1 || d === 3) ctx.rotate(d === 1 ? Math.PI / 2 : -Math.PI / 2)
     ctx.fillText(text, 0, 0)
     ctx.restore()
+  }
+}
+
+/** EXP-010b: one box per simultaneous enemy, each at its own arena side, with its own HP pips and
+ * ATTACK IN N — the multi-enemy equivalent of drawBoss's single sequential-phase target. */
+function drawEnemies(col, s, now) {
+  const g = geo
+  for (const en of s.enemies) {
+    const side = en.side
+    const long = Math.min(g.half * 1.1, 3.4 * g.cell)
+    const thick = 1.3 * g.cell
+    const cx = g.cx + DX[side] * g.bossR
+    const cy = g.cy + DY[side] * g.bossR
+    const horizontal = side === 0 || side === 2
+    const bw = horizontal ? long : thick
+    const bh = horizontal ? thick : long
+    const flashT = enemyFlash[en.id] ?? 0
+    const shake = now - flashT < 200 ? Math.sin((now - flashT) / 18) * 3 : 0
+    ctx.save()
+    ctx.translate(cx + (horizontal ? shake : DX[side] * Math.abs(shake)), cy + (horizontal ? DY[side] * Math.abs(shake) : shake))
+    ctx.fillStyle = en.dead ? col.bossDead : now - flashT < 120 ? '#ffffff' : col.boss
+    roundRect(-bw / 2, -bh / 2, bw, bh, 6)
+    ctx.fill()
+    ctx.strokeStyle = col.text
+    ctx.lineWidth = 1.3
+    ctx.stroke()
+    const n = en.hpMax
+    const pip = Math.min((long - 12) / n, g.cell * 0.42)
+    for (let i = 0; i < n; i++) {
+      const t = (i - (n - 1) / 2) * pip
+      const px = horizontal ? t : 0
+      const py = horizontal ? 0 : t
+      ctx.fillStyle = i < en.hp ? (dark() ? '#f2f2f2' : '#1f1f1f') : 'transparent'
+      ctx.strokeStyle = dark() ? '#f2f2f2' : '#1f1f1f'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.rect(px - pip * 0.32, py - pip * 0.32, pip * 0.64, pip * 0.64)
+      ctx.fill()
+      ctx.stroke()
+    }
+    ctx.restore()
+    ctx.fillStyle = col.text
+    ctx.font = `600 ${Math.max(10, Math.floor(g.cell * 0.3))}px system-ui`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const attackText = Number.isFinite(en.countdown) && !en.dead ? `  ATTACK IN ${en.countdown}` : ''
+    const label = en.dead ? 'убит' : `HP ${en.hp}/${en.hpMax}${attackText}`
+    const ly = side === 2 ? cy - thick / 2 - 0.4 * g.cell : side === 0 ? cy + thick / 2 + 0.4 * g.cell : cy - long / 2 - 0.4 * g.cell
+    ctx.fillStyle = Number.isFinite(en.countdown) && en.countdown <= 1 && !en.dead ? col.hp : col.text
+    const tw = ctx.measureText(label).width / 2 + 4
+    ctx.fillText(label, Math.max(tw, Math.min(g.size - tw, cx)), Math.max(10, Math.min(g.size - 10, ly)))
   }
 }
 
@@ -503,7 +570,7 @@ function drawArrow(a, col, s) {
   if (!alive) return
   const arena = s.arenaDir(a.id)
   const free = s.board.canExit(a.id)
-  const aims = arena === s.bossSide
+  const aims = isLiveTargetSide(s, arena)
   const pts = a.cells.map(center)
   const lw = Math.max(3, geo.cell * 0.26)
   const stroke = aims ? col.aim : free ? col.arrow : col.arrowDim
@@ -582,17 +649,29 @@ function renderPanel() {
     '',
     `состояние:  ${state}`,
     `HP игрока:  ${s.playerHp}/${run.maxHp}`,
-    `HP цели:    ${s.hp}/${s.totalHp}   ${'■'.repeat(s.hp)}${'□'.repeat(s.totalHp - s.hp)}`,
-    def.boss.phases.length > 1
-      ? `фаза:       ${Math.min(s.phaseIndex + 1, def.boss.phases.length)}/${def.boss.phases.length}` +
-        (s.won ? '' : `  цель ${SIDE_RU[s.bossSide]}, до смены фазы ${s.phaseHpLeft} hp`)
-      : `сторона:    ${SIDE_RU[s.bossSide]}`,
-    Number.isFinite(s.countdownTurns) ? `ATTACK IN:  ${s.countdownTurns}` : 'ATTACK IN:  — (пассивный)',
+  ]
+  if (def.enemies) {
+    lines.push('враги (одновременно):')
+    for (const en of s.enemies) {
+      const at = en.dead ? '' : Number.isFinite(en.countdown) ? `, ATTACK IN ${en.countdown}` : ', пассивен'
+      lines.push(`  ${en.label ?? en.id} (${SIDE_RU[en.side]}): ${en.dead ? 'убит' : `HP ${en.hp}/${en.hpMax}${at}`}`)
+    }
+  } else {
+    lines.push(
+      `HP цели:    ${s.hp}/${s.totalHp}   ${'■'.repeat(s.hp)}${'□'.repeat(s.totalHp - s.hp)}`,
+      def.boss.phases.length > 1
+        ? `фаза:       ${Math.min(s.phaseIndex + 1, def.boss.phases.length)}/${def.boss.phases.length}` +
+          (s.won ? '' : `  цель ${SIDE_RU[s.bossSide]}, до смены фазы ${s.phaseHpLeft} hp`)
+        : `сторона:    ${SIDE_RU[s.bossSide]}`,
+      Number.isFinite(s.countdownTurns) ? `ATTACK IN:  ${s.countdownTurns}` : 'ATTACK IN:  — (пассивный)',
+    )
+  }
+  lines.push(
     `Rotate:     зарядов ${s.rotateCharges}, использовано ${s.rotatesUsed}, доска ${s.rotation * 90}°`,
     '',
     'боезапас (projectile budget) по сторонам арены (живые / свободные):',
-    ...[0, 1, 2, 3].map((d) => `  ${ARROWS[d]} ${DIR_NAMES[d]}: ${String(alive[d]).padStart(2)} / ${String(free[d]).padStart(2)}${d === s.bossSide ? '   ← цель' : ''}`),
-  ]
+    ...[0, 1, 2, 3].map((d) => `  ${ARROWS[d]} ${DIR_NAMES[d]}: ${String(alive[d]).padStart(2)} / ${String(free[d]).padStart(2)}${isLiveTargetSide(s, d) ? '   ← цель' : ''}`),
+  )
   if (live) {
     const yn = (r) => (r.win ? 'да' : r.proven ? 'нет' : '?')
     lines.push('', `победа достижима:               ${yn(live.any)}`, `…без новых Rotate:              ${yn(live.noMore)}`)
@@ -681,5 +760,10 @@ window.cpDebug = {
     const p = boardMatrix(run.encounter.rotation * 90).transformPoint(new DOMPoint(x, y))
     const r = ui.canvas.getBoundingClientRect()
     return { x: r.left + p.x, y: r.top + p.y }
+  },
+  /** Jumps steps AND refreshes the module's level/def/board + UI, unlike run.debugJumpTo() alone. */
+  jumpTo(stepIndex) {
+    run.debugJumpTo(stepIndex)
+    loadCurrentBoard()
   },
 }

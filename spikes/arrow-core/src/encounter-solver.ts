@@ -263,7 +263,7 @@ export function validateEncounter(
   q: Pick<WinQuery, 'nodeBudget'> & { playerHp?: number } = {},
 ): EncounterReport {
   const start = new EncounterState(BoardTopology.fromLevel(level), def, q.playerHp)
-  const granted = def.boss.phases.reduce((s, p) => s + (p.grantRotate ?? 0), 0)
+  const granted = def.boss ? def.boss.phases.reduce((s, p) => s + (p.grantRotate ?? 0), 0) : (def.rotateCharges ?? 0)
   const byRotates = []
   let minRotates = -1
   let winWithoutRotate: WinResult | null = null
@@ -277,13 +277,20 @@ export function validateEncounter(
   const noRot = maxHits(start, { ...q, maxRotates: 0 })
   const minDamageWin = minDamageToWin(start, q)
   const bestSequence = minDamageWin.win ? minDamageWin.sequence : win.win ? win.sequence : []
+  const phasesText = def.boss
+    ? def.boss.phases.map(
+        (p, i) =>
+          `${i + 1}: side ${DIR_NAMES[p.side]}, ${p.hpUnits} hp${p.grantRotate ? `, grants Rotate ×${p.grantRotate}` : ''}` +
+          (p.attackTimer ? `, ATTACK IN ${p.attackTimer.interval} (dmg ${p.attackTimer.damage}, interrupt ${p.attackTimer.interruptHits ?? 1} hit(s))` : ''),
+      )
+    : (def.enemies ?? []).map(
+        (e, i) =>
+          `${i + 1}: ${e.id}, side ${DIR_NAMES[e.side]}, ${e.hp} hp${e.mandatory === false ? ' (optional)' : ''}` +
+          (e.attackTimer ? `, ATTACK IN ${e.attackTimer.interval} (dmg ${e.attackTimer.damage}, interrupt ${e.attackTimer.interruptHits ?? 1} hit(s))` : ''),
+      )
   return {
     totalHp: start.totalHp,
-    phases: def.boss.phases.map(
-      (p, i) =>
-        `${i + 1}: side ${DIR_NAMES[p.side]}, ${p.hpUnits} hp${p.grantRotate ? `, grants Rotate ×${p.grantRotate}` : ''}` +
-        (p.attackTimer ? `, ATTACK IN ${p.attackTimer.interval} (dmg ${p.attackTimer.damage}, interrupt ${p.attackTimer.interruptHits ?? 1} hit(s))` : ''),
-    ),
+    phases: phasesText,
     grantedRotates: granted,
     win,
     winWithoutRotate: winWithoutRotate as WinResult,
@@ -318,7 +325,11 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
     }
     let text = `${n}. ${formatAction(a).padEnd(8)} ${local}->${DIR_NAMES[r.arenaDir]}  ${r.hit ? 'HIT ' : 'miss'}  hp ${s.hp}/${s.totalHp}`
     if (r.interrupted) text += '  interrupt (attack timer reset)'
-    if (r.enemyAttacked) text += `  ENEMY ATTACK -${r.enemyDamage} hp (player ${r.playerHp})`
+    if (r.enemyAttacks && r.enemyAttacks.length) {
+      text += `  ENEMY ATTACK: ${r.enemyAttacks.map((e) => `${e.id} -${e.damage}`).join(', ')} (player ${r.playerHp})`
+    } else if (r.enemyAttacked) {
+      text += `  ENEMY ATTACK -${r.enemyDamage} hp (player ${r.playerHp})`
+    }
     if (r.phaseAfter !== r.phaseBefore) {
       text += r.won ? '  => WIN' : `  => phase ${r.phaseAfter + 1}, boss on ${DIR_NAMES[s.bossSide as number]}`
       if (r.granted) text += `, Rotate +${r.granted}`
@@ -371,9 +382,11 @@ export interface Phase2Probe {
  * Simulates players who do not plan ahead through phase 1 and looks at the moment phase 2 starts.
  * greedy: tap a hitting arrow if one is free, else Rotate if that makes a free arrow hit, else a
  * random free arrow. sloppy: same, but phase 1 taps uniformly random free arrows, ignoring hits.
- * Deterministic for a given seed.
+ * Deterministic for a given seed. Boss mode only (probes a sequential phase transition) — not
+ * meaningful for `enemies`-mode encounters, which have no phases.
  */
 export function probePhase2(level: Level, def: EncounterDef, policy: PlayPolicy, samples = 30, seed = 1): Phase2Probe {
+  if (!def.boss) throw new Error('probePhase2 requires a boss encounter (sequential phases)')
   const topo = BoardTopology.fromLevel(level)
   const rng = createRng(seed)
   const pick = <T>(xs: T[]) => xs[rng.int(xs.length)]

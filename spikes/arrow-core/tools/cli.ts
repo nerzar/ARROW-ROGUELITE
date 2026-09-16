@@ -43,8 +43,9 @@ const HELP = `arrow-core spike CLI
          [--min-arrows 12] [--max-arrows 24] [--top 10] [--out encounters/shortlist.json]
   prologue --step 1|2|3 [--start 1] [--count 5000] [--top 8] [--out encounters/prologue-eN-shortlist.json]
          seed shortlist for one of the three single-target prologue encounters (EXP-009)
-  cp-shortlist --step 3|4 [--start 1] [--count 4000] [--top 8] [--out encounters/cp-eN-shortlist.json]
-         seed shortlist for the timed combat-pressure encounters E3/E4 (EXP-010), proven no-damage path
+  cp-shortlist --step 3 [--start 1] [--count 4000] [--top 8] [--out encounters/cp-eN-shortlist.json]
+         seed shortlist for the timed single-target E3 (EXP-010), proven no-damage path. E4 is now
+         hand-authored multi-enemy content (EXP-010b, encounters/cp-e4.json) and no longer scanned here.
   bench  [--count 10000] [--presets tiny,easy,medium,hard,expert] [--seed 1]
          [--extra huge:500,xl:100,strict:1000|none] [--out bench-results/latest.json]
 
@@ -289,16 +290,19 @@ scanned ${o.count}/${o.count} in ${sec.toFixed(1)}s
 json: ${out}`)
 }
 
-// EXP-010 provisional tuning for the timed encounters — data, not a hardcoded engine rule; explicitly
-// not user-approved (docs/COMBAT-RULES.md 12, Gemini-suggested starting points per the task).
-const CP_STEPS: Record<3 | 4, { preset: PresetName; side: Dir; hp: number; interval: number; damage: number; id: string; title: string }> = {
+// EXP-010 provisional tuning for the timed single-target encounter — data, not a hardcoded engine
+// rule; explicitly not user-approved (docs/COMBAT-RULES.md 12, Gemini-suggested starting points).
+// EXP-010b note: E4 is no longer part of this scanner — it was redesigned as hand-authored
+// simultaneous-enemy content (encounters/cp-e4.json, seed 10) per the overnight multi-enemy brief,
+// which removed the old single-target seed-1638 E4 (6 unavoidable damage) entirely. This single-
+// target scanner remains useful for E3 and for any future single-target timed encounter.
+const CP_STEPS: Record<3, { preset: PresetName; side: Dir; hp: number; interval: number; damage: number; id: string; title: string }> = {
   3: { preset: 'easy', side: 1, hp: 3, interval: 4, damage: 2, id: 'cp_e3', title: 'Combat pressure 3 — time has a cost' },
-  4: { preset: 'easy', side: 1, hp: 5, interval: 3, damage: 3, id: 'cp_e4', title: 'Combat pressure 4 — the same size, again, harder' },
 }
 
 function cmdCpShortlist(opt: Record<string, string>): void {
-  const step = Number(opt.step ?? 3) as 3 | 4
-  if (![3, 4].includes(step)) throw new Error('--step must be 3 or 4')
+  const step = Number(opt.step ?? 3) as 3
+  if (step !== 3) throw new Error('--step must be 3 (E4 is hand-authored multi-enemy content, see encounters/cp-e4.json)')
   const spec = CP_STEPS[step]
   const playerHp = Number(opt['player-hp'] ?? 10)
   const o: CpScanOptions = {
@@ -313,8 +317,7 @@ function cmdCpShortlist(opt: Record<string, string>): void {
     minArrows: Number(opt['min-arrows'] ?? 8),
     maxArrows: Number(opt['max-arrows'] ?? 18),
     top: Number(opt.top ?? 8),
-    requireNoDamage: step === 3,
-    damageRange: step === 4 ? [Number(opt['min-damage'] ?? 1), Number(opt['max-damage'] ?? playerHp - 1)] : undefined,
+    requireNoDamage: true,
   }
   const t0 = performance.now()
   const res = scanCpEncounter(o, spec.id, spec.title, (i) => process.stderr.write(`

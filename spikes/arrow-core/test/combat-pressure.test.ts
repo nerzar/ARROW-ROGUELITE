@@ -164,7 +164,7 @@ describe('EXP-010 prologue encounter files', () => {
   it('cp-e1: passive mob, no HP consequence, a two-move puzzle-then-kill sequence', () => {
     const { file: enc, level: lvl } = encounterFromJson(load('cp-e1.json'))
     expect(enc.encounter.blockedTapDamage).toBe(0)
-    expect(enc.encounter.boss.phases[0].attackTimer).toBeUndefined()
+    expect(enc.encounter.boss!.phases[0].attackTimer).toBeUndefined()
     const r = findWin(EncounterState.fromLevel(lvl, enc.encounter))
     expect(r.win).toBe(true)
     expect(r.sequence).toHaveLength(2) // E puzzle-miss, then the N kill
@@ -177,14 +177,14 @@ describe('EXP-010 prologue encounter files', () => {
     expect(md).toMatchObject({ win: true, proven: true, minDamage: 0 })
   })
 
-  it('cp-e4: damage is intentional (repeated attack cycles), not a broken/unwinnable board', () => {
+  it('cp-e4: EXP-010b redesign (two simultaneous enemies, seed 10) has a proven 0-damage path', () => {
+    // Replaces EXP-010's single-target seed 1638 (6 unavoidable damage by design). The overnight
+    // brief removed that encounter for having unavoidable damage in the prologue; see
+    // test/multi-enemy.test.ts for the full cp-e4 coverage (clean path, wrong-priority path, engine).
     const { file: enc, level: lvl } = encounterFromJson(load('cp-e4.json'))
     const start = EncounterState.fromLevel(lvl, enc.encounter, 10)
     const md = minDamageToWin(start, { nodeBudget: 800_000 })
-    // Provisional by design (docs/COMBAT-RULES.md 10: E4 wants "repeated attack cycles"), not 0.
-    expect(md.win).toBe(true)
-    expect(md.proven).toBe(true)
-    expect(md.minDamage).toBeGreaterThan(0)
+    expect(md).toMatchObject({ win: true, proven: true, minDamage: 0 })
   })
 
   it('cp-e5: winnable via the intended Rotate (ccw) path at the HP the prologue chain produces', () => {
