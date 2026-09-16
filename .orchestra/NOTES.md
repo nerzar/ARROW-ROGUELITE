@@ -1,17 +1,17 @@
-# Заметки Magic Arrow
+# Заметки Arrow-Roguelite
 
 Короткий буфер важных идей и подтверждённых временных договорённостей. Это не архив и не полный дизайн-документ.
 
 ### N-001 — Рабочее название
 STATUS: AGREED FOR NOW
 
-Суть: рабочее название проекта — **Magic Arrow**.
+Суть: рабочее название проекта — **Arrow-Roguelite**, как имя репозитория/папки. Старое `Magic Arrow` считать устаревшим рабочим названием того же проекта.
 Подтвердил: USER
 
-### N-002 — Сначала исследование
+### N-002 — Сначала исследование и proof-of-fun
 STATUS: AGREED FOR NOW
 
-Суть: до MVP сначала максимально продумываем аудиторию, рынок, механику, систему наград, ассеты и визуальную тему; затем отдаём реализацию агентам.
+Суть: до полноценного production-MVP сначала продумываем аудиторию, рынок, механику, систему наград, ассеты и визуальную тему; затем техническими spike'ами проверяем generator/solver и proof-of-fun, после чего расширяем разработку.
 Подтвердил: USER
 
 ### N-003 — Данные вместо догадок
@@ -72,7 +72,7 @@ STATUS: AGREED FOR EXPLORATION
 ### N-012 — Отдельные фичи не считаем уникальностью
 STATUS: FACT / DESIGN GUARDRAIL
 
-Суть: актуальная проверка 16.09.2026 нашла Arrow Crypt (arrow puzzle + roguelite/runes/bosses), arrow puzzle spiral defense (arrow combat + bosses), Arrow Escape (deflectors/ice/locks/portals) и snake-like arrow animation в Arrows Tap Away. Ricochet распространён в Archero. Рабочий differentiator Magic Arrow ищем в связке directional puzzle + реальные projectile за пределами поля + внешние цели по сторонам + rotation + boss-driven transformations.
+Суть: актуальная проверка 16.09.2026 нашла Arrow Crypt (arrow puzzle + roguelite/runes/bosses), arrow puzzle spiral defense (arrow combat + bosses), Arrow Escape (deflectors/ice/locks/portals) и snake-like arrow animation в Arrows Tap Away. Ricochet распространён в Archero. Рабочий differentiator Arrow-Roguelite ищем в связке directional puzzle + реальные projectile за пределами поля + внешние цели по сторонам + rotation + boss-driven transformations.
 Источник: публичные страницы Google Play/референсов, проверка 16.09.2026.
 
 ### N-013 — Направление раскрывается на mini-boss пролога
@@ -80,3 +80,27 @@ STATUS: AGREED FOR NOW
 
 Суть: первые 3 коротких encounter пролога используют одну активную сторону и поочерёдно учат Tap Away, projectile и hit budget. **Направление не должно становиться отдельным ресурсом раньше времени.** На mini-boss в конце пролога цель впервые меняет сторону/уязвимый сектор; игрок сталкивается с нехваткой стрел нужного направления и там же впервые получает Rotate. После победы Rotate становится частью run-kit, а полноценный Act I уже строится вокруг multi-side combat.
 Подтвердил: USER — «направление становится ресурсом на первом мини боссе / боссе... конец пролога минибосс..и на нем уже дают возможность повертеться».
+
+### N-014 — Поздний encounter может быть power-gated
+STATUS: AGREED FOR EXPLORATION
+
+Суть: старое ограничение «каждый encounter всегда обязан проходиться без дополнительных бонусов» снято. В какой-то момент игра может требовать накопленную run/meta-power, consumable или другую помощь. Источники силы могут включать собранные предметы, регулярные активности, rewarded-рекламу и покупки. Генератор/валидатор должен различать осознанный `power-gated` encounter и случайно нерешаемый уровень.
+Подтвердил: USER — «в один момент он станет не решаем без доп бонусов, которые нужно либо собрать, либо получить за счет регулярных активностей, либо за донат».
+
+### N-015 — Монетизация не должна отпугивать раньше времени
+STATUS: AGREED FOR EXPLORATION
+
+Суть: помощь за rewarded/purchase хорошо ложится на run (доп. способность, предмет, Rotate, revive, reroll и т.п.), но ранняя игра сначала должна продать удовольствие от core loop. Точный момент давления, цены и ad cadence проектируются отдельно.
+Подтвердил: USER — «главное не отпугнуть игроков наверное раньше времени».
+
+### N-016 — Canonical game concept
+STATUS: AGREED FOR NOW
+
+Суть: `docs/GAME-CONCEPT.md` — короткая каноническая точка входа для новых агентов. Он собирает уже обсуждённые идеи, явно разделяет AGREED / HYPOTHESIS / OPEN и не заменяет подробные design/research документы.
+Подтвердил: USER — потребовал собрать game concept сейчас, чтобы накопленные идеи не потерялись.
+
+### N-017 — Generator/solver берём из проверяемых наработок, а не пишем вслепую
+STATUS: AGREED FOR EXPLORATION
+
+Суть: исследовать и использовать permissive/MIT наработки для Arrow generator/solver, сохраняя лицензии/attribution. Проекты без явной permissive-лицензии использовать только как reference. Собственный combat/EncounterSolver проектируется поверх чистого board-core.
+Подтвердил: USER — предложил исследовать и использовать готовые builder/solver реализации вместо бессмысленного переписывания всего с нуля.

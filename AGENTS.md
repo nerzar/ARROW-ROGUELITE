@@ -7,6 +7,10 @@
 3. `.orchestra/GIT.md`
 4. только назначенный тебе файл из `.orchestra/tasks/`
 
+Если задача касается game design, gameplay, puzzle core, combat, контента, progression, monetization, renderer или игровой архитектуры — дополнительно прочитай `docs/GAME-CONCEPT.md`.
+
+Подробные design-документы (`FIRST-RUN-HYPOTHESIS.md`, `CONTENT-SYSTEM.md`, `DESIGN-HYPOTHESES.md`) читай только если они нужны для конкретной задачи или task-файл прямо на них ссылается. Не перечитывай весь research без необходимости.
+
 Выполни только назначенную задачу.
 
 В конце:
