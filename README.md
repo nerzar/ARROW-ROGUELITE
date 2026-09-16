@@ -10,6 +10,10 @@ HTML5-игра под VK Games / VK Mini Apps с возможностью дал
 
 - `docs/GAME-CONCEPT.md` — канонический краткий концепт, текущие согласованные идеи, открытые вопросы и границы для AI-агентов.
 
+Ключевые подтверждённые gameplay-правила:
+
+- `docs/COMBAT-RULES.md` — HP игрока, пошаговое давление врагов, `ATTACK IN N`, урон за blocked tap, interrupt, deadlines и правило мгновенной победы после выполнения главной цели encounter.
+
 Подробности:
 
 - `docs/FIRST-RUN-HYPOTHESIS.md` — пролог, mini-boss с Rotate, первый run, Ricochet, Serpent, Chain;
@@ -23,7 +27,7 @@ HTML5-игра под VK Games / VK Mini Apps с возможностью дал
 
 Базовая дуга первого proof-of-fun:
 
-`Tap Away → projectile → mini-boss → direction as resource → Rotate → multi-side combat → Ricochet → Serpent → Chain → build showcase → final boss`.
+`Tap Away → projectile → enemy pressure → mini-boss → direction as resource → Rotate → multi-side combat → Ricochet → Serpent → Chain → build showcase → final boss`.
 
 ## Текущий статус
 
@@ -36,6 +40,7 @@ HTML5-игра под VK Games / VK Mini Apps с возможностью дал
 - проверяется готовая open-source база Arrow generator/solver;
 - проектируется pure puzzle core;
 - готовится proof-of-fun первого run;
+- прорабатывается combat pressure: run HP, enemy attack timers и interrupts;
 - оценивается production pipeline ассетов/VFX.
 
 Ни одно архитектурное, продуктовое, игровое или визуальное решение не считается окончательно принятым без явного подтверждения пользователя.
@@ -51,6 +56,8 @@ HTML5-игра под VK Games / VK Mini Apps с возможностью дал
 - связывает своё направление с расположением целей вокруг board;
 - может получить Ricochet, Pierce, Split, Serpent, Chain и другие формы;
 - через Rotate позволяет игроку перераспределять запас направлений.
+
+Враги при этом не стоят пассивно: они телеграфируют атаки через число ходов, а игрок должен вовремя открыть нужное направление, попасть в цель или выполнить interrupt. Ошибочный tap по заблокированной стрелке имеет цену по HP.
 
 Boss fights должны менять правила, а сильные boss rewards — позволять часть этих правил забрать себе на оставшийся run.
 
@@ -74,3 +81,4 @@ Boss fights должны менять правила, а сильные boss rew
 - `.orchestra/tasks/`.
 
 Для любой game/gameplay/core-задачи агент должен сначала прочитать `docs/GAME-CONCEPT.md`.
+Для задач, затрагивающих бой, HP, врагов, таймеры, interrupt или условия победы, дополнительно прочитать `docs/COMBAT-RULES.md`.
