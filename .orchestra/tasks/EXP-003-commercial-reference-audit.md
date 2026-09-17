@@ -1,13 +1,13 @@
 # TASK: EXP-003 — коммерческий разбор референсов и clone-кандидатов
 
-STATUS: READY
+STATUS: DONE
 TYPE: EXP
 SIZE: L
 AGENT: Muse Spark 1.3
 BASE_BRANCH: main
 BRANCH: exp/EXP-003-commercial-reference-audit
 START_SHA: ebe10d3f1c92c22361a7b9812def0ccf048ae519
-RESULT_SHA:
+RESULT_SHA: 8541b1cbf9e03733f2df5cde57187507948f474f
 
 ## Зачем
 
@@ -195,17 +195,17 @@ EXP-004 принят и влит в main.
 
 ## Готово, если
 
-- [ ] shortlist 20–25 игр собран с причинами выбора;
-- [ ] Arrow представлены минимум 8 играми;
-- [ ] sort / merge / match3 представлены реальными свежими кандидатами;
-- [ ] для каждой игры явно разделено `OBSERVED`, `PUBLIC_INFO`, `NOT_TESTED`, `INFERENCE`;
-- [ ] не выдумана monetization/gameplay там, где игра не запускалась;
-- [ ] есть коммерческая матрица механик;
-- [ ] есть 2–3 clone-experiment формулы с аргументами за/против;
-- [ ] сформирован shortlist для будущего Gemini visual review;
-- [ ] сформирован shortlist сообществ для EXP-005;
-- [ ] игровые/design файлы не менялись;
-- [ ] secret scan PASS.
+- [x] shortlist 20–25 игр собран с причинами выбора;
+- [x] Arrow представлены минимум 8 играми;
+- [x] sort / merge / match3 представлены реальными свежими кандидатами;
+- [x] для каждой игры явно разделено `OBSERVED`, `PUBLIC_INFO`, `NOT_TESTED`, `INFERENCE`;
+- [x] не выдумана monetization/gameplay там, где игра не запускалась;
+- [x] есть коммерческая матрица механик;
+- [x] есть 2–3 clone-experiment формулы с аргументами за/против;
+- [x] сформирован shortlist для будущего Gemini visual review;
+- [x] сформирован shortlist сообществ для EXP-005;
+- [x] игровые/design файлы не менялись;
+- [x] secret scan PASS.
 
 ## Когда остановиться
 
@@ -219,3 +219,34 @@ STATUS: BLOCKED, если:
 ## Финал
 
 Заполнить RESULT / VERIFY / FOUND, поставить STATUS: DONE или BLOCKED, записать RESULT_SHA, commit + push этой же ветки. Не merge в main. Остановиться.
+
+RESULT: shortlist 25 игр (10 arrow + 5 sort + 4 merge + 4 match3 + 2 screw) с причинами — `shortlist.csv`.
+Обязательные 51871737 (2-е место ниши, 88702; слова «стрел» в title/description нет — подтверждено текстом)
+и 53992911 (единственный Arrow с внешней целью: цветные шредеры + кнопка смены направления, OBSERVED на 3 кадрах;
+combat/мобы/боссы отсутствуют во всех 10 arrow-играх и в скриншотах, и в описаниях).
+Arrow-ниша: 2 поджанра (3D-cube vs 2D-untangle); picture reveal — главный meta-паттерн (3+ игры, XXX-бюджет ошибок OBSERVED);
+реально увиденная монетизация: rewarded×2 игры, валюты/бустеры×3, шоп скинов×1, жизни×2; IAP-ценников и interstitial — 0.
+Матрица 5 механик — `commercial-matrix.csv`. 3 clone-формулы с за/против: F1 water sort (ESTIMATE 5–8 ч-д),
+F2 tap-away gallery (ESTIMATE 6–10 ч-д), F3 screw-unblock (ESTIMATE 10–15 ч-д); runner-up — blast-race гибрид.
+8 игр для Gemini visual review и 12 сообществ для EXP-005 — в `EXP-003-REPORT.md` §4–5.
+Сравнение с Arrow-Roguelite только в конце отчёта (§7); игра и design docs не менялись, EXP-004 не повторялся.
+STATUS: DONE.
+
+VERIFY:
+- shortlist 25 строк, games 25 строк, id shortlist==games — проверено скриптом.
+- arrow в shortlist: 10 (требование ≥8 выполнено).
+- CSV parse PASS (25/25/5); secret scan PASS (паттерны токенов/ключей — 0 hits).
+- START_SHA ebe10d3 — предок ветки (проверено `merge-base --is-ancestor` до смены ветки рабочего каталога).
+- `members_count` нигде не назван MAU; MVP-оценки помечены ESTIMATE.
+- Игровые/design/EXP-004/collector файлы не тронуты (в коммите только `research/vk-market/reference-audit/**` + карточка).
+
+FOUND:
+- Параллельный трек сменил ветку общего рабочего каталога на exp/EXP-009-gray-prologue прямо во время задачи;
+  checkout exp/EXP-003 был заблокирован чужим незакоммиченным `spikes/arrow-core/tools/cli.ts`.
+  Чтобы не трогать чужую работу, коммиты выполнены из изолированного `git worktree` (temp), push — в exp/EXP-003.
+  Чужие изменения не коммитились и не затирались.
+- 54539273 «Разбери Стрелочки»: title про стрелки, description — sort/picture-reveal (расхождение подтверждено текстом).
+- 54662458 «Болты Сортировка»: зеркальное расхождение (title sort, description screw).
+- 54458245 Tap Gallery размечена EXP-004 как match3, фактически tap-away picture reveal — ближайшая к Arrow игра match3-сегмента.
+- Глубина проверки неоднородна: arrow-батч — попиксельный разбор 37 скриншотов; 15 не-arrow игр — уровень карточки +
+  description (скриншоты попиксельно не разбирались); gameplay NOT_TESTED везде (нужен логин). Зафиксировано в отчёте §0.
