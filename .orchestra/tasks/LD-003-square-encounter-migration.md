@@ -1,6 +1,6 @@
 # TASK: LD-003 — Square Encounter Migration Shortlist
 
-STATUS: READY
+STATUS: DONE
 TYPE: DESIGN
 SIZE: L
 AGENT: Gemini 3.8 Flash (level / puzzle designer)
