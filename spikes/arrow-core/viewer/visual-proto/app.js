@@ -19,11 +19,14 @@ const ui = {
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'),
 }
 
-// Two required scenes (VIS-001): the seed-10 multi-enemy prologue encounter and the seed-1571
-// mini-boss, both already accepted content from EXP-010b -- this file does not add/alter seeds.
+// Three required scenes (VS-001): cp-e4's two simultaneous regular enemies (EXP-010b), cp-e5's
+// mini-boss with an interruptible cast in phase 2 (EXP-011), and rock-spike's ATTACK IN N + THROW
+// IN N + PINNED arrow (EXP-013). All three are already-accepted encounter content -- this file
+// does not add/alter seeds or numbers.
 const SCENES = [
   { key: 'cp-e4', title: 'Пролог · два врага одновременно (seed 10)', file: '../../encounters/cp-e4.json' },
-  { key: 'cp-e5', title: 'Mini-boss (seed 1571)', file: '../../encounters/cp-e5.json' },
+  { key: 'cp-e5', title: 'Mini-boss · CAST/interrupt (seed 1571)', file: '../../encounters/cp-e5.json' },
+  { key: 'rock-spike', title: 'Rock-spike · THROW/PIN (seed 15)', file: '../../encounters/rock-spike.json' },
 ]
 
 async function fetchJson(url) {
@@ -61,8 +64,10 @@ async function loadScene(key) {
   renderer.resetFx()
   hint = null
   targetsBefore = renderer.collectTargets(run.encounter, def)
+  const hasAbility = def.enemies?.some((e) => e.ability)
   ui.msgLine.textContent = def.enemies
-    ? `Враги одновременно: ${run.encounter.enemies.map((e) => e.label ?? e.id).join(', ')}.`
+    ? `Враги одновременно: ${run.encounter.enemies.map((e) => e.label ?? e.id).join(', ')}.` +
+      (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '')
     : `Цель: ${def.boss.id}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
   ui.report.textContent = formatEncounterReport(rep)
@@ -80,6 +85,12 @@ function applyDomAssets(store) {
     $('boardFrame').style.backgroundSize = 'contain'
     $('boardFrame').style.backgroundPosition = 'center'
     $('boardFrame').style.backgroundRepeat = 'no-repeat'
+  }
+  if (store.playerPortrait) {
+    ui.playerCard.style.backgroundImage = `url(${store.playerPortrait.src})`
+    ui.playerCard.style.backgroundSize = 'cover'
+    ui.playerCard.style.backgroundPosition = 'center top'
+    ui.playerCard.classList.add('has-portrait') // CSS applies the blend mode
   }
 }
 
@@ -103,6 +114,12 @@ function tap(id) {
       }
       setMsg(text, r.playerDead)
       if (r.playerDead) scheduleGameOver()
+    } else if (r.reason === 'pinned') {
+      // EXP-013: rock-pinned arrow. Deliberately NOT the same feedback as a blocked tap -- no HP
+      // cost, no turn spent, and the message must say so explicitly or it reads as a bug.
+      renderer.onPinDenied(id)
+      setMsg(`Стрелка #${id} PINNED — камень держит её ещё ${r.pinTurnsLeft} ход(а). HP не тратится, ход не идёт.`, false)
+      pushLog(`tap #${id}  !! pinned (${r.pinTurnsLeft} turn(s) left)`)
     }
     renderPanel()
     kick()
@@ -119,11 +136,24 @@ function tap(id) {
     text += ` · ВРАГ АТАКУЕТ (HP игрока ${r.playerHp})`
     flashPlayerHit()
   }
-  if (r.interrupted) text += ' · подготовка сбита'
+  // EXP-011: only a genuine cast interrupt gets the literal "CAST INTERRUPTED" callout -- the
+  // legacy EXP-010 interruptOnHit reset (r.interrupted without r.castInterrupted) isn't a cast and
+  // isn't used by any current content, but keep a generic fallback in case it ever is.
+  if (r.castInterrupted) text += ' · CAST INTERRUPTED'
+  else if (r.interrupted) text += ' · подготовка сбита'
+  // EXP-013: Stone Throw pin/unpin this turn, enemies mode only.
+  if (r.pinnedThisTurn && r.pinnedThisTurn.length) text += ` · ROCK THROWN: #${r.pinnedThisTurn.map((p) => p.id).join(', #')} pinned ${r.pinnedThisTurn[0].turnsLeft}t`
+  if (r.pinExpired && r.pinExpired.length) text += ` · UNPINNED: #${r.pinExpired.join(', #')}`
   if (r.won) text = `Цель выполнена. ${text}`
   else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
   setMsg(text, r.playerDead)
-  pushLog(`${formatAction({ kind: 'tap', id })}  ${r.hit ? 'HIT' : 'miss'}  hp ${s.hp}` + (r.enemyAttacked ? `  ENEMY (player ${r.playerHp})` : ''))
+  pushLog(
+    `${formatAction({ kind: 'tap', id })}  ${r.hit ? 'HIT' : 'miss'}  hp ${s.hp}` +
+      (r.enemyAttacked ? `  ENEMY (player ${r.playerHp})` : '') +
+      (r.castInterrupted ? '  CAST INTERRUPTED' : '') +
+      (r.pinnedThisTurn && r.pinnedThisTurn.length ? `  ROCK THROWN: #${r.pinnedThisTurn.map((p) => `${p.id}(${p.turnsLeft}t)`).join(', #')}` : '') +
+      (r.pinExpired && r.pinExpired.length ? `  UNPINNED: #${r.pinExpired.join(', #')}` : ''),
+  )
   renderPanel()
   kick()
   if (r.won) scheduleWin()
@@ -239,12 +269,19 @@ function renderPanel() {
   ui.rotCw.style.visibility = def.rotate.allow.includes(1) ? 'visible' : 'hidden'
   ui.rotCcw.style.visibility = def.rotate.allow.includes(-1) ? 'visible' : 'hidden'
   ui.rotateCharges.textContent = def.rotate.allow.length === 0 ? '' : s.rotateCharges > 0 ? `Rotate ×${s.rotateCharges}` : s.rotatesUsed ? 'Rotate использован' : 'Rotate не получен'
-  ui.status.textContent = [
+  const statusLines = [
     `${def.title ?? def.id}`,
     `board ${board.preset} seed ${board.seed} (${level.width}x${level.height}, ${level.arrows.length} стрел)`,
     `состояние: ${s.playerDead ? 'ПОРАЖЕНИЕ' : s.won ? 'ЦЕЛЬ ВЫПОЛНЕНА' : 'бой'}`,
     `HP целей: ${s.hp}/${s.totalHp}`,
-  ].join('\n')
+  ]
+  // EXP-013: pin turns remaining, simple debug-panel badge per the VS-001 brief (the premium
+  // per-arrow rock marker on the board is the primary, always-visible cue -- this is the backup).
+  if (def.enemies?.some((e) => e.ability)) {
+    const pinned = s.pinnedArrows
+    statusLines.push(`pinned arrows: ${pinned.length ? pinned.map((p) => `#${p.id} (${p.turnsLeft}t)`).join(', ') : '—'}`)
+  }
+  ui.status.textContent = statusLines.join('\n')
 }
 
 // ---------------------------------------------------------------------------------------------

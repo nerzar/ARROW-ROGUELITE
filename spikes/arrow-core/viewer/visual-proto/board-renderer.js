@@ -16,6 +16,10 @@ export function createBoardRenderer(canvas) {
   let rotAnim = null // { from, to, t0, dur }
   let shots = [] // { cells, dir, arenaDir, hit, t0 }
   const targetFx = new Map() // key -> { hitT, deathT, attackT, interruptT }
+  // EXP-013/VS-001: per-arrow one-shot fx, keyed by board arrow id -- independent of targetFx
+  // (which is keyed by boss/enemy id), since a pin/unpin/denied-tap event happens to an *arrow*,
+  // not a target.
+  const arrowFx = new Map() // arrow id -> { pinT, unpinT, deniedT }
   let hoverId = -1
   let flash = { blocked: -1, blocker: -1 }
 
@@ -24,6 +28,15 @@ export function createBoardRenderer(canvas) {
     if (!fx) {
       fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9 }
       targetFx.set(key, fx)
+    }
+    return fx
+  }
+
+  function arrowFxFor(id) {
+    let fx = arrowFx.get(id)
+    if (!fx) {
+      fx = { pinT: -1e9, unpinT: -1e9, deniedT: -1e9 }
+      arrowFx.set(id, fx)
     }
     return fx
   }
@@ -93,7 +106,10 @@ export function createBoardRenderer(canvas) {
       if (hitTarget) {
         const fx = fxFor(targetKey(hitTarget))
         fx.hitT = now + 220 // shots already carry a ~220ms travel delay before impact
-        if (r.interrupted) fx.interruptT = now + 220
+        // EXP-011/VS-001: only a genuine cast-interrupt gets the "CAST INTERRUPTED" burst -- the
+        // legacy EXP-010 interruptOnHit reset (r.interrupted without r.castInterrupted) is unused
+        // by any current content and isn't a cast, so it gets no burst text.
+        if (r.castInterrupted) fx.interruptT = now + 220
       }
     }
     if (r.enemyAttacks && r.enemyAttacks.length) {
@@ -102,6 +118,17 @@ export function createBoardRenderer(canvas) {
       // Boss mode has one active target; attribute the attack to it directly.
       fxFor('boss').attackT = now
     }
+    // EXP-013/VS-001: Stone Throw pin/unpin, enemies mode only. A pin created and an arrow's pin
+    // expiring are independent per-arrow one-shot events, both possible on the same world turn.
+    if (r.pinnedThisTurn) for (const p of r.pinnedThisTurn) arrowFxFor(p.id).pinT = now
+    if (r.pinExpired) for (const arrowId of r.pinExpired) arrowFxFor(arrowId).unpinT = now
+  }
+
+  /** EXP-013/VS-001: the player tapped a currently-pinned arrow -- a no-op per the engine (no HP
+   * cost, no turn spent), but it needs its own feedback so it doesn't read as a silent failure or,
+   * worse, get confused with a damaging blocked tap. */
+  function onPinDenied(id) {
+    arrowFxFor(id).deniedT = performance.now()
   }
 
   function onRotateStart(fromDeg, toDeg) {
@@ -125,6 +152,7 @@ export function createBoardRenderer(canvas) {
   function resetFx() {
     shots = []
     targetFx.clear()
+    arrowFx.clear()
     rotAnim = null
     flash = { blocked: -1, blocker: -1 }
   }
@@ -133,11 +161,20 @@ export function createBoardRenderer(canvas) {
   // Frame
 
   function collectTargets(s, def) {
-    if (def.enemies) return s.enemies.map((e) => ({ id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead, countdown: e.countdown, isBoss: false }))
+    if (def.enemies) {
+      return s.enemies.map((e) => ({
+        id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead,
+        countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
+        isBoss: false,
+      }))
+    }
     const side = s.bossSide
     if (side < 0) return []
     const phase = def.boss.phases[Math.min(s.phaseIndex, def.boss.phases.length - 1)]
-    return [{ id: def.boss.id, label: phase.label ?? def.boss.id, side, hp: s.hp, hpMax: s.totalHp, dead: s.won, countdown: s.countdownTurns, isBoss: true }]
+    return [{
+      id: def.boss.id, label: phase.label ?? def.boss.id, side, hp: s.hp, hpMax: s.totalHp, dead: s.won,
+      countdown: s.countdownTurns, attackKind: s.attackKind, isBoss: true,
+    }]
   }
 
   function frame(now, view) {
@@ -160,6 +197,9 @@ export function createBoardRenderer(canvas) {
     for (const fx of targetFx.values()) {
       if (now - fx.hitT < 260 || now - fx.attackT < 320 || now - fx.interruptT < 700 || now - fx.deathT < 550) animating = true
     }
+    for (const fx of arrowFx.values()) {
+      if (now - fx.pinT < 500 || now - fx.unpinT < 550 || now - fx.deniedT < 320) animating = true
+    }
 
     const dark = matchMedia('(prefers-color-scheme: dark)').matches
     const col = palette(dark)
@@ -172,9 +212,14 @@ export function createBoardRenderer(canvas) {
     // Idle bob + cast-pulse are continuous functions of `now`, not one-shot fx: keep the loop
     // alive while any target is alive so they never visibly freeze between combat events.
     if (targets.some((t) => !t.dead)) animating = true
+    // VS-001: board surface first, target panels on top -- a target panel's label plate (name/HP/
+    // CAST-ATTACK-THROW text) can extend far enough toward the board on a short/wide N or S panel
+    // to reach the board's own footprint (e.g. cp-e4's N-side "slow" enemy once its 3-line plate
+    // grew past 2 lines), and an opaque board surface drawn afterward silently painted over that
+    // text -- a real bug the old 2-line layout happened not to trip.
+    drawBoardSurface(col)
     drawSideReadouts(col, s, def)
     for (const t of targets) drawTarget(col, t, now)
-    drawBoardSurface(col)
     ctx.save()
     ctx.setTransform(new DOMMatrix().scale(dpr, dpr).multiply(boardMatrix(shownAngle)))
     for (const a of level.arrows) drawArrow(col, s, def, a, hint)
@@ -211,16 +256,27 @@ export function createBoardRenderer(canvas) {
       ctx.translate(cx + ox, cy + oy)
       ctx.scale(1 - 0.3 * deathP, 1 - 0.3 * deathP)
 
-      // Cast pulse: a ring that grows/fades faster and redder as the attack countdown nears 0.
+      // Telegraph pulse: a ring (or, with a real castGlow asset, that image) that grows/fades
+      // faster and more saturated as the countdown nears 0. EXP-011/VS-001: a `kind: 'cast'`
+      // telegraph gets the violet cast palette (and the castGlow asset slot when present) instead
+      // of the plain attack's amber/red, so CAST IN N and ATTACK IN N read as visually distinct,
+      // not just different badge text.
       if (Number.isFinite(t.countdown) && !t.dead) {
+        const isCast = t.attackKind === 'cast'
         const urgency = t.countdown <= 1 ? 1 : t.countdown === 2 ? 0.55 : 0.3
         const cyc = (now / (520 - urgency * 260)) % 1
         ctx.save()
-        ctx.globalAlpha = (1 - cyc) * 0.5 * urgency
-        ctx.strokeStyle = urgency >= 1 ? col.danger : col.aim
-        ctx.lineWidth = 2.5
-        roundRect(-bw / 2 - cyc * 10, -bh / 2 - cyc * 10, bw + cyc * 20, bh + cyc * 20, 10 + cyc * 6)
-        ctx.stroke()
+        if (isCast && assets.castGlow) {
+          const s2 = (Math.max(bw, bh) * 1.15) * (1 + cyc * 0.35)
+          ctx.globalAlpha = (1 - cyc) * 0.85 * urgency
+          ctx.drawImage(assets.castGlow, -s2 / 2, -s2 / 2, s2, s2)
+        } else {
+          ctx.globalAlpha = (1 - cyc) * 0.5 * urgency
+          ctx.strokeStyle = isCast ? col.cast : urgency >= 1 ? col.danger : col.aim
+          ctx.lineWidth = 2.5
+          roundRect(-bw / 2 - cyc * 10, -bh / 2 - cyc * 10, bw + cyc * 20, bh + cyc * 20, 10 + cyc * 6)
+          ctx.stroke()
+        }
         ctx.restore()
       }
 
@@ -276,40 +332,51 @@ export function createBoardRenderer(canvas) {
         ctx.fill()
       }
 
-      // Name + HP text, stacked under the bar. Two short lines instead of one long one so it
-      // never needs more horizontal room than the panel itself already has.
+      // Name / HP / telegraph text, stacked under the bar. A dynamic line list rather than a fixed
+      // two lines: EXP-011 adds a CAST IN N / ATTACK IN N line (kept as its own literal-text line,
+      // not folded into the badge, per the VS-001 brief -- "отображать отдельно"), and EXP-013 adds
+      // an independent THROW IN N line when this target also carries a board ability.
       const fontPx = Math.max(10, Math.floor(g.cell * (t.isBoss ? 0.3 : 0.25)))
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      const line1Y = barY + barH + 6 + fontPx * 0.5
-      const line2Y = line1Y + fontPx * 1.15
-      const name = t.label ?? t.id
-      const line2 = t.dead ? 'повержен' : `HP ${t.hp}/${t.hpMax}`
-      ctx.font = `700 ${fontPx}px system-ui`
-      const w1 = ctx.measureText(name).width
-      ctx.font = `600 ${fontPx}px system-ui`
-      const w2 = ctx.measureText(line2).width
+      const lines = [
+        { text: t.label ?? t.id, bold: true, color: col.text },
+        { text: t.dead ? 'повержен' : `HP ${t.hp}/${t.hpMax}`, bold: false, color: t.dead ? col.muted : (t.hp / t.hpMax <= 0.25 ? col.danger : col.text) },
+      ]
+      const isCast = t.attackKind === 'cast'
+      if (!t.dead && Number.isFinite(t.countdown)) {
+        lines.push({ text: isCast ? `CAST IN ${t.countdown}` : `ATTACK IN ${t.countdown}`, bold: true, color: isCast ? col.cast : t.countdown <= 1 ? col.danger : col.text })
+      }
+      if (!t.dead && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
+        lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
+      }
+      const lineH = fontPx * 1.15
+      const firstY = barY + barH + 6 + fontPx * 0.5
+      let maxW = 0
+      for (const ln of lines) {
+        ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
+        maxW = Math.max(maxW, ctx.measureText(ln.text).width)
+      }
       const padX = 6
-      const plateW = Math.max(w1, w2) + padX * 2
+      const plateW = maxW + padX * 2
       ctx.fillStyle = col.labelBacking
-      roundRect(-plateW / 2, line1Y - fontPx * 0.6, plateW, (line2Y - line1Y) + fontPx * 1.1, 6)
+      roundRect(-plateW / 2, firstY - fontPx * 0.6, plateW, lineH * lines.length + fontPx * 0.5, 6)
       ctx.fill()
-      ctx.font = `700 ${fontPx}px system-ui`
-      ctx.fillStyle = col.text
-      ctx.fillText(name, 0, line1Y)
-      ctx.font = `600 ${fontPx}px system-ui`
-      ctx.fillStyle = t.dead ? col.muted : (t.hp / t.hpMax <= 0.25 ? col.danger : col.text)
-      ctx.fillText(line2, 0, line2Y)
+      lines.forEach((ln, i) => {
+        ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
+        ctx.fillStyle = ln.color
+        ctx.fillText(ln.text, 0, firstY + i * lineH)
+      })
 
-      // ATTACK IN badge: a small numeric chip at the panel's outer-top corner (outward = away
-      // from the board on this target's own side), independent of panel orientation.
+      // ATTACK/CAST IN badge: a small numeric chip at the panel's outer-top corner (outward = away
+      // from the board on this target's own side), independent of panel orientation. Colored by
+      // attack kind so it matches the telegraph pulse/text line above.
       if (Number.isFinite(t.countdown) && !t.dead) {
         const r = Math.max(9, g.cell * 0.2)
         const bxo = bw / 2 - r * 0.6
         const byo = -bh / 2 - r * 0.55
-        const urgent = t.countdown <= 1
         ctx.save()
-        ctx.fillStyle = urgent ? col.danger : col.badgeFill
+        ctx.fillStyle = isCast ? col.cast : t.countdown <= 1 ? col.danger : col.badgeFill
         ctx.beginPath()
         ctx.arc(bxo, byo, r, 0, Math.PI * 2)
         ctx.fill()
@@ -320,9 +387,28 @@ export function createBoardRenderer(canvas) {
         ctx.fillText(String(t.countdown), bxo, byo + 1)
         ctx.restore()
       }
+      // THROW IN badge (EXP-013): opposite corner from the attack badge, rock-brown, independent
+      // countdown -- a target can carry both at once (rock-spike's rockthrower does).
+      if (!t.dead && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
+        const r = Math.max(9, g.cell * 0.2)
+        const bxo = -bw / 2 + r * 0.6
+        const byo = -bh / 2 - r * 0.55
+        ctx.save()
+        ctx.fillStyle = col.rock
+        ctx.beginPath()
+        ctx.arc(bxo, byo, r, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = '#fff'
+        ctx.font = `800 ${Math.floor(r * 1.15)}px system-ui`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(String(t.abilityCountdown), bxo, byo + 1)
+        ctx.restore()
+      }
 
       // CAST INTERRUPTED burst, rising just above the panel -- local coords again, so it always
-      // reads next to its own target.
+      // reads next to its own target. Only fires for a real EXP-011 cast interrupt (see
+      // onTapResult), never the legacy interruptOnHit reset.
       const sinceInterrupt = now - fx.interruptT
       if (sinceInterrupt >= 0 && sinceInterrupt < 700) {
         const p = sinceInterrupt / 700
@@ -331,7 +417,7 @@ export function createBoardRenderer(canvas) {
         ctx.fillStyle = col.good
         ctx.font = `700 ${Math.max(10, Math.floor(g.cell * 0.24))}px system-ui`
         ctx.textAlign = 'center'
-        ctx.fillText('ПРЕРВАНО', 0, -bh / 2 - 10 - p * 12)
+        ctx.fillText('CAST INTERRUPTED', 0, -bh / 2 - 10 - p * 12)
         ctx.restore()
       }
 
@@ -389,6 +475,10 @@ export function createBoardRenderer(canvas) {
       if (!alive) return
       const arena = s.arenaDir(a.id)
       const free = s.board.canExit(a.id)
+      // EXP-013/VS-001: a rock-pinned arrow is geometrically free (board.canExit is unchanged) but
+      // mechanically untappable -- s.isPinned is the same "playable" overlay rock-spike.js already
+      // draws from, kept visually consistent here (rock-brown, dashed) so the two viewers agree.
+      const pinned = s.isPinned(a.id)
       const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead) : arena === s.bossSide
       const pts = a.cells.map(cellCenter)
       const lw = Math.max(3, geo.cell * 0.27)
@@ -396,22 +486,25 @@ export function createBoardRenderer(canvas) {
       const isHover = a.id === hoverId
       const isBlocked = a.id === flash.blocked
       const isBlocker = a.id === flash.blocker
+      const fx = arrowFxFor(a.id)
+      const isDenied = now - fx.deniedT >= 0 && now - fx.deniedT < 320
 
-      // Outer glow: strong + colored for a free/aimed arrow, faint for a blocked one.
+      // Outer glow: strong + colored for a free/aimed arrow, rock-brown for a pinned one, faint for
+      // a geometrically blocked one.
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.shadowBlur = free ? (aims ? 16 : 9) : 3
-      ctx.shadowColor = aims ? col.aimGlow : free ? col.freeGlow : col.mutedGlow
-      ctx.strokeStyle = aims ? col.aim : free ? col.arrow : col.arrowDim
-      ctx.globalAlpha = free ? 1 : 0.55
-      ctx.setLineDash(free ? [] : [lw * 0.9, lw * 0.9])
+      ctx.shadowBlur = pinned ? 10 : free ? (aims ? 16 : 9) : 3
+      ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : free ? col.freeGlow : col.mutedGlow
+      ctx.strokeStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
+      ctx.globalAlpha = pinned ? 0.85 : free ? 1 : 0.55
+      ctx.setLineDash(pinned ? [lw * 0.55, lw * 0.55] : free ? [] : [lw * 0.9, lw * 0.9])
       ctx.lineWidth = lw
       polyline(pts)
       ctx.restore()
 
-      // Inner highlight: a thin near-white core along the same path for a glossy look (free only).
-      if (free) {
+      // Inner highlight: a thin near-white core along the same path for a glossy look (free, unpinned only).
+      if (free && !pinned) {
         ctx.save()
         ctx.globalCompositeOperation = 'lighter'
         ctx.globalAlpha = 0.22
@@ -423,9 +516,11 @@ export function createBoardRenderer(canvas) {
         ctx.restore()
       }
 
-      if (isHover || isBlocked || isBlocker || isHint) {
+      if (isHover || isBlocked || isBlocker || isHint || isDenied) {
         ctx.save()
-        ctx.strokeStyle = isBlocked ? '#e53935' : isBlocker ? '#fb8c00' : isHint ? '#43a047' : col.muted
+        // Denied (tapped while pinned) gets its own amber ring, deliberately NOT the blocked-tap
+        // red -- this never costs HP, so it must not look like a damaging mistake.
+        ctx.strokeStyle = isBlocked ? '#e53935' : isBlocker ? '#fb8c00' : isDenied ? col.rock : isHint ? '#43a047' : col.muted
         ctx.lineWidth = lw + 6
         ctx.globalAlpha = 0.55
         ctx.lineCap = 'round'
@@ -439,10 +534,10 @@ export function createBoardRenderer(canvas) {
       const d = a.dir
       const sz = geo.cell * 0.42
       ctx.save()
-      ctx.shadowBlur = free ? 10 : 0
-      ctx.shadowColor = aims ? col.aimGlow : col.freeGlow
-      ctx.fillStyle = aims ? col.aim : free ? col.arrow : col.arrowDim
-      ctx.globalAlpha = free ? 1 : 0.6
+      ctx.shadowBlur = pinned ? 6 : free ? 10 : 0
+      ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : col.freeGlow
+      ctx.fillStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
+      ctx.globalAlpha = pinned ? 0.85 : free ? 1 : 0.6
       ctx.beginPath()
       ctx.moveTo(hx + DX[d] * sz, hy + DY[d] * sz)
       ctx.lineTo(hx - DY[d] * sz * 0.82, hy + DX[d] * sz * 0.82)
@@ -450,6 +545,71 @@ export function createBoardRenderer(canvas) {
       ctx.closePath()
       ctx.fill()
       ctx.restore()
+
+      drawPinFx(col, a, hx, hy, sz, pinned, s)
+    }
+
+    /** EXP-013/VS-001: rock marker + remaining-turns badge for the whole pin duration, plus the
+     * three one-shot cues the brief asks for: a pop-in "ROCK THROWN" when the pin is created, a
+     * green "UNPINNED" pulse when it expires, and a denied-tap "PINNED" popup (no HP shown lost --
+     * there is none). Deliberately simple (an icon + text popup): no puppet/FX pipeline, per the
+     * VS-001 brief. */
+    function drawPinFx(col, a, hx, hy, sz, pinned, s) {
+      const fx = arrowFxFor(a.id)
+      const markerX = hx + DX[a.dir] * sz * 2.2
+      const markerY = hy + DY[a.dir] * sz * 2.2
+
+      if (pinned) {
+        const turnsLeft = s.pinnedArrows.find((p) => p.id === a.id)?.turnsLeft ?? 0
+        const sincePin = now - fx.pinT
+        const pop = sincePin >= 0 && sincePin < 400 ? 1 + Math.sin(clamp01(sincePin / 400) * Math.PI) * 0.5 : 1
+        ctx.save()
+        ctx.translate(markerX, markerY)
+        ctx.scale(pop, pop)
+        const r = Math.max(9, geo.cell * 0.22)
+        if (assets.rockProjectile) {
+          ctx.drawImage(assets.rockProjectile, -r, -r, r * 2, r * 2)
+        } else {
+          ctx.font = `${Math.floor(r * 1.8)}px system-ui`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText('\u{1FAA8}', 0, 0) // rock emoji placeholder
+        }
+        ctx.fillStyle = col.rock
+        ctx.font = `700 ${Math.max(9, Math.floor(geo.cell * 0.24))}px system-ui`
+        ctx.textAlign = 'center'
+        ctx.fillText(`${turnsLeft}t`, 0, r + 8)
+        ctx.restore()
+      }
+
+      const sinceUnpin = now - fx.unpinT
+      if (sinceUnpin >= 0 && sinceUnpin < 550) {
+        const p = sinceUnpin / 550
+        ctx.save()
+        ctx.globalAlpha = 1 - p
+        ctx.strokeStyle = col.good
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(hx, hy, sz * (1 + p * 1.6), 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.fillStyle = col.good
+        ctx.font = `700 ${Math.max(9, Math.floor(geo.cell * 0.22))}px system-ui`
+        ctx.textAlign = 'center'
+        ctx.fillText('UNPINNED', hx, hy - sz * 2.4 - p * 10)
+        ctx.restore()
+      }
+
+      const sinceDenied = now - fx.deniedT
+      if (sinceDenied >= 0 && sinceDenied < 320) {
+        const p = sinceDenied / 320
+        ctx.save()
+        ctx.globalAlpha = 1 - p
+        ctx.fillStyle = col.rock
+        ctx.font = `700 ${Math.max(9, Math.floor(geo.cell * 0.22))}px system-ui`
+        ctx.textAlign = 'center'
+        ctx.fillText('PINNED', hx, hy - sz * 2.4 - p * 8)
+        ctx.restore()
+      }
     }
 
     function drawShot(col, sh, now) {
@@ -507,11 +667,17 @@ export function createBoardRenderer(canvas) {
       badgeFill: dark ? '#4a4a52' : '#5c5348',
       hpTrack: dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)', hpFill: dark ? '#7be08a' : '#2e8b3d',
       danger: dark ? '#ff6b6b' : '#c62828', good: dark ? '#7be08a' : '#1a7f37',
+      // EXP-011/VS-001: cast telegraph is visually distinct from a plain attack (violet, matching
+      // design/visual-assets-v01's "amethyst"/purple cast-glow direction) rather than reusing the
+      // attack's amber/red. EXP-013/VS-001: rock-brown for anything Stone-Throw-related, matching
+      // rock-spike.js's debug-viewer convention so the two viewers read consistently.
+      cast: dark ? '#c9a6ff' : '#7c4dbf', castGlow: dark ? 'rgba(201,166,255,0.8)' : 'rgba(124,77,191,0.55)',
+      rock: dark ? '#c49a7c' : '#8d6e63', rockGlow: dark ? 'rgba(196,154,124,0.7)' : 'rgba(141,110,99,0.5)',
     }
   }
 
   return {
-    resize, hitTest, setHover, setFlash, onTapResult, onRotateStart, onRotateEnemyAttack, markDeaths, resetFx, frame,
+    resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, resetFx, frame,
     get geo() { return geo },
     collectTargets,
   }

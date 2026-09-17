@@ -49,9 +49,13 @@ canvas#arena { max-width: 100%; max-height: 100%; touch-action: manipulation; }
 .hud-right { right: 14px; top: 44px; width: 260px; max-height: 46vh; }
 
 .player-card {
-  background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 10px 12px;
+  background-color: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 10px 12px;
   backdrop-filter: blur(6px); transition: box-shadow 0.15s ease;
 }
+/* VS-001: playerPortrait asset slot, blended under the same translucent panel color -- if the
+   file doesn't exist (assets.js resolves it to null) this class is simply never added, and the
+   card looks exactly like it did before this slot existed. */
+.player-card.has-portrait { background-blend-mode: luminosity; }
 .player-card .name { font-weight: 700; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-dim); }
 .hp-bar { height: 12px; border-radius: 6px; background: rgba(255,255,255,0.12); overflow: hidden; margin-top: 6px; border: 1px solid var(--panel-border); }
 .hp-fill { height: 100%; background: linear-gradient(180deg, #8be89a, #2e8b3d); transition: width 0.25s ease, background 0.25s ease; }
