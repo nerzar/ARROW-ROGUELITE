@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VIS-003 — Layered 2D Puppet Animation Proof</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 16px 20px 40px;
+    background: #0b0e14; color: #e8eef4;
+    font: 14px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+    max-width: 1020px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 12px; color: #9fb0c0; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; align-items: center; }
+  button {
+    background: #1e252f; color: #e8eef4;
+    border: 1px solid #3a4656; border-radius: 6px;
+    padding: 7px 12px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { background: #2c3645; }
+  button.active { border-color: #00e5ff; color: #00e5ff; }
+  button.warn { border-color: #7a2f2f; }
+  .group-label { color: #9fb0c0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  #fps, #status { font-family: monospace; font-size: 13px; }
+  #fps { color: #00e5ff; }
+  #status { color: #ffd54f; }
+  .stage-wrap {
+    /* checkerboard proves the canvas itself is transparent */
+    background:
+      conic-gradient(#161c26 0 25%, #10141c 0 50%, #161c26 0 75%, #10141c 0);
+    background-size: 24px 24px;
+    border: 1px solid #3a4656; border-radius: 8px;
+    margin: 10px 0;
+  }
+  canvas#stage { width: 100%; display: block; }
+  table { border-collapse: collapse; margin-top: 8px; font-family: monospace; font-size: 13px; }
+  th, td { border: 1px solid #3a4656; padding: 4px 10px; text-align: right; }
+  th { color: #9fb0c0; font-weight: normal; }
+  .note { color: #9fb0c0; font-size: 12px; max-width: 900px; }
+  code { color: #ffd54f; }
+</style>
+</head>
+<body>
+  <h1>VIS-003 — Layered 2D Puppet Animation Proof</h1>
+  <p class="sub">
+    Standalone tech demo. Zero dependencies, no combat engine, one dummy caster
+    (8 procedural parts) on a transparent canvas. See <code>REPORT.md</code> for the full write-up.
+  </p>
+
+  <div class="row">
+    <span class="group-label">Clips</span>
+    <button id="btn-idle">Idle</button>
+    <button id="btn-hit">Hit</button>
+    <button id="btn-attack">Attack</button>
+    <button id="btn-cast">Cast</button>
+    <button id="btn-death" class="warn">Death</button>
+    <button id="btn-revive">Revive → Idle</button>
+    <button id="btn-interrupt">Test: cast → hit interrupt → idle</button>
+  </div>
+
+  <div class="row">
+    <span class="group-label">Puppets</span>
+    <button id="btn-n1">1</button>
+    <button id="btn-n10">10</button>
+    <button id="btn-n30">30</button>
+    <button id="btn-n100">100</button>
+    <button id="btn-bench">▶ Run benchmark 1/10/30/100</button>
+    <button id="btn-markers">FX markers: ON</button>
+  </div>
+
+  <div class="row">
+    <span id="fps">— FPS</span>
+    <span id="status">…</span>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage"></canvas>
+  </div>
+
+  <table id="results"></table>
+
+  <p class="note">
+    Interrupt model: every one-shot clip auto-returns to <code>idle</code>; any clip can be
+    interrupted at any time with a 120&nbsp;ms crossfade (offsets are blended, never snapped).
+    <code>death</code> is terminal until Revive. Cyan crosses are FX attachment anchors
+    (<code>handL, weaponTip, bodyCenter, headTop</code>) resolved through the live hierarchy.
+    Benchmark runs the same looping <code>idle</code> on every puppet.
+  </p>
+
+  <script src="anim-core.js"></script>
+  <script src="manifest.js"></script>
+  <script src="puppet-clips.js"></script>
+  <script src="dummy-parts.js"></script>
+  <script src="puppet.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
