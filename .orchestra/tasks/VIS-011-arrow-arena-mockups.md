@@ -112,8 +112,11 @@ Do not merge main.
 - Проекция сверена в node теми же константами: квад `[[355,243],[605,243],[629,442],[334,443]]`,
   `S(2,0)=42.8 → S(2,2)=46.8 → S(3,4)=51.6` (перспектива: дальний ряд тоньше ближнего),
   21/21 занятых центров внутри stage, пересечений клеток между стрелками нет (21/25, свободны (3,0),(4,0)).
-- Push fast-forward на `origin/design/VIS-011-arrow-arena-mockups`,
-  `origin/... == RESULT_SHA` (см. ниже).
+- Push fast-forward на `origin/design/VIS-011-arrow-arena-mockups`.
+  Проверено на remote после push: `origin/design/VIS-011-arrow-arena-mockups` == SHA финального
+  коммита ветки (он же прямой потомок `RESULT_SHA`); `git log origin/design/VIS-011-arrow-arena-mockups`
+  начинается с финального коммита → `0029478` → `87163a1` → `eea5c7e`.
+  Рабочее дерево чистое, незапушенных коммитов нет.
 
 ## FOUND
 
@@ -144,8 +147,12 @@ Do not merge main.
 
 ## RESULT_SHA
 
-_RESULT_SHA_FILLED_IN_FINAL_COMMIT_
+`0029478f9b6bd0a30cf1ba190da348d8e26c23c0` — RESULT-коммит: docs-деливерабл `87163a1`
+(`docs/VIS-011-ARROW-ARENA-MOCKUPS.md` + `docs/VIS-011-arena-mockups.html`) плюс карточка
+с заполненными RESULT/VERIFY/FOUND. Финальный коммит ветки добавляет эту строку и `STATUS: DONE`
+(самоссылочный SHA невозможен, поэтому RESULT_SHA указывает на родителя tip'а — та же
+конвенция, что в VIS-010). Фактический tip проверяется в VERIFY.
 
 ## STATUS
 
-READY (RESULT/VERIFY/FOUND заполнены; финальный commit ставит STATUS и SHA).
+DONE (исполнитель закончил; работа не принята до решения пользователя).
