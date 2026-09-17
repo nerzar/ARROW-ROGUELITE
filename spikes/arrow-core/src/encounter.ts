@@ -33,6 +33,17 @@ import { BoardTopology } from './topology.js'
  * couple of simultaneous enemies). The boss branch is untouched EXP-010 code, moved verbatim into
  * `tapBoss`/`advanceTurn`; all EXP-008/009/010 encounters (including the seed-1571 mini-boss) keep
  * using it exactly as before.
+ *
+ * EXP-011 adds an attack *type* to `AttackTimer`, orthogonal to boss-mode vs enemies-mode:
+ * `kind: 'normal' | 'cast'`. A `normal` attack is unchanged EXP-010 behaviour (a landed hit deals its
+ * damage and never touches the timer). A `cast` attack telegraphs the same way but, when
+ * `interruptible` is set, a landed hit while it is armed interrupts it: the cast's own damage never
+ * fires, and the attacker's *next* attack becomes `interruptedAttack` (by convention a `normal`
+ * attack with its own interval/damage) — a type change, not a numeric bonus to the cast's countdown
+ * and not a full reset back into another cast. An uninterruptible cast (`interruptible` absent/false)
+ * behaves exactly like a `normal` timer that merely displays as "CAST IN N" — hits do not touch it.
+ * This is the general mechanism the brief asks for regular Caster enemies to reuse later; the
+ * mini-boss's phase 2 (`encounters/cp-e5.json`) is simply the first `AttackTimer` to set it.
  */
 
 /**
@@ -46,11 +57,21 @@ export const DEFAULT_PLAYER_HP = 9999
 /** +1 = 90° clockwise, -1 = 90° counter-clockwise. */
 export type Turn = 1 | -1
 
+/** EXP-011: what an `AttackTimer` currently telegraphs as. Default `'normal'` if `kind` is absent. */
+export type AttackKind = 'normal' | 'cast'
+
 /**
- * Enemy `ATTACK IN N` telegraph. Ticks down by one every turn regardless of hit/miss and hits the
- * player at 0, then resets. A landed hit deals its damage to the target and nothing else UNLESS
- * `interruptOnHit` is set — that is a separate, explicit opt-in (docs/COMBAT-RULES.md 5), off by
- * default, and not used by any EXP-010 prologue encounter.
+ * Enemy `ATTACK IN N` / `CAST IN N` telegraph. Ticks down by one every turn regardless of hit/miss
+ * and hits the player at 0, then resets. A landed hit deals its damage to the target and nothing else
+ * UNLESS one of the two independent opt-ins below fires:
+ *
+ * - `interruptOnHit` (EXP-010, legacy): N hits in the cycle reset THIS SAME countdown to `interval`
+ *   without changing `kind`. Off by default, not used by any EXP-011 content; kept only because
+ *   docs/COMBAT-RULES.md 5 lists "Tank needs 2 hits to interrupt" as a possible future rule shape.
+ * - `kind: 'cast'` + `interruptible` (EXP-011): a landed hit while the cast is armed cancels it —
+ *   its damage never fires — and the attacker's next attack becomes `interruptedAttack` instead of
+ *   this same cast continuing or resetting. This is a *type* change, not a timer bonus: see the
+ *   module doc comment above.
  */
 export interface AttackTimer {
   /** Turns between attacks; the countdown resets to this value after every attack or interrupt. */
@@ -61,6 +82,14 @@ export interface AttackTimer {
   interruptOnHit?: boolean
   /** Hits needed in the current cycle to interrupt, when `interruptOnHit` is true. Default 1. */
   interruptHits?: number
+  /** EXP-011: attack type telegraphed to the player. Default `'normal'`. */
+  kind?: AttackKind
+  /** EXP-011, `kind: 'cast'` only: a landed hit while armed interrupts this cast (see above). */
+  interruptible?: boolean
+  /** EXP-011: required when `interruptible` is true — the attack used after the interrupt (by
+   * convention `kind: 'normal'`; nesting another interruptible cast here is not a case this spike's
+   * content needs, but is not itself rejected by `checkEncounter`). */
+  interruptedAttack?: AttackTimer
 }
 
 export interface BossPhase {
@@ -125,8 +154,13 @@ export type TapResult =
       phaseAfter: number
       /** Rotate charges granted by the phase this hit started. Always 0 in `enemies` mode. */
       granted: number
-      /** This hit interrupted (reset) an attack timer (the active boss phase's, or the hit enemy's). */
+      /** This hit interrupted (reset) an attack timer (the active boss phase's, or the hit enemy's) —
+       * fires for both the legacy `interruptOnHit` reset and an EXP-011 `castInterrupted` below. */
       interrupted: boolean
+      /** EXP-011: this hit specifically interrupted a `kind: 'cast'` attack — its damage never fired
+       * and the attacker's next attack became `interruptedAttack`. A narrower, UI-facing signal than
+       * `interrupted` (e.g. to show "CAST INTERRUPTED" instead of a generic message). */
+      castInterrupted: boolean
       /** At least one attack timer reached 0 this turn and hit the player. */
       enemyAttacked: boolean
       /** Total player damage taken this turn from enemy attacks. */
@@ -144,10 +178,14 @@ interface TimerSnapshot {
   /** Boss mode. */
   countdown?: number
   hitsThisCycle?: number
+  /** Boss mode, EXP-011: has the active phase's cast already been interrupted (switched to `interruptedAttack`)? */
+  castInterrupted?: boolean
   /** Enemies mode: one entry per `def.enemies[i]`. */
   enemyHp?: number[]
   enemyCountdown?: number[]
   enemyHitsThisCycle?: number[]
+  /** Enemies mode, EXP-011: one entry per `def.enemies[i]` — has that enemy's cast been interrupted? */
+  enemyCastInterrupted?: boolean[]
 }
 
 type Entry = ({ kind: 'tap'; id: number; hit: boolean } | { kind: 'rotate'; turn: Turn }) & { timerBefore: TimerSnapshot }
@@ -167,10 +205,15 @@ export class EncounterState {
   private countdown = Infinity
   /** Landed hits accumulated toward the active attackTimer's interruptHits threshold. Boss mode only. */
   private hitsThisCycle = 0
+  /** EXP-011, boss mode only: has the active phase's `kind: 'cast'` attack already been interrupted
+   * (switched to `interruptedAttack`)? Reset to false on every phase change. */
+  private castInterrupted = false
   /** Enemies mode: per-enemy remaining hp, countdown, interrupt-cycle hit count (index = def.enemies[i]). */
   private enemyHp: number[] = []
   private enemyCountdown: number[] = []
   private enemyHitsThisCycle: number[] = []
+  /** EXP-011, enemies mode only: per-enemy, has that enemy's `kind: 'cast'` attack been interrupted? */
+  private enemyCastInterrupted: boolean[] = []
   private playerHpValue: number
   /** The HP this encounter started with (constructor param), needed to replay it exactly in clone(). */
   readonly playerHpStart: number
@@ -189,6 +232,7 @@ export class EncounterState {
       this.enemyHp = def.enemies.map((e) => e.hp)
       this.enemyCountdown = def.enemies.map((e) => e.attackTimer?.interval ?? Infinity)
       this.enemyHitsThisCycle = def.enemies.map(() => 0)
+      this.enemyCastInterrupted = def.enemies.map(() => false)
     } else {
       let hp = 0
       let granted = 0
@@ -255,6 +299,12 @@ export class EncounterState {
   get countdownTurns(): number {
     return this.countdown
   }
+  /** EXP-011, boss mode: the active phase's current attack type ('normal'/'cast'), or undefined if
+   * this phase has no attackTimer at all. After an interrupt this reflects `interruptedAttack.kind`. */
+  get attackKind(): AttackKind | undefined {
+    const at = this.currentAttackTimer()
+    return at ? (at.kind ?? 'normal') : undefined
+  }
   /** The only loss condition: the player ran out of HP. */
   get lost(): boolean {
     return this.playerDead
@@ -288,18 +338,33 @@ export class EncounterState {
    * Enemies mode: current state of every enemy, for the validator/analyzer/viewer (boss mode has no
    * equivalent — its single target's state is `hp`/`totalHp`/`bossSide`/`phaseIndex`).
    */
-  get enemies(): { id: string; side: Dir; hp: number; hpMax: number; dead: boolean; countdown: number; mandatory: boolean; label?: string }[] {
+  get enemies(): {
+    id: string
+    side: Dir
+    hp: number
+    hpMax: number
+    dead: boolean
+    countdown: number
+    mandatory: boolean
+    label?: string
+    /** EXP-011: this enemy's current attack type, or undefined if it has no attackTimer. */
+    attackKind?: AttackKind
+  }[] {
     if (!this.def.enemies) return []
-    return this.def.enemies.map((e, i) => ({
-      id: e.id,
-      side: e.side,
-      hp: Math.max(0, this.enemyHp[i]),
-      hpMax: e.hp,
-      dead: this.enemyHp[i] <= 0,
-      countdown: this.enemyCountdown[i],
-      mandatory: e.mandatory ?? true,
-      label: e.label,
-    }))
+    return this.def.enemies.map((e, i) => {
+      const at = this.currentEnemyAttackTimer(i)
+      return {
+        id: e.id,
+        side: e.side,
+        hp: Math.max(0, this.enemyHp[i]),
+        hpMax: e.hp,
+        dead: this.enemyHp[i] <= 0,
+        countdown: this.enemyCountdown[i],
+        mandatory: e.mandatory ?? true,
+        label: e.label,
+        attackKind: at ? (at.kind ?? 'normal') : undefined,
+      }
+    })
   }
 
   grantedUpToPhase(i: number): number {
@@ -347,9 +412,15 @@ export class EncounterState {
         enemyHp: [...this.enemyHp],
         enemyCountdown: [...this.enemyCountdown],
         enemyHitsThisCycle: [...this.enemyHitsThisCycle],
+        enemyCastInterrupted: [...this.enemyCastInterrupted],
       }
     }
-    return { playerHp: this.playerHpValue, countdown: this.countdown, hitsThisCycle: this.hitsThisCycle }
+    return {
+      playerHp: this.playerHpValue,
+      countdown: this.countdown,
+      hitsThisCycle: this.hitsThisCycle,
+      castInterrupted: this.castInterrupted,
+    }
   }
   private restoreTimer(t: TimerSnapshot): void {
     this.playerHpValue = t.playerHp
@@ -357,9 +428,11 @@ export class EncounterState {
       this.enemyHp = t.enemyHp!
       this.enemyCountdown = t.enemyCountdown!
       this.enemyHitsThisCycle = t.enemyHitsThisCycle!
+      this.enemyCastInterrupted = t.enemyCastInterrupted!
     } else {
       this.countdown = t.countdown!
       this.hitsThisCycle = t.hitsThisCycle!
+      this.castInterrupted = t.castInterrupted!
     }
   }
 
@@ -368,26 +441,59 @@ export class EncounterState {
     const at = this.def.boss!.phases[i]?.attackTimer
     this.countdown = at?.interval ?? Infinity
     this.hitsThisCycle = 0
+    this.castInterrupted = false
+  }
+
+  /** Boss mode: the phase-active attack config right now — the phase's own `attackTimer`, or, once
+   * `castInterrupted` flipped true, its `interruptedAttack`. Undefined if the phase has no attackTimer
+   * or the boss is already dead. EXP-011. */
+  private currentAttackTimer(): AttackTimer | undefined {
+    const phases = this.def.boss!.phases
+    const i = this.phaseIndex
+    if (i >= phases.length) return undefined
+    const at = phases[i].attackTimer
+    if (!at) return undefined
+    return this.castInterrupted && at.interruptedAttack ? at.interruptedAttack : at
+  }
+
+  /** Enemies mode equivalent of `currentAttackTimer`, per-enemy. EXP-011. */
+  private currentEnemyAttackTimer(i: number): AttackTimer | undefined {
+    const at = this.def.enemies![i].attackTimer
+    if (!at) return undefined
+    return this.enemyCastInterrupted[i] && at.interruptedAttack ? at.interruptedAttack : at
   }
 
   /**
    * Advances the active phase's attack timer by one turn. `hitLanded` is whether this turn's tap
    * hit the boss (a rotate never hits). Per docs/COMBAT-RULES.md 5, a landed hit only damages the
-   * target and the countdown ticks down exactly like a miss would — UNLESS this phase's
-   * `attackTimer.interruptOnHit` explicitly opts in, in which case reaching `interruptHits` resets
-   * the cycle instead of ticking it down (no EXP-010 prologue encounter turns this on). Returns
-   * what happened for the caller to report.
+   * target and the countdown ticks down exactly like a miss would — UNLESS the active attack config
+   * opts into one of two independent interrupt shapes (checked in this order, before the countdown
+   * ticks at all):
+   *
+   * 1. EXP-011 `kind: 'cast'` + `interruptible`: the hit cancels this cast (no damage this cycle) and
+   *    the phase's active attack becomes `interruptedAttack` for the rest of the phase — a type
+   *    change, not a timer bonus.
+   * 2. EXP-010 legacy `interruptOnHit`: `interruptHits` hits reset the SAME countdown to `interval`
+   *    without changing attack kind (no EXP-011 content turns this on).
+   *
+   * Returns what happened for the caller to report.
    */
-  private advanceTurn(hitLanded: boolean): { interrupted: boolean; attacked: boolean; damage: number } {
-    const phases = this.def.boss!.phases
-    const at = phases[Math.min(this.phaseIndex, phases.length - 1)]?.attackTimer
-    if (!at || this.phaseIndex >= phases.length) return { interrupted: false, attacked: false, damage: 0 }
+  private advanceTurn(hitLanded: boolean): { interrupted: boolean; castInterrupted: boolean; attacked: boolean; damage: number } {
+    const at = this.currentAttackTimer()
+    if (!at) return { interrupted: false, castInterrupted: false, attacked: false, damage: 0 }
+    if (at.kind === 'cast' && at.interruptible && hitLanded) {
+      this.castInterrupted = true
+      const next = at.interruptedAttack
+      this.countdown = next?.interval ?? Infinity
+      this.hitsThisCycle = 0
+      return { interrupted: true, castInterrupted: true, attacked: false, damage: 0 }
+    }
     if (at.interruptOnHit && hitLanded) {
       this.hitsThisCycle++
       if (this.hitsThisCycle >= (at.interruptHits ?? 1)) {
         this.countdown = at.interval
         this.hitsThisCycle = 0
-        return { interrupted: true, attacked: false, damage: 0 }
+        return { interrupted: true, castInterrupted: false, attacked: false, damage: 0 }
       }
     }
     this.countdown--
@@ -395,29 +501,40 @@ export class EncounterState {
       this.playerHpValue = Math.max(0, this.playerHpValue - at.damage)
       this.countdown = at.interval
       this.hitsThisCycle = 0
-      return { interrupted: false, attacked: true, damage: at.damage }
+      return { interrupted: false, castInterrupted: false, attacked: true, damage: at.damage }
     }
-    return { interrupted: false, attacked: false, damage: 0 }
+    return { interrupted: false, castInterrupted: false, attacked: false, damage: 0 }
   }
 
   /**
    * Enemies mode: ticks every currently-alive enemy's attack timer by one turn (docs/COMBAT-RULES.md
    * / EXP-010b brief: "each legal world turn ticks the timers of all alive attackers", independent of
    * which single enemy this turn's hit landed on, if any — `hitTargetIdx` is only used to let that one
-   * enemy's own `interruptOnHit` fire). An enemy already at 0 hp is skipped: a kill lands before this
-   * runs (see `tapEnemies`), so the enemy that died this turn never gets to retaliate — same rule as
-   * the boss's "killed this turn: no retaliation", just per-enemy instead of per-encounter.
+   * enemy's own `interruptOnHit`/EXP-011 cast-interrupt fire). An enemy already at 0 hp is skipped: a
+   * kill lands before this runs (see `tapEnemies`), so the enemy that died this turn never gets to
+   * retaliate — same rule as the boss's "killed this turn: no retaliation", just per-enemy instead of
+   * per-encounter. Per-enemy interrupt precedence mirrors `advanceTurn`: EXP-011 cast-interrupt first,
+   * then the EXP-010 legacy `interruptOnHit` reset, then the plain tick.
    */
-  private advanceEnemiesTurn(hitTargetIdx: number): { interrupted: boolean; attacked: boolean; damage: number; attacks: { id: string; damage: number }[] } {
+  private advanceEnemiesTurn(hitTargetIdx: number): { interrupted: boolean; castInterrupted: boolean; attacked: boolean; damage: number; attacks: { id: string; damage: number }[] } {
     let interrupted = false
+    let castInterrupted = false
     let attacked = false
     let damage = 0
     const attacks: { id: string; damage: number }[] = []
-    const defs = this.def.enemies!
     for (let i = 0; i < this.enemyHp.length; i++) {
       if (this.enemyHp[i] <= 0) continue
-      const at = defs[i].attackTimer
+      const at = this.currentEnemyAttackTimer(i)
       if (!at) continue
+      if (at.kind === 'cast' && at.interruptible && i === hitTargetIdx) {
+        this.enemyCastInterrupted[i] = true
+        const next = at.interruptedAttack
+        this.enemyCountdown[i] = next?.interval ?? Infinity
+        this.enemyHitsThisCycle[i] = 0
+        interrupted = true
+        castInterrupted = true
+        continue
+      }
       if (at.interruptOnHit && i === hitTargetIdx) {
         this.enemyHitsThisCycle[i]++
         if (this.enemyHitsThisCycle[i] >= (at.interruptHits ?? 1)) {
@@ -434,10 +551,10 @@ export class EncounterState {
         this.enemyHitsThisCycle[i] = 0
         attacked = true
         damage += at.damage
-        attacks.push({ id: defs[i].id, damage: at.damage })
+        attacks.push({ id: this.def.enemies![i].id, damage: at.damage })
       }
     }
-    return { interrupted, attacked, damage, attacks }
+    return { interrupted, castInterrupted, attacked, damage, attacks }
   }
 
   tap(id: number): TapResult {
@@ -461,6 +578,7 @@ export class EncounterState {
     this.log.push({ kind: 'tap', id, hit, timerBefore })
 
     let interrupted = false
+    let castInterrupted = false
     let attacked = false
     let enemyDamage = 0
     let enemyAttacks: { id: string; damage: number }[] = []
@@ -469,13 +587,14 @@ export class EncounterState {
       // ticking for every enemy still standing, same rule as the boss's per-turn advance.
       const res = this.advanceEnemiesTurn(targetIdx)
       interrupted = res.interrupted
+      castInterrupted = res.castInterrupted
       attacked = res.attacked
       enemyDamage = res.damage
       enemyAttacks = res.attacks
     }
     return {
       ok: true, arenaDir, hit, phaseBefore: 0, phaseAfter: 0, granted: 0,
-      interrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
+      interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
   }
@@ -491,6 +610,7 @@ export class EncounterState {
     const granted = phaseAfter !== phaseBefore ? this.grantedUpToPhase(phaseAfter) - this.grantedUpToPhase(phaseBefore) : 0
 
     let interrupted = false
+    let castInterrupted = false
     let attacked = false
     let enemyDamage = 0
     if (this.won) {
@@ -501,12 +621,13 @@ export class EncounterState {
     } else {
       const res = this.advanceTurn(hit)
       interrupted = res.interrupted
+      castInterrupted = res.castInterrupted
       attacked = res.attacked
       enemyDamage = res.damage
     }
     return {
       ok: true, arenaDir, hit, phaseBefore, phaseAfter, granted,
-      interrupted, enemyAttacked: attacked, enemyDamage,
+      interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
   }
@@ -551,14 +672,17 @@ export class EncounterState {
     return true
   }
 
-  /** Search key: alive set + everything that affects the future. */
+  /** Search key: alive set + everything that affects the future. Includes `castInterrupted`/
+   * `enemyCastInterrupted` (EXP-011): two states with the same hp/countdown but a different active
+   * attack config (e.g. cast vs. its post-interrupt normal attack) must not be treated as equal. */
   key(): string {
     if (this.def.enemies) {
       const cd = this.enemyCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
-      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${this.playerHpValue}`
+      const ci = this.enemyCastInterrupted.map((b) => (b ? 1 : 0)).join(',')
+      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${this.playerHpValue}`
     }
     const c = Number.isFinite(this.countdown) ? this.countdown : 'inf'
-    return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.playerHpValue}`
+    return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${this.playerHpValue}`
   }
 }
 
@@ -574,6 +698,14 @@ function checkAttackTimer(at: AttackTimer, label: string): void {
   if (at.interruptHits !== undefined && (!Number.isInteger(at.interruptHits) || at.interruptHits < 1)) {
     throw new Error(`${label}: attackTimer.interruptHits must be a positive integer`)
   }
+  if (at.kind !== undefined && at.kind !== 'normal' && at.kind !== 'cast') {
+    throw new Error(`${label}: attackTimer.kind must be 'normal' or 'cast'`)
+  }
+  if (at.interruptible) {
+    if (at.kind !== 'cast') throw new Error(`${label}: attackTimer.interruptible requires kind 'cast'`)
+    if (!at.interruptedAttack) throw new Error(`${label}: attackTimer.interruptible requires interruptedAttack`)
+  }
+  if (at.interruptedAttack) checkAttackTimer(at.interruptedAttack, `${label}.interruptedAttack`)
 }
 
 export function checkEncounter(def: EncounterDef): void {

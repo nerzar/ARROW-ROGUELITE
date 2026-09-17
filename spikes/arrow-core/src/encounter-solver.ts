@@ -1,5 +1,6 @@
 import { DIR_NAMES } from './dir.js'
 import {
+  type AttackTimer,
   type EncounterAction,
   type EncounterDef,
   EncounterState,
@@ -43,6 +44,22 @@ export interface WinResult {
 }
 
 const DEFAULT_BUDGET = 2_000_000
+
+/** EXP-011: human-readable description of an `AttackTimer` for reports/CLI — `ATTACK IN N` for
+ * `kind: 'normal'` (default), `CAST IN N` for `kind: 'cast'`, noting interruptibility and what it
+ * switches to when interrupted. */
+function describeAttackTimer(at: AttackTimer): string {
+  const kind = at.kind ?? 'normal'
+  const label = kind === 'cast' ? 'CAST IN' : 'ATTACK IN'
+  let text = `${label} ${at.interval} (dmg ${at.damage}`
+  if (kind === 'cast') {
+    text += at.interruptible ? ', interruptible -> normal on hit' : ', not interruptible'
+  }
+  if (at.interruptOnHit) text += `, interrupt ${at.interruptHits ?? 1} hit(s)`
+  text += ')'
+  if (at.interruptedAttack) text += ` then ${describeAttackTimer(at.interruptedAttack)}`
+  return text
+}
 
 /** Searches for a win starting from `start` (not modified). */
 export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
@@ -281,12 +298,12 @@ export function validateEncounter(
     ? def.boss.phases.map(
         (p, i) =>
           `${i + 1}: side ${DIR_NAMES[p.side]}, ${p.hpUnits} hp${p.grantRotate ? `, grants Rotate ×${p.grantRotate}` : ''}` +
-          (p.attackTimer ? `, ATTACK IN ${p.attackTimer.interval} (dmg ${p.attackTimer.damage}, interrupt ${p.attackTimer.interruptHits ?? 1} hit(s))` : ''),
+          (p.attackTimer ? `, ${describeAttackTimer(p.attackTimer)}` : ''),
       )
     : (def.enemies ?? []).map(
         (e, i) =>
           `${i + 1}: ${e.id}, side ${DIR_NAMES[e.side]}, ${e.hp} hp${e.mandatory === false ? ' (optional)' : ''}` +
-          (e.attackTimer ? `, ATTACK IN ${e.attackTimer.interval} (dmg ${e.attackTimer.damage}, interrupt ${e.attackTimer.interruptHits ?? 1} hit(s))` : ''),
+          (e.attackTimer ? `, ${describeAttackTimer(e.attackTimer)}` : ''),
       )
   return {
     totalHp: start.totalHp,
@@ -324,7 +341,8 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
       return
     }
     let text = `${n}. ${formatAction(a).padEnd(8)} ${local}->${DIR_NAMES[r.arenaDir]}  ${r.hit ? 'HIT ' : 'miss'}  hp ${s.hp}/${s.totalHp}`
-    if (r.interrupted) text += '  interrupt (attack timer reset)'
+    if (r.castInterrupted) text += '  CAST INTERRUPTED -> next attack: normal'
+    else if (r.interrupted) text += '  interrupt (attack timer reset)'
     if (r.enemyAttacks && r.enemyAttacks.length) {
       text += `  ENEMY ATTACK: ${r.enemyAttacks.map((e) => `${e.id} -${e.damage}`).join(', ')} (player ${r.playerHp})`
     } else if (r.enemyAttacked) {
