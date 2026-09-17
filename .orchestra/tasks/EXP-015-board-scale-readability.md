@@ -20,17 +20,38 @@ FIX-021 параллельно внедряет fixed stone board plane + projec
 
 Тебе не нужно реализовывать projection.
 
+## USER ADDENDUM — Square-first policy
+
+Пользователь утвердил текущую контентную политику:
+
+- основной production-content сейчас строим на квадратных boards;
+- приоритетная линейка: `6x6`, `7x7`, `8x8`, `9x9`, `10x10`;
+- арены также генерируются/компонуются вокруг квадратного board well;
+- Rotate на квадратном board — основной визуальный сценарий;
+- прямоугольные board не запрещены технически и могут остаться future/special-case, но НЕ должны определять рекомендации по обычному контенту;
+- не считать это окончательным production maximum: это AGREED FOR NOW для текущего slice.
+
+Поэтому основной ответ EXP-015 должен быть: какой square range даёт лучший баланс читаемости, плотности, длинных arrow-paths и визуальной выразительности.
+
 ## What to evaluate
 
-На текущем visual prototype / screenshots / доступном debug viewer исследовать минимум:
+Основной набор:
 
-- easy 6x7 and rotated 7x6;
-- medium 8x10 and rotated 10x8;
-- hard 10x12 and rotated 12x10;
-- 12x14 / 14x12 если генератор позволяет;
+- 6x6;
+- 7x7;
+- 8x8;
+- 9x9;
+- 10x10;
+- 12x12;
 - 16x16;
 - 20x20;
-- 24x24 как верхний технический предел.
+- 24x24 как технический stress case.
+
+Дополнительно для compatibility, но вторично:
+
+- 6x7 / 7x6;
+- 8x10 / 10x8;
+- 10x12 / 12x10.
 
 Если часть размеров не поддерживается preset'ами, можно использовать debug/research-only generated boards без изменения production content.
 
@@ -44,11 +65,16 @@ FIX-021 параллельно внедряет fixed stone board plane + projec
 - удобно ли кликать мышью;
 - остаются ли arrowheads/turns читаемыми;
 - насколько плотным становится field;
-- как выглядит после Rotate;
 - сколько визуального шума;
-- подходит ли размер для обычного encounter / boss / только late-game.
+- насколько board заполняет stone well эстетично;
+- подходит ли размер для ordinary / elite / boss / only late-game.
 
 Отдельно оценить не только клетки, а наши длинные path-arrows: где они начинают сливаться в лапшу.
+
+Для square boards отдельно отметить:
+- насколько естественно смотрится Rotate;
+- не возникает ли ощущения пустоты на маленьких boards;
+- с какого размера появляется ощущение "богатой" большой головоломки без потери читаемости.
 
 ## Output
 
@@ -60,23 +86,28 @@ FIX-021 параллельно внедряет fixed stone board plane + projec
 
 BOARD SIZE | 1920 | 1366 | READABILITY | CLICKABILITY | VISUAL VALUE | USE
 
-И три порога:
+И пороги именно для square-first:
 
+- BEST EARLY RANGE;
 - SAFE DEFAULT RANGE;
 - LARGE BUT GOOD;
+- BOSS / SPECIAL ONLY;
 - TECHNICALLY POSSIBLE BUT BAD.
+
+Прямоугольники вынести в короткий compatibility appendix.
 
 Не выбирать окончательный production maximum без пользователя.
 
 ## Screenshots
 
-Если возможно, сделать screenshots нескольких representative размеров:
+Если возможно, сделать representative screenshots:
 
-- 6x7;
-- 10x12;
+- 6x6;
+- 8x8;
+- 10x10;
 - 16x16;
 - 24x24;
-- один rotated rectangular board.
+- один rectangular compatibility case.
 
 Можно не коммитить тяжёлые screenshots, но указать paths/observations в task-card.
 
