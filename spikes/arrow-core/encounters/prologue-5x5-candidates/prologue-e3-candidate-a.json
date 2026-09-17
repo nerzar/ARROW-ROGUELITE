@@ -1,0 +1,32 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square5",
+    "seed": 132,
+    "levelHash": "53adf2f9"
+  },
+  "encounter": {
+    "id": "prologue_e3_5x5_a",
+    "title": "Prologue 3 — Time Has a Cost (5x5 Candidate A, seed 132)",
+    "boss": {
+      "id": "grunt_timed",
+      "phases": [
+        {
+          "side": 1,
+          "hpUnits": 3,
+          "attackTimer": {
+            "interval": 4,
+            "damage": 2
+          },
+          "label": "ATTACK IN 4"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-005 Prologue 5x5 Candidate A. Board: square5 (5x5), seed 132, 6 arrows (N0 E3 S2 W1). Mob on East, 3 HP, ATTACK IN 4, dmg 2. Clean 0-damage sequence: #3(S) -> #0(E) -> #5(E) -> #4(E) kills the mob on turn 4 exactly before it strikes. Wasting a turn taking #1(W) causes boss to fire for 2 damage."
+  }
+}

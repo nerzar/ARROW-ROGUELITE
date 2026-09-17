@@ -1,0 +1,32 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square5",
+    "seed": 238,
+    "levelHash": "3d98010d"
+  },
+  "encounter": {
+    "id": "prologue_e3_5x5_b",
+    "title": "Prologue 3 — Time Has a Cost (5x5 Candidate B, seed 238)",
+    "boss": {
+      "id": "grunt_timed",
+      "phases": [
+        {
+          "side": 1,
+          "hpUnits": 3,
+          "attackTimer": {
+            "interval": 4,
+            "damage": 2
+          },
+          "label": "ATTACK IN 4"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-005 Prologue 5x5 Candidate B. Board: square5 (5x5), seed 238, 6 arrows (N1 E4 S0 W1). Mob on East, 3 HP, ATTACK IN 4, dmg 2. Clean path: #3(N) -> #2(E) -> #1(E) -> #5(E) kills in 4 turns with 0 damage. Distraction #0(W) leads to deadline failure and 2 damage."
+  }
+}

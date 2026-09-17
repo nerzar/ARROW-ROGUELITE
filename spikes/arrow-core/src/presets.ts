@@ -47,7 +47,12 @@ export const PRESETS = {
     targetFill: 0.95, minFill: 0.9, maxInitialFreeRatio: 0.15, minArrows: 18,
     blockSeeking: 1, attempts: 40,
   },
-  /** Square-first policy presets (EXP-015 / LD-003): 6x6 through 10x10. */
+  /** Square-first policy presets (EXP-015 / LD-003 / LD-005): 5x5 through 10x10. */
+  square5: {
+    width: 5, height: 5, minLength: 2, maxLength: 4, turnChance: 0.12,
+    targetFill: 0.75, minFill: 0.60, maxInitialFreeRatio: 0.65, minArrows: 4,
+    blockSeeking: 0.65, attempts: 40,
+  },
   square6: {
     width: 6, height: 6, minLength: 2, maxLength: 5, turnChance: 0.15,
     targetFill: 0.8, minFill: 0.65, maxInitialFreeRatio: 0.55, minArrows: 6,

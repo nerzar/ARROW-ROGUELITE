@@ -1,0 +1,54 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square6",
+    "seed": 4710,
+    "levelHash": "a09eaba2"
+  },
+  "encounter": {
+    "id": "prologue_boss_6x6_a",
+    "title": "Prologue Boss — Goblin Shaman (6x6 Candidate A, seed 4710)",
+    "boss": {
+      "id": "goblin-shaman",
+      "phases": [
+        {
+          "side": 1,
+          "hpUnits": 4,
+          "attackTimer": {
+            "interval": 6,
+            "damage": 1
+          },
+          "label": "Phase 1: East"
+        },
+        {
+          "side": 0,
+          "hpUnits": 5,
+          "grantRotate": 1,
+          "attackTimer": {
+            "interval": 3,
+            "damage": 1,
+            "kind": "cast",
+            "interruptible": true,
+            "interruptedAttack": {
+              "interval": 4,
+              "damage": 1,
+              "kind": "normal"
+            }
+          },
+          "label": "Phase 2: North (cast)"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false
+    },
+    "blockedTapDamage": 1,
+    "winRotateReward": 2,
+    "notes": "LD-005 Prologue Boss 6x6 Candidate A. Board: square6 (6x6), seed 4710, 9 arrows (N1 E4 S0 W4). Phase 1: East 4 HP (IN 6, dmg 1) consumes all 4 E arrows. Phase 2: North 5 HP (CAST IN 3 -> NORM IN 4, +1 Rotate). Solitary original N arrow #1. Rotate CW(+1) turns 4 West arrows into North, giving exactly enough ammo to interrupt the cast on turn 8 and finish the boss with 0 damage. Rotate CCW(-1) turns depleted East into North, starving player of North ammo and suffering 1 boss damage."
+  }
+}

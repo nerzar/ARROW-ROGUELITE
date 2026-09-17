@@ -1,0 +1,28 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square5",
+    "seed": 1,
+    "levelHash": "4186f194"
+  },
+  "encounter": {
+    "id": "prologue_e2_5x5_a",
+    "title": "Prologue 2 — Mistake Has a Cost (5x5 Candidate A, seed 1)",
+    "boss": {
+      "id": "grunt_passive",
+      "phases": [
+        {
+          "side": 1,
+          "hpUnits": 2,
+          "label": "passive target on East"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-005 Prologue 5x5 Candidate A. Board: square5 (5x5), seed 1, 6 arrows (N2 E2 S1 W1). 2 E arrows: #0 is free at start; #1 is blocked by #2(N). Free E #0 hits boss 2->1. Blocked E #1 is in plain sight tempting an early tap (blocked tap damage 1). Peeling #2(N) unblocks #1(E) for the clean 0-damage kill. Preserves exact cp-e2 contract."
+  }
+}

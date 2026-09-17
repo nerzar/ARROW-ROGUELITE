@@ -1,0 +1,54 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square6",
+    "seed": 4251,
+    "levelHash": "66291490"
+  },
+  "encounter": {
+    "id": "prologue_boss_6x6_b",
+    "title": "Prologue Boss — Goblin Shaman (6x6 Candidate B, seed 4251)",
+    "boss": {
+      "id": "goblin-shaman",
+      "phases": [
+        {
+          "side": 1,
+          "hpUnits": 4,
+          "attackTimer": {
+            "interval": 6,
+            "damage": 1
+          },
+          "label": "Phase 1: East"
+        },
+        {
+          "side": 0,
+          "hpUnits": 5,
+          "grantRotate": 1,
+          "attackTimer": {
+            "interval": 3,
+            "damage": 1,
+            "kind": "cast",
+            "interruptible": true,
+            "interruptedAttack": {
+              "interval": 4,
+              "damage": 1,
+              "kind": "normal"
+            }
+          },
+          "label": "Phase 2: North (cast)"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false
+    },
+    "blockedTapDamage": 1,
+    "winRotateReward": 2,
+    "notes": "LD-005 Prologue Boss 6x6 Candidate B. Board: square6 (6x6), seed 4251, 10 arrows (N1 E4 S0 W5). Phase 1 consumes all 4 E arrows. Phase 2 needs 5 N hits. Board has only 1 N arrow. Rotate CW turns 5 West arrows into North for clean 0-damage kill. Rotate CCW turns exhausted East arrows into North, failing to meet deadline and suffering 1 boss damage."
+  }
+}

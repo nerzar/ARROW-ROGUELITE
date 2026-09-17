@@ -1,0 +1,28 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square5",
+    "seed": 1107,
+    "levelHash": "4b2681e6"
+  },
+  "encounter": {
+    "id": "prologue_e1_5x5_a",
+    "title": "Prologue 1 — Pure Puzzle Shot (5x5 Candidate A, seed 1107)",
+    "boss": {
+      "id": "grunt_passive",
+      "phases": [
+        {
+          "side": 0,
+          "hpUnits": 1,
+          "label": "passive target on North"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 0,
+    "notes": "LD-005 Prologue 5x5 Candidate A. Board: square5 (5x5), seed 1107, 5 arrows (N1 E1 S2 W1). Only arrow #0 (E) is free at start; the sole N arrow #3 is blocked by #0. Intended sequence: turn 1 taps #0 (E, pure puzzle move peeling the blocker), turn 2 taps #3 (N, hits boss on North and kills). Preserves exact cp-e1 experience contract: game is a puzzle, not tap-and-win. No HP consequence yet: blockedTapDamage 0, no attackTimer."
+  }
+}

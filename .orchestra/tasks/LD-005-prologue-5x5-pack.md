@@ -100,3 +100,58 @@ LD-003 уже подготовил квадратные кандидаты дл�
 5. только потом STATUS: DONE.
 
 Не merge main.
+
+## RESULT
+
+- Сформулирован Experience Contract каждого текущего прологового шага (E1: первый пазл-выстрел и холостой ход, E2: цена ошибки и заблокированный тап, E3: время имеет цену и дедлайн 4 хода, E4: приоритет двух независимых врагов, E5: смена фаз босса, срыв каста, обязательный Rotate и наказание за неверный поворот).
+- Разработана и добавлена поддержка пресета `square5` (5x5) в `spikes/arrow-core/src/presets.ts` без нарушения генеративных инвариантов и тестов.
+- Проведено сканирование тысяч семян в `square5` и `square6` с использованием точного детерминированного генератора и математического солвера (`minDamageToWin`, `findWin`, `EncounterState`).
+- Сформирован shortlist из минимум 2 direct-playtest candidates на каждый шаг:
+  * **E1 (First Puzzle Shot, 5x5, 1 HP N):**
+    - Cand A: `square5` Seed 1107 (5 стрел, strict 1-free opener #0(E) -> #3(N), 2 taps, 0 dmg)
+    - Cand B: `square5` Seed 3178 (5 стрел, strict 1-free opener #0(W) -> #3(N), 2 taps, 0 dmg)
+  * **E2 (Mistake Has a Cost, 5x5, 2 HP E, blockedTapDamage 1):**
+    - Cand A: `square5` Seed 1 (6 стрел, 1 free E, 1 blocked E, #0(E) -> #2(N) -> #1(E), 3 taps, 0 dmg)
+    - Cand B: `square5` Seed 20 (6 стрел, 1 free E, 1 blocked E, #0(E) -> #2(W) -> #1(E), 3 taps, 0 dmg)
+  * **E3 (Time Has a Cost, 5x5, 3 HP E, ATTACK IN 4 dmg 2):**
+    - Cand A: `square5` Seed 132 (6 стрел, #3(S) -> #0(E) -> #5(E) -> #4(E), 4 taps, 0 dmg, отвлечение на W наказывается 2 dmg)
+    - Cand B: `square5` Seed 238 (6 стрел, #3(N) -> #2(E) -> #1(E) -> #5(E), 4 taps, 0 dmg)
+  * **E4 (Two Enemies / Priority, 5x5, Urgent E IN 3 vs Slow N IN 5):**
+    - Cand A: `square5` Seed 119 (7 стрел, #0(E) -> #2(N) -> #1(E) -> #3(N), 4 taps, 0 dmg, ошибка приоритета наказывается 2 dmg)
+    - Cand B: `square5` Seed 405 (7 стрел, #1(E) -> #2(N) -> #3(E) -> #0(N), 4 taps, 0 dmg)
+  * **E5 (Goblin Shaman Boss, 6x6 primary vs 7x7 comparison):**
+    - Cand A: `square6` Seed 4710 (9 стрел, Phase 1 E 4 HP IN 6; Phase 2 N 5 HP CAST IN 3 -> NORM IN 4, +1 Rotate; Rotate CW = 0 dmg, Rotate CCW = 1 dmg)
+    - Cand B: `square6` Seed 4251 (10 стрел, Phase 1 E 4 HP; Phase 2 N 5 HP, Rotate CW = 0 dmg, Rotate CCW = 1 dmg)
+    - Cand C (Comparison): `square7` Seed 98 (11 стрел, Rotate CW = 0 dmg, Rotate CCW = 2 dmg)
+- Созданы изолированные playable JSON-файлы кандидатов:
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-e1-candidate-a.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-e1-candidate-b.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-e2-candidate-a.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-e2-candidate-b.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-e3-candidate-a.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-e3-candidate-b.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-e4-candidate-a.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-e4-candidate-b.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-boss-candidate-a.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-boss-candidate-b.json`
+  * `spikes/arrow-core/encounters/prologue-5x5-candidates/prologue-boss-candidate-7x7.json`
+- Проведён подробный A/B анализ развития шкалы: Prologue starts at 5x5 vs starts at 6x6.
+- Текущие production encounters (`cp-e1` – `cp-e5`) не изменены.
+- Оформлен исчерпывающий дизайн-документ: `docs/LD-005-PROLOGUE-5X5-PACK.md`.
+
+## VERIFY
+
+1. `spikes/arrow-core`:
+   - `npm run typecheck` — 0 ошибок.
+   - `npm test` — 21 test files, 260 tests passed (включая 11 новых тестов в `test/ld-005-candidates.test.ts`).
+   - `npm run build` — успешная компиляция TypeScript.
+2. Проверка кандидатов шортлиста:
+   - Все 11 файлов в `encounters/prologue-5x5-candidates/*.json` валидированы через `encounterFromJson`, хэши уровней совпадают.
+   - Математически доказано `minDamageToWin = 0` для всех 11 кандидатов при безошибочной игре.
+   - Добавлен автоматический регрессионный тест `test/ld-005-candidates.test.ts`.
+
+## FOUND
+
+1. **Идеальная плотность 5x5 для обучающего сегмента:** Поле 5x5 вмещает 5–7 стрел, что даёт кристальную ясность замысла без «мусорных» стрел, отвлекающих новичка. Механики «холостого» хода, цены ошибки и дедлайна считываются моментально.
+2. **Жизнеспособность Goblin Shaman на 6x6:** На поле 6x6 (9–10 стрел) удаётся полностью воспроизвести механику босса: расход направления East в Фазе 1, срыв смертоносного каста в Фазе 2 и строгая дивергенция Rotate (CW спасает без урона, CCW наказывает уроном из-за истощения патронов). При этом 7x7 остаётся отличным альтернативным якорем для более монументального финала.
+

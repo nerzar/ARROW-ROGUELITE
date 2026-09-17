@@ -1,0 +1,28 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square5",
+    "seed": 20,
+    "levelHash": "48b6d41f"
+  },
+  "encounter": {
+    "id": "prologue_e2_5x5_b",
+    "title": "Prologue 2 — Mistake Has a Cost (5x5 Candidate B, seed 20)",
+    "boss": {
+      "id": "grunt_passive",
+      "phases": [
+        {
+          "side": 1,
+          "hpUnits": 2,
+          "label": "passive target on East"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-005 Prologue 5x5 Candidate B. Board: square5 (5x5), seed 20, 6 arrows (N1 E2 S0 W3). 2 E arrows: #0 is free; #1 is blocked by #2(W). Clean path: #0(E) -> #2(W) -> #1(E) kills with 0 damage. Tapping #1 while blocked costs 1 HP."
+  }
+}

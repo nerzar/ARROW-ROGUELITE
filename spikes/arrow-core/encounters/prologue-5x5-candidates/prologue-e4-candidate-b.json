@@ -1,0 +1,40 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square5",
+    "seed": 405,
+    "levelHash": "243bf928"
+  },
+  "encounter": {
+    "id": "prologue_e4_5x5_b",
+    "title": "Prologue 4 — Two Enemies / Priority (5x5 Candidate B, seed 405)",
+    "enemies": [
+      {
+        "id": "grunt_e",
+        "side": 1,
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "grunt_n",
+        "side": 0,
+        "hp": 2,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "label": "slow"
+      }
+    ],
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-005 Prologue 5x5 Candidate B. Board: square5 (5x5), seed 405, 7 arrows (N4 E2 S0 W1). Urgent Grunt E (2 HP, IN 3, dmg 2) and Slow Grunt N (2 HP, IN 5, dmg 2). Clean sequence: #1(E) -> #2(N) -> #3(E) -> #0(N) kills urgent E on turn 3, slow N on turn 4 with 0 damage. Wrong priority on N leads to 2 damage from E."
+  }
+}

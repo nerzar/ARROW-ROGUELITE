@@ -1,0 +1,54 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square7",
+    "seed": 98,
+    "levelHash": "4b33394f"
+  },
+  "encounter": {
+    "id": "prologue_boss_7x7_comparison",
+    "title": "Prologue Boss — Goblin Shaman (7x7 Comparison Candidate C, seed 98)",
+    "boss": {
+      "id": "goblin-shaman",
+      "phases": [
+        {
+          "side": 1,
+          "hpUnits": 4,
+          "attackTimer": {
+            "interval": 6,
+            "damage": 1
+          },
+          "label": "Phase 1: East"
+        },
+        {
+          "side": 0,
+          "hpUnits": 5,
+          "grantRotate": 1,
+          "attackTimer": {
+            "interval": 3,
+            "damage": 1,
+            "kind": "cast",
+            "interruptible": true,
+            "interruptedAttack": {
+              "interval": 4,
+              "damage": 1,
+              "kind": "normal"
+            }
+          },
+          "label": "Phase 2: North (cast)"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false
+    },
+    "blockedTapDamage": 1,
+    "winRotateReward": 2,
+    "notes": "LD-005 / LD-003 Prologue Boss 7x7 Comparison Candidate C. Board: square7 (7x7), seed 98, 11 arrows (N2 E4 S3 W2). Clean 0 damage with Rotate CW; Rotate CCW punishes with 2 damage. Retained strictly as 6x6 vs 7x7 comparison anchor per task requirements."
+  }
+}
