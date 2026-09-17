@@ -370,6 +370,9 @@ export function hasArenaCalibrationOverride(id) {
  */
 export function resolveArenaPresentation(presentation) {
   if (!presentation || typeof presentation !== 'object') return null
+  if (presentation.calibration && typeof presentation.calibration === 'object') {
+    return presentation.calibration
+  }
   const id = presentation.calibration ?? presentation.arena
   if (!id || typeof id !== 'string') return null
   return getArenaCalibration(id)

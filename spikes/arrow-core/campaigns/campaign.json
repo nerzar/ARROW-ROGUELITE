@@ -1,0 +1,196 @@
+{
+  "format": "arrow-campaign",
+  "v": 1,
+  "id": "authored-campaign",
+  "title": "Авторская кампания",
+  "levels": [
+    {
+      "id": "stage-1",
+      "title": "Этап 1 · Квадрат 5x5",
+      "board": {
+        "preset": "square-5",
+        "size": 5,
+        "seed": 1077
+      },
+      "presentation": {
+        "arena": "prologue-5x5-good",
+        "background": "assets/arenas/prologue-act1/5x5-good.png",
+        "calibration": null
+      },
+      "encounter": {
+        "id": "enc_stage_1",
+        "title": "Этап 1",
+        "enemies": [
+          {
+            "id": "mob_top",
+            "species": "dire-wolf",
+            "label": "Dire Wolf (Enemy)",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": []
+        },
+        "blockedTapDamage": 1,
+        "notes": "Authored square level 5x5"
+      }
+    },
+    {
+      "id": "stage-2",
+      "title": "Этап 2 · Квадрат 6x6",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 1154
+      },
+      "presentation": {
+        "arena": "prologue-5x5-good",
+        "background": "assets/arenas/prologue-act1/5x5-good.png",
+        "calibration": null
+      },
+      "encounter": {
+        "id": "enc_stage_2",
+        "title": "Этап 2",
+        "enemies": [
+          {
+            "id": "mob_top",
+            "species": "dire-wolf",
+            "label": "Dire Wolf (Enemy)",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": []
+        },
+        "blockedTapDamage": 1,
+        "notes": "Authored square level 6x6"
+      }
+    },
+    {
+      "id": "stage-3",
+      "title": "Verified Square 6x6",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 2026
+      },
+      "presentation": {
+        "arena": "prologue-5x5-good",
+        "background": "assets/arenas/prologue-act1/5x5-good.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/prologue-act1/5x5-good.png",
+          "boardSizeLocked": 5,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35,
+              0.42
+            ],
+            "tr": [
+              0.63,
+              0.45
+            ],
+            "br": [
+              0.655,
+              0.818
+            ],
+            "bl": [
+              0.348,
+              0.82
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5,
+              "y": 0.43
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.83,
+              "y": 0.62
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5,
+              "y": 0.37
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.83,
+              "y": 0.62
+            }
+          },
+          "actorScale": {
+            "top": 0.75,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "enc_stage_3",
+        "title": "Этап 3",
+        "enemies": [
+          {
+            "id": "mob_top",
+            "species": "dire-wolf",
+            "label": "Dire Wolf (Enemy)",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          },
+          {
+            "id": "mob_5164",
+            "species": "dire-wolf",
+            "label": "Dire Wolf (Enemy)",
+            "side": 1,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": []
+        },
+        "blockedTapDamage": 1,
+        "notes": "Authored square level 5x5"
+      }
+    }
+  ]
+}

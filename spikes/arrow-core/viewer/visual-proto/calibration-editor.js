@@ -1,61 +1,39 @@
-// CAL-001/CAL-004: visual arena calibration editor. A standalone debug/tool page (never wired into
-// the production HUD/index.html) so calibrating a baked-grid arena's board-plane corners and
-// actor/effect anchors is a drag-and-type task instead of a hand-edit-arena-calibration.js-and-
-// reload loop.
-//
-// GEOMETRY CONTRACT (per the CAL-001 task card): this tool must use the exact same production
-// geometry every real playthrough uses, not a separate approximation. Concretely:
-//  - the whole arena/grid/sprite/arrow render below is `board-renderer.js`'s own `createBoardRenderer`
-//    (the same module `app.js` drives) -- so the grid mesh comes from `board-plane.js`'s
-//    project()/fitGrid()/gridLineToScreen(), and sprite placement comes from `arena-layout.js`'s
-//    podiumSlot()/effectGround(), exactly as a real scene renders them.
-//  - the only things this file adds are: (1) DOM drag/keyboard handles that read/write the
-//    calibration draft's own stage-fraction numbers (a handle's screen position is that same
-//    fraction times the stage size -- board-plane.js's own `planeCornersPx`/`podiumSlot`/
-//    `effectGround` do the identical `frac * stageSize` math), and (2) the export/copy panel.
-//
-// CAL-004: the editor now has two content modes (see `mode` below):
-//  - 'stage' (primary, `#stagePick`): loads one of the 5 canon Prologue steps' own real board/seed
-//    and def via prologue-steps.js's getStep() -- the exact same content and shape (boss vs
-//    enemies) app.js's loadActiveStep() would show for that step, calibrated against its own
-//    independent ARENA_CALIBRATIONS entry (see PROLOGUE_STAGE_CALIBRATION).
-//  - 'debug' (secondary, `#arenaPick`): the original CAL-001/FIX-023 path -- a freshly generated
-//    board of the chosen grid size plus a throwaway 3-side preview encounter (TOP/LEFT/RIGHT), for
-//    calibrating a non-Prologue arena that has no real encounter yet (currently boss-shadow-moon).
+// BUILD-026: Campaign & Level Authoring Tool + Arena Calibration Editor.
+// Extends CAL-004 calibration tooling into a complete authoring environment.
+// Supports:
+//  - Square-only boards (5x5, 6x6, 7x7, 8x8, 9x9, 10x10) + seed rolling
+//  - Center-first enemy placement (TOP/center slot 0 default)
+//  - Multi-enemy management with HP, attack timers, and species from data-driven asset catalog
+//  - Full arena presentation and calibration (board corners, actor anchors, scale, sprite pivot, effect anchors)
+//  - Level ordering: create, duplicate, delete, move up/down
+//  - Dual persistence: real project file (POST /api/campaign/save -> campaigns/campaign.json) + localStorage fallback
+//  - Direct launch into playable game for single level or full campaign playtest.
+
 import { EncounterState, generateLevel, PRESETS } from '../../dist/src/index.js'
 import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
-import { ARENA_CALIBRATIONS, clearArenaCalibrationOverride, getArenaCalibration, hasArenaCalibrationOverride, saveArenaCalibrationOverride } from './arena-calibration.js'
+import {
+  ARENA_CALIBRATIONS, clearArenaCalibrationOverride, getArenaCalibration,
+  hasArenaCalibrationOverride, saveArenaCalibrationOverride,
+} from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import { appearEnemyVisual, readEnemySnapshot, tickEnemyVisual } from './enemy-visual-state.js'
 import { appearBossVisual, readBossSnapshot, tickBossVisual } from './boss-visual-state.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
-
-// CAL-004: which ARENA_CALIBRATIONS entry backs each canon Prologue step -- see that file's
-// CAL-004 comment. Kept here (not in prologue-steps.js) because it's a calibration-editor-only
-// concern: the production game resolves calibration from each encounter JSON's own `presentation`
-// block, never from this table.
-const PROLOGUE_STAGE_CALIBRATION = {
-  'prologue-5x5': 'prologue-5x5-good',
-  'cp-e2': 'prologue-2',
-  'cp-e3': 'prologue-3',
-  'cp-e4': 'prologue-4',
-  'cp-e5': 'prologue-5',
-}
-
-// CAL-004: every arena background PNG that actually exists in the repo today -- the "available
-// game arena assets" a stage's background can be switched to. Adding a real new arena image later
-// is a one-line addition here, not a calibration-editor.js code change.
-const ARENA_ASSETS = [
-  { id: 'moonlit-fortress', label: 'Moonlit Fortress (flexible dais)', path: 'assets/arena-moonlit-fortress.png' },
-  { id: '5x5-good', label: '5x5-good (baked 5x5 grid)', path: 'assets/arenas/prologue-act1/5x5-good.png' },
-  { id: '6x6-5', label: '6x6-5 / boss-shadow-moon (baked 6x6 grid)', path: 'assets/arenas/prologue-act1/6x6-5.png' },
-]
+import { ARENA_CATALOG, CREATURE_CATALOG, findArena, findCreature } from './asset-catalog.js'
+import {
+  createDefaultCampaign, createDefaultLevel, generateBoardForLevel,
+  getNextAvailableSide, convertLevelToStep, saveCampaign, loadCampaign,
+} from './campaign-model.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
   stagePick: $('stagePick'), bgPick: $('bgPick'), arenaPick: $('arenaPick'), gridSizePick: $('gridSizePick'),
   toggleGrid: $('toggleGrid'), toggleArrows: $('toggleArrows'), toggleSprites: $('toggleSprites'), toggleEffect: $('toggleEffect'),
   resetBtn: $('resetBtn'), saveStorageBtn: $('saveStorageBtn'), clearStorageBtn: $('clearStorageBtn'), copyBtn: $('copyBtn'), downloadBtn: $('downloadBtn'),
+  newLevelBtn: $('newLevelBtn'), saveBadge: $('saveBadge'), playLevelBtn: $('playLevelBtn'), playCampaignBtn: $('playCampaignBtn'),
+  authorLevelTitle: $('authorLevelTitle'), authorBoardSize: $('authorBoardSize'), authorBoardSeed: $('authorBoardSeed'), rollSeedBtn: $('rollSeedBtn'),
+  authorBlockedTap: $('authorBlockedTap'), btnDupLevel: $('btnDupLevel'), btnDelLevel: $('btnDelLevel'), btnMoveUp: $('btnMoveUp'), btnMoveDown: $('btnMoveDown'),
+  authorEnemiesList: $('authorEnemiesList'), authorAddEnemyBtn: $('authorAddEnemyBtn'),
   scaleTop: $('scaleTop'), scaleTopNum: $('scaleTopNum'),
   scaleLeft: $('scaleLeft'), scaleLeftNum: $('scaleLeftNum'),
   scaleRight: $('scaleRight'), scaleRightNum: $('scaleRightNum'),
@@ -70,39 +48,8 @@ const ui = {
   selectedInfo: $('selectedInfo'), valuesTable: $('valuesTable'), exportText: $('exportText'), copyStatus: $('copyStatus'),
 }
 
-// CAL-001/FIX-023 legacy debug-arena preview: three non-mandatory 1-hp "enemies" on TOP(N)/
-// LEFT(W)/RIGHT(E) so board-renderer.js's real drawTarget draws a real sprite at each of the three
-// anchor sides at once, for calibrating an arena that has no real Prologue content of its own
-// (e.g. `boss-shadow-moon`, a debug-only baked-grid arena). Never a real encounter (not in
-// encounters/, not reachable from app.js) -- purely a fixture so EncounterState has valid enemies
-// to report through `collectTargets`. CAL-004: Prologue stages 1-5 no longer use this -- they load
-// their own real board/def via prologue-steps.js's getStep(), see loadStage() below.
-const DEBUG_PREVIEW_DEF = {
-  id: 'cal-001-preview',
-  enemies: [
-    { id: 'cal_top', side: 0, hp: 1, mandatory: false, label: 'TOP' },
-    { id: 'cal_left', side: 3, hp: 1, mandatory: false, label: 'LEFT' },
-    { id: 'cal_right', side: 1, hp: 1, mandatory: false, label: 'RIGHT' },
-  ],
-  rotate: { allow: [] },
-  blockedTapDamage: 0,
-}
-
-const renderer = createBoardRenderer(ui.canvas, ui.stage)
-const assets = await loadAssets(ASSET_MANIFEST)
-const wolfPack = await loadWolfPack()
-// CAL-004: only 'goblin-shaman' backs any current Prologue boss (cp-e5's miniboss_placeholder via
-// assets.js's bossSpeciesFor), but load both packs like app.js does for the same future-proofing.
-const bossPacks = {
-  'goblin-shaman': await loadBossPack(BOSS_MANIFESTS['goblin-shaman']),
-  'goblin-taunter': await loadBossPack(BOSS_MANIFESTS['goblin-taunter']),
-}
-
 // ---------------------------------------------------------------------------------------------
-// Handle definitions: one entry per draggable point. `fmt` says whether the underlying
-// arena-calibration.js field is the `[u, v]` array shape (board-plane corners) or the `{x, y}`
-// object shape (anchors/effectAnchors) -- getRaw/setRaw read/write the draft in that native shape
-// so the exported object round-trips byte-for-byte into arena-calibration.js's own format.
+// Geometry / Handles Contract
 
 function cornerDef(key, label, short) {
   return {
@@ -140,6 +87,7 @@ const HANDLE_DEFS = [
 ]
 
 const clamp01 = (n) => Math.max(0, Math.min(1, n))
+const deepClone = (v) => JSON.parse(JSON.stringify(v))
 
 function fracXY(def, d) {
   const v = def.getRaw(d)
@@ -151,12 +99,10 @@ function writeFracXY(def, d, x, y) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// State: `original` is the last loaded/reset snapshot (what Reset returns to); `draft` is the
-// live-edited copy. Neither ever touches ARENA_CALIBRATIONS itself -- the only way a change
-// reaches arena-calibration.js is the user pasting the Copy/Download output in by hand, per the
-// task's "не менять prologue-5x5-good автоматически" requirement.
-const deepClone = (v) => JSON.parse(JSON.stringify(v))
+// Global authoring state
 
+let campaign = null
+let currentLevelIndex = 0
 let draft = null
 let original = null
 let level = null
@@ -167,110 +113,409 @@ let bossVisual = null
 let bossPack = null
 let selected = null
 
-// CAL-004: which content is currently loaded -- 'stage' (a real canon Prologue step, via
-// prologue-steps.js) or 'debug' (the legacy CAL-001/FIX-023 synthetic 3-side preview on a
-// non-Prologue calibration id, e.g. boss-shadow-moon). Both modes share the same draft/original/
-// handle/save-load machinery below; only how level/def/actor-visuals are populated differs.
-let mode = 'stage'
-let currentStageKey = null
-let currentDebugId = null
-
-const levelCache = new Map()
-function levelForSize(n) {
-  if (levelCache.has(n)) return levelCache.get(n)
-  let found = null
-  for (let seed = 1; seed <= 8 && !found; seed++) {
-    const gen = generateLevel({ ...PRESETS.medium, width: n, height: n, minArrows: Math.max(4, Math.round(n * n * 0.12)) }, seed)
-    if (gen.ok && gen.level) found = gen.level
-  }
-  if (!found) throw new Error(`calibration-editor: could not generate a ${n}x${n} preview board`)
-  levelCache.set(n, found)
-  return found
+const renderer = createBoardRenderer(ui.canvas, ui.stage)
+const assets = await loadAssets(ASSET_MANIFEST)
+const wolfPack = await loadWolfPack()
+const bossPacks = {
+  'goblin-shaman': await loadBossPack(BOSS_MANIFESTS['goblin-shaman']),
+  'goblin-taunter': await loadBossPack(BOSS_MANIFESTS['goblin-taunter']),
 }
 
-/** CAL-004: (re)derive boss/wolf presentation-only visual state from whatever `def` is currently
- * active (real Prologue def in stage mode, DEBUG_PREVIEW_DEF in debug mode) -- mirrors app.js's
- * own boss-mode-vs-enemies-mode branch in loadActiveStep(). */
+// ---------------------------------------------------------------------------------------------
+// Visual state derivations
+
 function setupActorVisuals() {
   bossVisual = null
   bossPack = null
   wolfVisuals = null
   if (def.boss) {
-    bossPack = bossPacks[bossSpeciesFor(def.boss.id)]
+    bossPack = bossPacks[bossSpeciesFor(def.boss.id)] ?? bossPacks['goblin-shaman']
     bossVisual = appearBossVisual(performance.now())
   } else if (def.enemies) {
     wolfVisuals = new Map()
-    for (const e of encounterState.enemies) wolfVisuals.set(e.id, appearEnemyVisual(performance.now()))
+    for (const e of encounterState.enemies) {
+      wolfVisuals.set(e.id, appearEnemyVisual(performance.now()))
+    }
   }
 }
 
-/** Legacy CAL-001/FIX-023 debug-arena content: a freshly generated square board of
- * `draft.boardSizeLocked` plus the synthetic 3-side DEBUG_PREVIEW_DEF. */
-function rebuildDebugEncounter() {
-  level = levelForSize(draft.boardSizeLocked)
-  def = DEBUG_PREVIEW_DEF
-  encounterState = EncounterState.fromLevel(level, def, 9999, null)
-  setupActorVisuals()
-  renderer.resetFx()
-  renderer.resize(level, draft)
+function setBackground(src) {
+  if (src) {
+    ui.bgLayer.style.setProperty('--bg-image', `url(${src})`)
+    ui.bgLayer.classList.add('has-image')
+  } else {
+    ui.bgLayer.style.removeProperty('--bg-image')
+    ui.bgLayer.classList.remove('has-image')
+  }
 }
 
-/** CAL-004: load a real canon Prologue step's own board/def (exactly what app.js's loadActiveStep
- * would show for the same step) plus its own independent calibration -- see
- * PROLOGUE_STAGE_CALIBRATION and arena-calibration.js's CAL-004 entries. */
-async function loadStage(stepKey) {
-  const sceneDef = SEQUENCE_STEPS.find((s) => s.key === stepKey)
-  if (!sceneDef) return
-  const step = await getStep(sceneDef)
-  mode = 'stage'
-  currentStageKey = stepKey
+function applyCalibration(calib) {
+  draft = deepClone(calib)
+  original = deepClone(calib)
+  setBackground(draft.background)
+  syncBgPick()
+  syncScaleInputs()
+  syncPivotInputs()
+}
+
+function syncBgPick() {
+  const match = ARENA_CATALOG.find((a) => a.path === draft.background)
+  if (match) ui.bgPick.value = match.path
+}
+
+// ---------------------------------------------------------------------------------------------
+// Level loading and authoring logic
+
+async function loadLevel(idx) {
+  if (!campaign || !campaign.levels || campaign.levels.length === 0) return
+  if (idx < 0) idx = 0
+  if (idx >= campaign.levels.length) idx = campaign.levels.length - 1
+  currentLevelIndex = idx
+
+  const levelDef = campaign.levels[idx]
+
+  // 1. Build Step & Board
+  let step
+  try {
+    step = convertLevelToStep(levelDef)
+  } catch (err) {
+    console.error('Board generation error, rolling fallback seed', err)
+    levelDef.board.seed = 1000 + idx * 77
+    step = convertLevelToStep(levelDef)
+  }
+
   level = step.level
   def = step.def
   encounterState = EncounterState.fromLevel(level, def, 9999, null)
   setupActorVisuals()
   renderer.resetFx()
-  const calibId = PROLOGUE_STAGE_CALIBRATION[stepKey]
-  applyCalibration(getArenaCalibration(calibId))
-  // Keep the toolbar in sync even when loadStage() is invoked directly (URL hash, debug hook)
-  // rather than through stagePick's own onchange.
-  ui.stagePick.value = stepKey
-  ui.arenaPick.value = ''
-  ui.gridSizePick.closest('label').style.display = 'none'
+
+  // 2. Resolve Calibration
+  const arenaInfo = findArena(levelDef.presentation?.arena || levelDef.presentation?.background)
+  let calib = levelDef.presentation?.calibration
+  if (!calib || typeof calib !== 'object') {
+    const calibId = arenaInfo.calibrationId || 'prologue-5x5-good'
+    calib = getArenaCalibration(calibId)
+  }
+  // Ensure background path matches selected arena
+  calib = { ...calib, background: arenaInfo.path }
+  applyCalibration(calib)
+
+  // 3. Sync UI inputs
+  ui.authorLevelTitle.value = levelDef.title || `Этап ${idx + 1}`
+  ui.authorBoardSize.value = String(levelDef.board.size || 5)
+  ui.authorBoardSeed.value = String(levelDef.board.seed || 1000)
+  ui.authorBlockedTap.value = String(levelDef.encounter.blockedTapDamage ?? 1)
+  ui.stagePick.value = String(idx)
+
+  renderEnemiesList()
+
   renderer.resize(level, draft)
   positionHandles()
   refreshPanels()
 }
 
-/** Legacy CAL-001/FIX-023 path: calibrate a non-Prologue debug arena (currently just
- * `boss-shadow-moon`) against the synthetic 3-side preview board, same as before CAL-004. */
-function loadDebugArena(calibId) {
-  const calib = getArenaCalibration(calibId)
-  if (!calib) return
-  mode = 'debug'
-  currentDebugId = calibId
-  applyCalibration(calib)
-  // Same self-sync as loadStage() above.
-  ui.arenaPick.value = calibId
-  ui.stagePick.value = ''
-  ui.gridSizePick.closest('label').style.display = ''
-  ui.gridSizePick.value = String(draft.boardSizeLocked)
-  rebuildDebugEncounter()
-  positionHandles()
+function renderEnemiesList() {
+  const levelDef = campaign.levels[currentLevelIndex]
+  if (!levelDef || !levelDef.encounter.enemies) {
+    ui.authorEnemiesList.innerHTML = '<div class="muted small">No enemies defined</div>'
+    return
+  }
+
+  const slotLabels = { 0: 'TOP (Center)', 1: 'RIGHT (East)', 3: 'LEFT (West)' }
+  ui.authorEnemiesList.innerHTML = levelDef.encounter.enemies.map((e, i) => {
+    const creature = findCreature(e.species)
+    return `
+      <div class="enemy-card" data-idx="${i}">
+        <div class="enemy-card-header">
+          <span>Enemy ${i + 1}</span>
+          <span class="slot-badge">${slotLabels[e.side] ?? 'Slot ' + e.side}</span>
+          ${levelDef.encounter.enemies.length > 1 ? `<button type="button" class="del-enemy-btn" data-del="${i}" title="Remove enemy">✕</button>` : ''}
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Creature</label>
+            <select class="enemy-creature-select" data-idx="${i}">
+              ${CREATURE_CATALOG.map((c) => `<option value="${c.id}" ${c.id === (e.species ?? creature.id) ? 'selected' : ''}>${c.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Slot</label>
+            <select class="enemy-slot-select" data-idx="${i}">
+              <option value="0" ${Number(e.side) === 0 ? 'selected' : ''}>TOP (Center)</option>
+              <option value="1" ${Number(e.side) === 1 ? 'selected' : ''}>RIGHT</option>
+              <option value="3" ${Number(e.side) === 3 ? 'selected' : ''}>LEFT</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>HP</label>
+            <input type="number" min="1" max="99" class="enemy-hp-input" data-idx="${i}" value="${e.hp ?? 2}">
+          </div>
+          <div class="form-group">
+            <label class="chk" style="margin-top:16px;">
+              <input type="checkbox" class="enemy-timer-chk" data-idx="${i}" ${e.attackTimer ? 'checked' : ''}> Attack Timer
+            </label>
+          </div>
+        </div>
+        ${e.attackTimer ? `
+        <div class="timer-box">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Interval (turns)</label>
+              <input type="number" min="1" max="20" class="enemy-interval-input" data-idx="${i}" value="${e.attackTimer.interval ?? 4}">
+            </div>
+            <div class="form-group">
+              <label>Damage</label>
+              <input type="number" min="1" max="20" class="enemy-dmg-input" data-idx="${i}" value="${e.attackTimer.damage ?? 2}">
+            </div>
+          </div>
+        </div>` : ''}
+      </div>
+    `
+  }).join('')
+
+  // Wire enemy card events
+  ui.authorEnemiesList.querySelectorAll('.del-enemy-btn').forEach((btn) => {
+    btn.onclick = () => {
+      const idx = Number(btn.getAttribute('data-del'))
+      levelDef.encounter.enemies.splice(idx, 1)
+      rebuildCurrentLevel()
+    }
+  })
+
+  ui.authorEnemiesList.querySelectorAll('.enemy-creature-select').forEach((sel) => {
+    sel.onchange = () => {
+      const idx = Number(sel.getAttribute('data-idx'))
+      const c = findCreature(sel.value)
+      const target = levelDef.encounter.enemies[idx]
+      target.species = c.id
+      target.label = c.label
+      rebuildCurrentLevel()
+    }
+  })
+
+  ui.authorEnemiesList.querySelectorAll('.enemy-slot-select').forEach((sel) => {
+    sel.onchange = () => {
+      const idx = Number(sel.getAttribute('data-idx'))
+      levelDef.encounter.enemies[idx].side = Number(sel.value)
+      rebuildCurrentLevel()
+    }
+  })
+
+  ui.authorEnemiesList.querySelectorAll('.enemy-hp-input').forEach((inp) => {
+    inp.onchange = () => {
+      const idx = Number(inp.getAttribute('data-idx'))
+      levelDef.encounter.enemies[idx].hp = Math.max(1, Number(inp.value) || 1)
+      rebuildCurrentLevel()
+    }
+  })
+
+  ui.authorEnemiesList.querySelectorAll('.enemy-timer-chk').forEach((chk) => {
+    chk.onchange = () => {
+      const idx = Number(chk.getAttribute('data-idx'))
+      if (chk.checked) {
+        levelDef.encounter.enemies[idx].attackTimer = { interval: 4, damage: 2 }
+      } else {
+        levelDef.encounter.enemies[idx].attackTimer = null
+      }
+      renderEnemiesList()
+      rebuildCurrentLevel()
+    }
+  })
+
+  ui.authorEnemiesList.querySelectorAll('.enemy-interval-input').forEach((inp) => {
+    inp.onchange = () => {
+      const idx = Number(inp.getAttribute('data-idx'))
+      if (levelDef.encounter.enemies[idx].attackTimer) {
+        levelDef.encounter.enemies[idx].attackTimer.interval = Math.max(1, Number(inp.value) || 1)
+        rebuildCurrentLevel()
+      }
+    }
+  })
+
+  ui.authorEnemiesList.querySelectorAll('.enemy-dmg-input').forEach((inp) => {
+    inp.onchange = () => {
+      const idx = Number(inp.getAttribute('data-idx'))
+      if (levelDef.encounter.enemies[idx].attackTimer) {
+        levelDef.encounter.enemies[idx].attackTimer.damage = Math.max(1, Number(inp.value) || 1)
+        rebuildCurrentLevel()
+      }
+    }
+  })
+}
+
+function rebuildCurrentLevel() {
+  const levelDef = campaign.levels[currentLevelIndex]
+  levelDef.presentation.calibration = buildExportObject()
+  levelDef.presentation.background = draft.background
+  loadLevel(currentLevelIndex)
+  markUnsaved()
+}
+
+function updateStagePickOptions() {
+  ui.stagePick.innerHTML = ''
+  campaign.levels.forEach((l, i) => {
+    const size = l.board?.size ?? 5
+    const seed = l.board?.seed ?? ''
+    const opt = new Option(`${i + 1}. ${l.title} (${size}x${size}, s:${seed})`, String(i))
+    ui.stagePick.append(opt)
+  })
+  ui.stagePick.value = String(currentLevelIndex)
+}
+
+function markUnsaved() {
+  ui.saveBadge.className = 'save-badge unsaved'
+  ui.saveBadge.textContent = 'Unsaved'
+}
+
+// ---------------------------------------------------------------------------------------------
+// Handles DOM Layer
+
+const handleEls = new Map()
+
+function createHandles() {
+  ui.handlesLayer.innerHTML = ''
+  handleEls.clear()
+  for (const d of HANDLE_DEFS) {
+    const el = document.createElement('div')
+    el.className = `handle ${d.kind}`
+    el.tabIndex = 0
+    el.dataset.key = d.key
+    el.dataset.kind = d.kind
+    el.textContent = d.short
+    el.title = `${d.label} (${d.key})`
+    wireHandleEvents(el, d)
+    ui.handlesLayer.append(el)
+    handleEls.set(d, el)
+  }
+}
+
+function positionHandles() {
+  if (!draft) return
+  const rect = ui.stage.getBoundingClientRect()
+  const w = rect.width, h = rect.height
+  const showEffect = ui.toggleEffect.checked
+  for (const [d, el] of handleEls) {
+    if (d.kind === 'effect' && !showEffect) {
+      el.classList.add('hidden-toggle')
+      continue
+    }
+    el.classList.remove('hidden-toggle')
+    const { x, y } = fracXY(d, draft)
+    el.style.left = `${Math.round(x * w)}px`
+    el.style.top = `${Math.round(y * h)}px`
+  }
+}
+
+function wireHandleEvents(el, d) {
+  let dragging = false
+  function updateFromPointer(ev) {
+    const rect = ui.stage.getBoundingClientRect()
+    const x = (ev.clientX - rect.left) / rect.width
+    const y = (ev.clientY - rect.top) / rect.height
+    writeFracXY(d, draft, x, y)
+    positionHandles()
+    renderer.resize(level, draft)
+    refreshPanels()
+    markUnsaved()
+  }
+  el.addEventListener('pointerdown', (ev) => {
+    ev.preventDefault()
+    el.setPointerCapture(ev.pointerId)
+    dragging = true
+    selectHandle(d)
+  })
+  el.addEventListener('pointermove', (ev) => {
+    if (dragging) updateFromPointer(ev)
+  })
+  function endDrag(ev) {
+    if (!dragging) return
+    dragging = false
+    try { el.releasePointerCapture(ev.pointerId) } catch {}
+  }
+  el.addEventListener('pointerup', endDrag)
+  el.addEventListener('pointercancel', endDrag)
+  el.addEventListener('keydown', (ev) => {
+    const step = (ev.shiftKey ? 10 : 1) / (ev.key.startsWith('ArrowLeft') || ev.key.startsWith('ArrowRight') ? ui.stage.clientWidth : ui.stage.clientHeight)
+    let { x, y } = fracXY(d, draft)
+    if (ev.key === 'ArrowLeft') x -= step
+    else if (ev.key === 'ArrowRight') x += step
+    else if (ev.key === 'ArrowUp') y -= step
+    else if (ev.key === 'ArrowDown') y += step
+    else return
+    ev.preventDefault()
+    writeFracXY(d, draft, x, y)
+    positionHandles()
+    renderer.resize(level, draft)
+    refreshPanels()
+    markUnsaved()
+  })
+}
+
+function selectHandle(d) {
+  selected = d
+  for (const [def, el] of handleEls) {
+    el.classList.toggle('selected', def === d)
+  }
   refreshPanels()
 }
 
-/** Re-run whichever content path is currently active (stage vs debug), e.g. after Reset/Clear
- * override change `draft`/`original` underneath and need level/def/visuals refreshed too. */
-function refreshActiveContent() {
-  if (mode === 'stage') {
-    encounterState = EncounterState.fromLevel(level, def, 9999, null)
-    setupActorVisuals()
-    renderer.resetFx()
-    renderer.resize(level, draft)
-  } else {
-    ui.gridSizePick.value = String(draft.boardSizeLocked)
-    rebuildDebugEncounter()
+// ---------------------------------------------------------------------------------------------
+// Panels and Export
+
+function buildExportObject() {
+  return {
+    id: draft.id,
+    background: draft.background,
+    boardSizeLocked: draft.boardSizeLocked,
+    boardPlaneFrac: {
+      tl: [draft.boardPlaneFrac.tl[0], draft.boardPlaneFrac.tl[1]],
+      tr: [draft.boardPlaneFrac.tr[0], draft.boardPlaneFrac.tr[1]],
+      br: [draft.boardPlaneFrac.br[0], draft.boardPlaneFrac.br[1]],
+      bl: [draft.boardPlaneFrac.bl[0], draft.boardPlaneFrac.bl[1]],
+    },
+    anchors: {
+      top: { x: draft.anchors.top.x, y: draft.anchors.top.y },
+      left: { x: draft.anchors.left.x, y: draft.anchors.left.y },
+      right: { x: draft.anchors.right.x, y: draft.anchors.right.y },
+    },
+    effectAnchors: {
+      top: { x: draft.effectAnchors.top.x, y: draft.effectAnchors.top.y },
+      left: { x: draft.effectAnchors.left.x, y: draft.effectAnchors.left.y },
+      right: { x: draft.effectAnchors.right.x, y: draft.effectAnchors.right.y },
+    },
+    actorScale: {
+      top: draft.actorScale.top,
+      left: draft.actorScale.left,
+      right: draft.actorScale.right,
+    },
+    spritePivot: {
+      top: { dx: draft.spritePivot.top.dx, dy: draft.spritePivot.top.dy },
+      left: { dx: draft.spritePivot.left.dx, dy: draft.spritePivot.left.dy },
+      right: { dx: draft.spritePivot.right.dx, dy: draft.spritePivot.right.dy },
+    },
   }
+}
+
+function refreshPanels() {
+  if (!draft) return
+  if (selected) {
+    const { x, y } = fracXY(selected, draft)
+    const rect = ui.stage.getBoundingClientRect()
+    ui.selectedInfo.innerHTML = `<strong>${selected.label}</strong><br>` +
+      `Frac: (${x.toFixed(4)}, ${y.toFixed(4)})<br>` +
+      `Px: (${Math.round(x * rect.width)}, ${Math.round(y * rect.height)})`
+  }
+  let table = '<tr><th>Handle</th><th>X</th><th>Y</th></tr>'
+  for (const d of HANDLE_DEFS) {
+    const { x, y } = fracXY(d, draft)
+    const selClass = d === selected ? ' class="row-selected"' : ''
+    table += `<tr${selClass}><td>${d.label}</td><td>${x.toFixed(3)}</td><td>${y.toFixed(3)}</td></tr>`
+  }
+  ui.valuesTable.innerHTML = table
+  ui.exportText.value = JSON.stringify(buildExportObject(), null, 2)
 }
 
 function syncScaleInputs() {
@@ -309,30 +554,16 @@ function wireScaleEvents() {
     }
     renderer.resize(level, draft)
     refreshPanels()
+    markUnsaved()
   }
-
   ui.scaleTop.addEventListener('input', () => onScaleChange('top', Number(ui.scaleTop.value)))
-  ui.scaleTopNum.addEventListener('input', () => {
-    const v = Number(ui.scaleTopNum.value)
-    if (Number.isFinite(v)) onScaleChange('top', v)
-  })
-
+  ui.scaleTopNum.addEventListener('input', () => onScaleChange('top', Number(ui.scaleTopNum.value)))
   ui.scaleLeft.addEventListener('input', () => onScaleChange('left', Number(ui.scaleLeft.value)))
-  ui.scaleLeftNum.addEventListener('input', () => {
-    const v = Number(ui.scaleLeftNum.value)
-    if (Number.isFinite(v)) onScaleChange('left', v)
-  })
-
+  ui.scaleLeftNum.addEventListener('input', () => onScaleChange('left', Number(ui.scaleLeftNum.value)))
   ui.scaleRight.addEventListener('input', () => onScaleChange('right', Number(ui.scaleRight.value)))
-  ui.scaleRightNum.addEventListener('input', () => {
-    const v = Number(ui.scaleRightNum.value)
-    if (Number.isFinite(v)) onScaleChange('right', v)
-  })
+  ui.scaleRightNum.addEventListener('input', () => onScaleChange('right', Number(ui.scaleRightNum.value)))
 }
 
-// PLAYTEST-002: sprite pivot/foot-offset rows -- same range+number pairing pattern as actor
-// scale above, one pair per side per axis (dx/dy), no link checkbox (each side is independently
-// wrong or right, unlike LEFT/RIGHT actor scale which is usually symmetric).
 function syncPivotInputs() {
   const p = draft.spritePivot
   const set = (rangeEl, numEl, v) => { rangeEl.value = String(v); numEl.value = v.toFixed(3) }
@@ -352,310 +583,243 @@ function wirePivotEvents() {
     numEl.value = val.toFixed(3)
     renderer.resize(level, draft)
     refreshPanels()
+    markUnsaved()
   }
-  function wireRow(side, axis, rangeEl, numEl) {
+  const wire = (side, axis, rangeEl, numEl) => {
     rangeEl.addEventListener('input', () => onPivotChange(side, axis, Number(rangeEl.value), rangeEl, numEl))
-    numEl.addEventListener('input', () => {
-      const v = Number(numEl.value)
-      if (Number.isFinite(v)) onPivotChange(side, axis, v, rangeEl, numEl)
-    })
+    numEl.addEventListener('input', () => onPivotChange(side, axis, Number(numEl.value), rangeEl, numEl))
   }
-  wireRow('top', 'dx', ui.pivotTopX, ui.pivotTopXNum)
-  wireRow('top', 'dy', ui.pivotTopY, ui.pivotTopYNum)
-  wireRow('left', 'dx', ui.pivotLeftX, ui.pivotLeftXNum)
-  wireRow('left', 'dy', ui.pivotLeftY, ui.pivotLeftYNum)
-  wireRow('right', 'dx', ui.pivotRightX, ui.pivotRightXNum)
-  wireRow('right', 'dy', ui.pivotRightY, ui.pivotRightYNum)
-}
-
-/** CAL-004: load an ARENA_CALIBRATIONS entry into `draft`/`original` and sync every side-panel
- * control to it -- shared by both loadStage() (real Prologue content) and loadDebugArena() (legacy
- * synthetic preview). Never touches which level/def/actor-visuals are active; callers do that
- * themselves before/after, since it differs by mode. */
-function applyCalibration(calib) {
-  if (!calib) return
-  original = deepClone(calib)
-  if (!original.effectAnchors) original.effectAnchors = deepClone(original.anchors) // defensive, see arena-calibration.d.ts
-  if (!original.actorScale) original.actorScale = { top: 1.0, left: 1.0, right: 1.0 }
-  else {
-    original.actorScale = {
-      top: original.actorScale.top ?? 1.0,
-      left: original.actorScale.left ?? 1.0,
-      right: original.actorScale.right ?? 1.0,
-    }
-  }
-  // PLAYTEST-002: same defensive defaulting as actorScale above, for calibrations saved before
-  // spritePivot existed.
-  original.spritePivot = {
-    top: { dx: original.spritePivot?.top?.dx ?? 0, dy: original.spritePivot?.top?.dy ?? 0 },
-    left: { dx: original.spritePivot?.left?.dx ?? 0, dy: original.spritePivot?.left?.dy ?? 0 },
-    right: { dx: original.spritePivot?.right?.dx ?? 0, dy: original.spritePivot?.right?.dy ?? 0 },
-  }
-  draft = deepClone(original)
-  setBackground(draft.background)
-  syncBgPick()
-  syncScaleInputs()
-  syncPivotInputs()
-  selected = null
-}
-
-function setBackground(path) {
-  ui.bgLayer.style.setProperty('--bg-image', `url(${path})`)
-  ui.bgLayer.classList.add('has-image')
-}
-
-/** CAL-004: reflect `draft.background` in the arena/background dropdown -- falls back to a
- * synthesized "custom" option (not persisted to ARENA_ASSETS) if the path doesn't match any known
- * asset, e.g. a hand-edited/imported calibration. */
-function syncBgPick() {
-  let opt = [...ui.bgPick.options].find((o) => o.value === draft.background)
-  if (!opt) {
-    opt = new Option(`custom (${draft.background})`, draft.background)
-    ui.bgPick.append(opt)
-  }
-  ui.bgPick.value = draft.background
+  wire('top', 'dx', ui.pivotTopX, ui.pivotTopXNum)
+  wire('top', 'dy', ui.pivotTopY, ui.pivotTopYNum)
+  wire('left', 'dx', ui.pivotLeftX, ui.pivotLeftXNum)
+  wire('left', 'dy', ui.pivotLeftY, ui.pivotLeftYNum)
+  wire('right', 'dx', ui.pivotRightX, ui.pivotRightXNum)
+  wire('right', 'dy', ui.pivotRightY, ui.pivotRightYNum)
 }
 
 // ---------------------------------------------------------------------------------------------
-// Handles: DOM overlay, created once; only their position/selection state changes per arena.
+// Toolbar and Authoring Actions Wiring
 
-const handleEls = new Map()
-function createHandles() {
-  for (const def of HANDLE_DEFS) {
-    const el = document.createElement('div')
-    el.className = `handle ${def.kind}`
-    el.tabIndex = 0
-    el.title = `${def.label} — drag, or focus + arrow keys (1px, Shift = 10px)`
-    el.textContent = def.short
-    el.setAttribute('role', 'slider')
-    el.setAttribute('aria-label', def.label)
-    wireHandleEvents(el, def)
-    ui.handlesLayer.append(el)
-    handleEls.set(`${def.kind}:${def.key}`, el)
-  }
-}
-
-function wireHandleEvents(el, def) {
-  el.addEventListener('pointerdown', (ev) => {
-    ev.preventDefault()
-    selectHandle(def)
-    el.setPointerCapture(ev.pointerId)
-    const move = (mv) => {
-      const rect = ui.stage.getBoundingClientRect()
-      writeFracXY(def, draft, (mv.clientX - rect.left) / rect.width, (mv.clientY - rect.top) / rect.height)
-      positionHandles()
-      renderer.resize(level, draft)
-      refreshPanels()
-    }
-    const up = (uv) => {
-      el.releasePointerCapture(uv.pointerId)
-      el.removeEventListener('pointermove', move)
-      el.removeEventListener('pointerup', up)
-    }
-    el.addEventListener('pointermove', move)
-    el.addEventListener('pointerup', up)
-  })
-  el.addEventListener('focus', () => selectHandle(def))
-  el.addEventListener('keydown', (ev) => {
-    let dx = 0, dy = 0
-    if (ev.key === 'ArrowLeft') dx = -1
-    else if (ev.key === 'ArrowRight') dx = 1
-    else if (ev.key === 'ArrowUp') dy = -1
-    else if (ev.key === 'ArrowDown') dy = 1
-    else return
-    ev.preventDefault()
-    const step = ev.shiftKey ? 10 : 1
-    selectHandle(def)
-    const rect = ui.stage.getBoundingClientRect()
-    const cur = fracXY(def, draft)
-    writeFracXY(def, draft, cur.x + (dx * step) / rect.width, cur.y + (dy * step) / rect.height)
-    positionHandles()
-    renderer.resize(level, draft)
-    refreshPanels()
-  })
-}
-
-function selectHandle(def) {
-  selected = def
-  for (const [k, el] of handleEls) el.classList.toggle('selected', k === `${def.kind}:${def.key}`)
-  refreshPanels()
-}
-
-function positionHandles() {
-  const rect = ui.stage.getBoundingClientRect()
-  for (const def of HANDLE_DEFS) {
-    const el = handleEls.get(`${def.kind}:${def.key}`)
-    const xy = fracXY(def, draft)
-    el.style.left = `${xy.x * rect.width}px`
-    el.style.top = `${xy.y * rect.height}px`
-    el.classList.toggle('hidden-toggle', def.kind === 'effect' && !ui.toggleEffect.checked)
-  }
-}
-
-// ---------------------------------------------------------------------------------------------
-// Side panel: selected-handle readout + full values table + live export text.
-
-const swatchVar = (kind) => (kind === 'corner' ? 'corner' : kind === 'actor' ? 'actor' : 'effect')
-
-function refreshPanels() {
-  updateSelectedInfo()
-  updateValuesTable()
-  updateExportText()
-}
-
-function updateSelectedInfo() {
-  if (!selected) {
-    ui.selectedInfo.textContent = '— click or tab to a handle —'
-    return
-  }
-  const xy = fracXY(selected, draft)
-  const rect = ui.stage.getBoundingClientRect()
-  ui.selectedInfo.innerHTML =
-    `<span class="dot" style="background:var(--${swatchVar(selected.kind)})"></span><strong>${selected.label}</strong><br>` +
-    `px: ${(xy.x * rect.width).toFixed(1)}, ${(xy.y * rect.height).toFixed(1)}<br>` +
-    `frac: ${xy.x.toFixed(4)}, ${xy.y.toFixed(4)}`
-}
-
-function updateValuesTable() {
-  const rect = ui.stage.getBoundingClientRect()
-  const rows = HANDLE_DEFS.map((def) => {
-    const xy = fracXY(def, draft)
-    const isSel = selected === def
-    return `<tr class="${isSel ? 'row-selected' : ''}">` +
-      `<td><span class="swatch" style="background:var(--${swatchVar(def.kind)})"></span>${def.label}</td>` +
-      `<td>${(xy.x * rect.width).toFixed(1)}, ${(xy.y * rect.height).toFixed(1)}</td>` +
-      `<td>${xy.x.toFixed(4)}, ${xy.y.toFixed(4)}</td></tr>`
-  }).join('')
-  const s = draft?.actorScale ?? { top: 1.0, left: 1.0, right: 1.0 }
-  const scaleRows = [
-    `<tr><td><span class="swatch" style="background:var(--actor)"></span>TOP actor scale</td><td>—</td><td>${s.top.toFixed(2)}x</td></tr>`,
-    `<tr><td><span class="swatch" style="background:var(--actor)"></span>LEFT actor scale</td><td>—</td><td>${s.left.toFixed(2)}x</td></tr>`,
-    `<tr><td><span class="swatch" style="background:var(--actor)"></span>RIGHT actor scale</td><td>—</td><td>${s.right.toFixed(2)}x</td></tr>`,
-  ].join('')
-  const p = draft?.spritePivot ?? { top: { dx: 0, dy: 0 }, left: { dx: 0, dy: 0 }, right: { dx: 0, dy: 0 } }
-  const pivotRows = [
-    `<tr><td><span class="swatch" style="background:var(--actor)"></span>TOP sprite pivot</td><td>—</td><td>dx ${p.top.dx.toFixed(3)}, dy ${p.top.dy.toFixed(3)}</td></tr>`,
-    `<tr><td><span class="swatch" style="background:var(--actor)"></span>LEFT sprite pivot</td><td>—</td><td>dx ${p.left.dx.toFixed(3)}, dy ${p.left.dy.toFixed(3)}</td></tr>`,
-    `<tr><td><span class="swatch" style="background:var(--actor)"></span>RIGHT sprite pivot</td><td>—</td><td>dx ${p.right.dx.toFixed(3)}, dy ${p.right.dy.toFixed(3)}</td></tr>`,
-  ].join('')
-  ui.valuesTable.innerHTML = `<tr><th>handle</th><th>px (x, y)</th><th>frac / scale</th></tr>${rows}${scaleRows}${pivotRows}`
-}
-
-const round4 = (n) => Math.round(n * 10000) / 10000
-
-function buildExportObject() {
-  const c = draft.boardPlaneFrac
-  const a = draft.anchors
-  const e = draft.effectAnchors
-  const s = draft.actorScale
-  const p = draft.spritePivot
-  return {
-    id: draft.id,
-    background: draft.background,
-    boardSizeLocked: draft.boardSizeLocked,
-    boardPlaneFrac: {
-      tl: [round4(c.tl[0]), round4(c.tl[1])], tr: [round4(c.tr[0]), round4(c.tr[1])],
-      br: [round4(c.br[0]), round4(c.br[1])], bl: [round4(c.bl[0]), round4(c.bl[1])],
-    },
-    anchors: {
-      top: { x: round4(a.top.x), y: round4(a.top.y) },
-      left: { x: round4(a.left.x), y: round4(a.left.y) },
-      right: { x: round4(a.right.x), y: round4(a.right.y) },
-    },
-    effectAnchors: {
-      top: { x: round4(e.top.x), y: round4(e.top.y) },
-      left: { x: round4(e.left.x), y: round4(e.left.y) },
-      right: { x: round4(e.right.x), y: round4(e.right.y) },
-    },
-    actorScale: {
-      top: round4(s.top),
-      left: round4(s.left),
-      right: round4(s.right),
-    },
-    spritePivot: {
-      top: { dx: round4(p.top.dx), dy: round4(p.top.dy) },
-      left: { dx: round4(p.left.dx), dy: round4(p.left.dy) },
-      right: { dx: round4(p.right.dx), dy: round4(p.right.dy) },
-    },
-  }
-}
-
-/** Formats as a ready-to-paste ARENA_CALIBRATIONS entry -- same quoting/shape arena-calibration.js
- * itself uses, so the output can be pasted straight in as a `'<id>': { ... },` entry. */
-function formatCalibrationEntry(o) {
-  const c = o.boardPlaneFrac, a = o.anchors, e = o.effectAnchors, s = o.actorScale, p = o.spritePivot
-  return `'${o.id}': {
-  id: '${o.id}',
-  background: '${o.background}',
-  boardSizeLocked: ${o.boardSizeLocked},
-  boardPlaneFrac: {
-    tl: [${c.tl[0]}, ${c.tl[1]}], tr: [${c.tr[0]}, ${c.tr[1]}], br: [${c.br[0]}, ${c.br[1]}], bl: [${c.bl[0]}, ${c.bl[1]}],
-  },
-  anchors: {
-    top: { x: ${a.top.x}, y: ${a.top.y} },
-    left: { x: ${a.left.x}, y: ${a.left.y} },
-    right: { x: ${a.right.x}, y: ${a.right.y} },
-  },
-  effectAnchors: {
-    top: { x: ${e.top.x}, y: ${e.top.y} },
-    left: { x: ${e.left.x}, y: ${e.left.y} },
-    right: { x: ${e.right.x}, y: ${e.right.y} },
-  },
-  actorScale: {
-    top: ${s.top},
-    left: ${s.left},
-    right: ${s.right},
-  },
-  spritePivot: {
-    top: { dx: ${p.top.dx}, dy: ${p.top.dy} },
-    left: { dx: ${p.left.dx}, dy: ${p.left.dy} },
-    right: { dx: ${p.right.dx}, dy: ${p.right.dy} },
-  },
-},`
-}
-
-function updateExportText() {
-  ui.exportText.value = formatCalibrationEntry(buildExportObject())
-}
-
-// ---------------------------------------------------------------------------------------------
-// Toolbar wiring
-
-// CAL-004: primary selector -- the 5 canon Prologue stages, in order.
-for (const s of SEQUENCE_STEPS) ui.stagePick.append(new Option(s.title, s.key))
-ui.stagePick.onchange = () => { if (ui.stagePick.value) loadStage(ui.stagePick.value) }
-
-// CAL-004: arena/background swap -- changes only `draft.background` for whichever calibration id
-// is currently active (stage or debug); geometry/anchors/scale are untouched and the user re-tunes
-// them by hand against the new art, same as CAL-001's original per-arena calibration workflow.
-for (const a of ARENA_ASSETS) ui.bgPick.append(new Option(a.label, a.path))
+// Arena picker
+ARENA_CATALOG.forEach((a) => ui.bgPick.append(new Option(a.label, a.path)))
 ui.bgPick.onchange = () => {
-  draft.background = ui.bgPick.value
+  const arenaInfo = findArena(ui.bgPick.value)
+  draft.background = arenaInfo.path
+  const currentLevel = campaign.levels[currentLevelIndex]
+  if (currentLevel) {
+    currentLevel.presentation.background = arenaInfo.path
+    currentLevel.presentation.arena = arenaInfo.id
+  }
   setBackground(draft.background)
   renderer.resize(level, draft)
   refreshPanels()
+  markUnsaved()
 }
 
-// Legacy CAL-001/FIX-023 debug-arena picker: every ARENA_CALIBRATIONS id NOT part of the canon
-// Prologue sequence (today just `boss-shadow-moon`) -- kept for calibrating a non-Prologue baked
-// arena against the old synthetic 3-side preview.
-const prologueCalibIds = new Set(Object.values(PROLOGUE_STAGE_CALIBRATION))
-for (const c of Object.values(ARENA_CALIBRATIONS)) {
-  if (prologueCalibIds.has(c.id)) continue
-  ui.arenaPick.append(new Option(`${c.id} (${c.boardSizeLocked}x${c.boardSizeLocked})`, c.id))
-}
-ui.arenaPick.onchange = () => { if (ui.arenaPick.value) loadDebugArena(ui.arenaPick.value) }
-
-for (let n = 5; n <= 10; n++) ui.gridSizePick.append(new Option(`${n}x${n}`, String(n)))
-ui.gridSizePick.onchange = () => {
-  if (mode !== 'debug') return
-  draft.boardSizeLocked = Number(ui.gridSizePick.value)
-  rebuildDebugEncounter()
-  positionHandles()
-  refreshPanels()
+// Stage / Level selector
+ui.stagePick.onchange = () => {
+  const idx = Number(ui.stagePick.value)
+  if (!Number.isNaN(idx)) loadLevel(idx)
 }
 
-ui.toggleEffect.onchange = () => positionHandles()
+// Title change
+ui.authorLevelTitle.oninput = () => {
+  const levelDef = campaign.levels[currentLevelIndex]
+  if (levelDef) {
+    levelDef.title = ui.authorLevelTitle.value
+    updateStagePickOptions()
+    markUnsaved()
+  }
+}
+
+// Board Size change (Square-only)
+ui.authorBoardSize.onchange = () => {
+  const levelDef = campaign.levels[currentLevelIndex]
+  if (levelDef) {
+    const s = Number(ui.authorBoardSize.value)
+    levelDef.board.size = s
+    levelDef.board.preset = `square-${s}`
+    rebuildCurrentLevel()
+    updateStagePickOptions()
+  }
+}
+
+// Board Seed change & Roll
+ui.authorBoardSeed.onchange = () => {
+  const levelDef = campaign.levels[currentLevelIndex]
+  if (levelDef) {
+    levelDef.board.seed = Number(ui.authorBoardSeed.value) || 1
+    rebuildCurrentLevel()
+    updateStagePickOptions()
+  }
+}
+ui.rollSeedBtn.onclick = () => {
+  const levelDef = campaign.levels[currentLevelIndex]
+  if (levelDef) {
+    levelDef.board.seed = Math.floor(Math.random() * 9000) + 1000
+    ui.authorBoardSeed.value = String(levelDef.board.seed)
+    rebuildCurrentLevel()
+    updateStagePickOptions()
+  }
+}
+
+// Blocked Tap Damage
+ui.authorBlockedTap.onchange = () => {
+  const levelDef = campaign.levels[currentLevelIndex]
+  if (levelDef) {
+    levelDef.encounter.blockedTapDamage = Number(ui.authorBlockedTap.value)
+    markUnsaved()
+  }
+}
+
+// + Add Enemy (STRICT RULE: center/top is default first slot)
+ui.authorAddEnemyBtn.onclick = () => {
+  const levelDef = campaign.levels[currentLevelIndex]
+  if (!levelDef.encounter.enemies) levelDef.encounter.enemies = []
+  if (levelDef.encounter.enemies.length >= 3) {
+    alert('Maximum 3 actor slots (TOP, RIGHT, LEFT) supported')
+    return
+  }
+  const nextSide = getNextAvailableSide(levelDef.encounter.enemies)
+  const defaultCreature = findCreature('dire-wolf')
+  levelDef.encounter.enemies.push({
+    id: `mob_${Date.now() % 10000}`,
+    species: defaultCreature.id,
+    label: defaultCreature.label,
+    side: nextSide, // center-first slot!
+    hp: defaultCreature.defaultHp,
+    attackTimer: defaultCreature.defaultTimer ? { ...defaultCreature.defaultTimer } : null,
+  })
+  rebuildCurrentLevel()
+}
+
+// + Level
+ui.newLevelBtn.onclick = () => {
+  const newIdx = campaign.levels.length + 1
+  const newLvl = createDefaultLevel(newIdx, 5)
+  campaign.levels.push(newLvl)
+  updateStagePickOptions()
+  loadLevel(campaign.levels.length - 1)
+  markUnsaved()
+}
+
+// Duplicate Level
+ui.btnDupLevel.onclick = () => {
+  const current = campaign.levels[currentLevelIndex]
+  if (!current) return
+  const dup = deepClone(current)
+  dup.id = `stage-${campaign.levels.length + 1}`
+  dup.title = `${current.title} (Copy)`
+  dup.board.seed = Number(current.board.seed) + 11
+  campaign.levels.splice(currentLevelIndex + 1, 0, dup)
+  updateStagePickOptions()
+  loadLevel(currentLevelIndex + 1)
+  markUnsaved()
+}
+
+// Delete Level
+ui.btnDelLevel.onclick = () => {
+  if (campaign.levels.length <= 1) {
+    alert('Cannot delete the last remaining level')
+    return
+  }
+  campaign.levels.splice(currentLevelIndex, 1)
+  const nextIdx = Math.min(currentLevelIndex, campaign.levels.length - 1)
+  updateStagePickOptions()
+  loadLevel(nextIdx)
+  markUnsaved()
+}
+
+// Move Up
+ui.btnMoveUp.onclick = () => {
+  if (currentLevelIndex <= 0) return
+  const temp = campaign.levels[currentLevelIndex]
+  campaign.levels[currentLevelIndex] = campaign.levels[currentLevelIndex - 1]
+  campaign.levels[currentLevelIndex - 1] = temp
+  currentLevelIndex--
+  updateStagePickOptions()
+  loadLevel(currentLevelIndex)
+  markUnsaved()
+}
+
+// Move Down
+ui.btnMoveDown.onclick = () => {
+  if (currentLevelIndex >= campaign.levels.length - 1) return
+  const temp = campaign.levels[currentLevelIndex]
+  campaign.levels[currentLevelIndex] = campaign.levels[currentLevelIndex + 1]
+  campaign.levels[currentLevelIndex + 1] = temp
+  currentLevelIndex++
+  updateStagePickOptions()
+  loadLevel(currentLevelIndex)
+  markUnsaved()
+}
+
+// ---------------------------------------------------------------------------------------------
+// Persistence Actions
+
+async function executeSave() {
+  const currentLevel = campaign.levels[currentLevelIndex]
+  if (currentLevel) {
+    currentLevel.presentation.calibration = buildExportObject()
+    currentLevel.presentation.background = draft.background
+  }
+  ui.saveBadge.className = 'save-badge'
+  ui.saveBadge.textContent = 'Saving...'
+
+  const res = await saveCampaign(campaign)
+  if (res.fileSaved) {
+    ui.saveBadge.className = 'save-badge saved-file'
+    ui.saveBadge.textContent = `✔ Saved to ${res.filePath} & storage`
+  } else if (res.storageSaved) {
+    ui.saveBadge.className = 'save-badge saved-storage'
+    ui.saveBadge.textContent = '⚠ Saved to browser storage only'
+  } else {
+    ui.saveBadge.className = 'save-badge unsaved'
+    ui.saveBadge.textContent = '✕ Save failed'
+  }
+  return res
+}
+
+ui.saveStorageBtn.onclick = executeSave
+
+ui.clearStorageBtn.onclick = async () => {
+  const loaded = await loadCampaign()
+  campaign = loaded.campaign
+  updateStagePickOptions()
+  loadLevel(0)
+  ui.saveBadge.className = 'save-badge saved-file'
+  ui.saveBadge.textContent = `Reloaded (${loaded.source})`
+}
+
+ui.playLevelBtn.onclick = async () => {
+  await executeSave()
+  window.location.href = `./index.html?mode=authored&stage=${currentLevelIndex}`
+}
+
+ui.playCampaignBtn.onclick = async () => {
+  await executeSave()
+  window.location.href = `./index.html?mode=authored&stage=0`
+}
+
+ui.copyBtn.onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(ui.exportText.value)
+    ui.copyStatus.textContent = 'Copied calibration to clipboard.'
+  } catch {
+    ui.copyStatus.textContent = 'Clipboard blocked — copy text manually.'
+  }
+  setTimeout(() => { ui.copyStatus.textContent = '' }, 3000)
+}
+
+ui.downloadBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify(campaign, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `campaign.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 ui.resetBtn.onclick = () => {
   draft = deepClone(original)
@@ -665,66 +829,14 @@ ui.resetBtn.onclick = () => {
   syncPivotInputs()
   selected = null
   for (const el of handleEls.values()) el.classList.remove('selected')
-  refreshActiveContent()
+  renderer.resize(level, draft)
   positionHandles()
   refreshPanels()
 }
 
-if (ui.saveStorageBtn) {
-  ui.saveStorageBtn.onclick = () => {
-    const ok = saveArenaCalibrationOverride(draft.id, buildExportObject())
-    ui.copyStatus.textContent = ok
-      ? 'Saved override to browser! Reload game to see new layout.'
-      : 'Failed to save to browser.'
-    setTimeout(() => { ui.copyStatus.textContent = '' }, 4000)
-  }
-}
-
-if (ui.clearStorageBtn) {
-  ui.clearStorageBtn.onclick = () => {
-    clearArenaCalibrationOverride(draft.id)
-    draft = deepClone(ARENA_CALIBRATIONS[draft.id] ?? original)
-    original = deepClone(draft)
-    setBackground(draft.background)
-    syncBgPick()
-    syncScaleInputs()
-    syncPivotInputs()
-    selected = null
-    for (const el of handleEls.values()) el.classList.remove('selected')
-    refreshActiveContent()
-    positionHandles()
-    refreshPanels()
-    ui.copyStatus.textContent = 'Browser override cleared. Reverted to code default.'
-    setTimeout(() => { ui.copyStatus.textContent = '' }, 4000)
-  }
-}
-
-ui.copyBtn.onclick = async () => {
-  try {
-    await navigator.clipboard.writeText(ui.exportText.value)
-    ui.copyStatus.textContent = 'Copied to clipboard.'
-  } catch {
-    ui.copyStatus.textContent = 'Clipboard blocked — select the text above and copy manually.'
-  }
-  setTimeout(() => { ui.copyStatus.textContent = '' }, 3000)
-}
-
-ui.downloadBtn.onclick = () => {
-  const blob = new Blob([JSON.stringify(buildExportObject(), null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${draft.id}.calibration.json`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
 // ---------------------------------------------------------------------------------------------
-// Render loop -- always on (idle sprite bob is a continuous function of `now`, same as app.js).
+// Render loop
 
-/** Mirrors app.js's tickAndSyncWolves: expire timed holds so idle bob/breathing never visibly
- * freezes. No gameplay events ever fire in the calibration editor (no tap/rotate), so this is
- * simpler than app.js's own version -- just keep ticking toward baseline. */
 function tickWolves(now) {
   if (!wolfVisuals) return
   for (const e of encounterState.enemies) {
@@ -751,9 +863,6 @@ function loop(now) {
 }
 requestAnimationFrame(loop)
 
-// Stage size can change from a window resize OR a layout change (sidebar, DPR) -- ResizeObserver
-// catches both; the 1920x1080/1366x768 verify step just resizes the window and expects this to
-// re-fit live, same contract app.js's own 'resize' listener gives production scenes.
 if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(() => {
     if (!draft || !level) return
@@ -768,44 +877,48 @@ if (typeof ResizeObserver !== 'undefined') {
   })
 }
 
+// ---------------------------------------------------------------------------------------------
+// Initialization
+
 createHandles()
 wireScaleEvents()
 wirePivotEvents()
-// CAL-004: `#stage=<key>` picks a Prologue step directly (matches SEQUENCE_STEPS keys); the
-// legacy `#arena=<id>` still works for a non-Prologue debug arena.
+
+const loadedCampaignInfo = await loadCampaign()
+campaign = loadedCampaignInfo.campaign
+updateStagePickOptions()
+
 const hashParams = new URLSearchParams(location.hash.slice(1))
-const initialDebugId = hashParams.get('arena')
-if (initialDebugId && ARENA_CALIBRATIONS[initialDebugId] && !prologueCalibIds.has(initialDebugId)) {
-  loadDebugArena(initialDebugId)
+const queryParams = new URLSearchParams(location.search)
+const initialStageIdx = Number(queryParams.get('stage') ?? hashParams.get('stage') ?? 0)
+
+await loadLevel(initialStageIdx)
+
+if (loadedCampaignInfo.source === 'file') {
+  ui.saveBadge.className = 'save-badge saved-file'
+  ui.saveBadge.textContent = 'Loaded from file'
+} else if (loadedCampaignInfo.source === 'storage') {
+  ui.saveBadge.className = 'save-badge saved-storage'
+  ui.saveBadge.textContent = 'Loaded from browser storage'
 } else {
-  const initialStage = hashParams.get('stage') ?? 'prologue-5x5'
-  await loadStage(SEQUENCE_STEPS.some((s) => s.key === initialStage) ? initialStage : SEQUENCE_STEPS[0].key)
+  ui.saveBadge.className = 'save-badge'
+  ui.saveBadge.textContent = 'New campaign'
 }
 
-// Debug hook, same convention as app.js's window.visualDebug.
+// Debug hook for testing / automation
 window.calibrationEditorDebug = {
   draft: () => draft,
   original: () => original,
+  campaign: () => campaign,
+  currentLevelIndex: () => currentLevelIndex,
   exportObject: () => buildExportObject(),
-  loadStage,
-  loadDebugArena,
-  mode: () => mode,
-  currentKey: () => (mode === 'stage' ? currentStageKey : currentDebugId),
-  setActorScale: (top, left, right) => {
-    if (top !== undefined) draft.actorScale.top = top
-    if (left !== undefined) draft.actorScale.left = left
-    if (right !== undefined) draft.actorScale.right = right
-    syncScaleInputs()
-    renderer.resize(level, draft)
-    refreshPanels()
-  },
-  setSpritePivot: (side, dx, dy) => {
-    if (!draft.spritePivot[side]) return
-    if (dx !== undefined) draft.spritePivot[side].dx = dx
-    if (dy !== undefined) draft.spritePivot[side].dy = dy
-    syncPivotInputs()
-    renderer.resize(level, draft)
-    refreshPanels()
-  },
+  loadLevel,
+  addNewLevel: () => ui.newLevelBtn.click(),
+  duplicateLevel: () => ui.btnDupLevel.click(),
+  deleteLevel: () => ui.btnDelLevel.click(),
+  moveLevelUp: () => ui.btnMoveUp.click(),
+  moveLevelDown: () => ui.btnMoveDown.click(),
+  addEnemy: () => ui.authorAddEnemyBtn.click(),
+  save: executeSave,
   getLayout: () => renderer.debugLayout(),
 }

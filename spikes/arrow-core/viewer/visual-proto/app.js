@@ -10,6 +10,7 @@ import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPac
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
+import { loadCampaign, convertLevelToStep } from './campaign-model.js'
 import {
   appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
   onBossGameplayEvent, readBossSnapshot, tickBossVisual,
@@ -86,6 +87,7 @@ let wolfVisuals = null
 // FIX-023: the ARENA_CALIBRATIONS entry for the currently-loaded TRUE baked-grid debug arena, or
 // null on every normal/flexible-arena/rectangular-regression scene -- see loadBakedArenaDebug.
 let activeCalibration = null
+let authoredSteps = []
 
 /** Expire timed holds and re-sync baselines (e.g. a newly armed attackReady telegraph).
  * Presentation only; never touches engine state. */
@@ -114,21 +116,30 @@ async function loadScene(key) {
   ui.stage.classList.remove('hit-flash')
   activeCalibration = null // flexible-arena regression path -- see loadBakedArenaDebug
   restoreDefaultBackground()
-  const seqIdx = SEQUENCE_STEPS.findIndex((s) => s.key === key)
-  if (seqIdx >= 0) {
-    const steps = await Promise.all(SEQUENCE_STEPS.map(getStep))
-    // All Prologue sequence steps start with 0 Rotate charges.
-    // Rotate is unlocked in combat during Boss Phase 2 (+1 local) and granted on Boss win (+2 global reward).
-    const initialCharges = 0
-    run = new RunState({ ...runConfig, initialRotateCharges: initialCharges }, steps)
-    if (seqIdx > 0) {
-      run.debugJumpTo(seqIdx, initialCharges)
+
+  if (key.startsWith('authored-') && authoredSteps.length > 0) {
+    const authIdx = Number(key.replace('authored-', ''))
+    run = new RunState({ ...runConfig, initialRotateCharges: 0 }, authoredSteps)
+    if (authIdx > 0 && authIdx < authoredSteps.length) {
+      run.debugJumpTo(authIdx, 0)
     }
   } else {
-    const standalone = STANDALONE_SCENES.find((s) => s.key === key) ?? STANDALONE_SCENES[0]
-    const step = await getStep(standalone)
-    const initialCharges = standalone.key.startsWith('act1') ? 2 : 0
-    run = new RunState({ ...runConfig, initialRotateCharges: initialCharges }, [step])
+    const seqIdx = SEQUENCE_STEPS.findIndex((s) => s.key === key)
+    if (seqIdx >= 0) {
+      const steps = await Promise.all(SEQUENCE_STEPS.map(getStep))
+      // All Prologue sequence steps start with 0 Rotate charges.
+      // Rotate is unlocked in combat during Boss Phase 2 (+1 local) and granted on Boss win (+2 global reward).
+      const initialCharges = 0
+      run = new RunState({ ...runConfig, initialRotateCharges: initialCharges }, steps)
+      if (seqIdx > 0) {
+        run.debugJumpTo(seqIdx, initialCharges)
+      }
+    } else {
+      const standalone = STANDALONE_SCENES.find((s) => s.key === key) ?? STANDALONE_SCENES[0]
+      const step = await getStep(standalone)
+      const initialCharges = standalone.key.startsWith('act1') ? 2 : 0
+      run = new RunState({ ...runConfig, initialRotateCharges: initialCharges }, [step])
+    }
   }
   loadActiveStep()
 }
@@ -458,8 +469,9 @@ function showOverlay(kind) {
       loadActiveStep()
     }
     if (ui.overlayRestartAll) {
+      const isAuthored = run.steps.length > 0 && run.steps[0]?.id?.startsWith('stage-')
       ui.overlayRestartAll.style.display = run.steps.length > 1 ? 'inline-block' : 'none'
-      ui.overlayRestartAll.textContent = 'Начать пролог сначала'
+      ui.overlayRestartAll.textContent = isAuthored ? 'Начать кампанию сначала' : 'Начать пролог сначала'
       ui.overlayRestartAll.onclick = () => {
         hideOverlay()
         run.restartRun()
@@ -470,21 +482,31 @@ function showOverlay(kind) {
     const isSeq = run.steps.length > 1
     const isLast = !isSeq || run.isLastStep
     const reward = def.winRotateReward ?? 0
+    const isAuthored = run.steps.length > 0 && run.steps[0]?.id?.startsWith('stage-')
     if (ui.overlayRestartAll) ui.overlayRestartAll.style.display = 'none'
 
     if (isSeq && isLast) {
-      ui.overlayTitle.textContent = 'Пролог пройден!'
-      let body = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}. `
-      if (reward > 0) {
-        body += `Награда за босса: +${reward} ROTATE (общий пул: ${run.rotateCharges + reward}). `
-      }
-      body += 'Все 5 этапов текущего пролога успешно завершены! Теперь обсуждаем дальнейшие изменения.'
-      ui.overlayBody.textContent = body
-      ui.overlayNext.textContent = 'Пройти пролог заново'
-      ui.overlayNext.onclick = () => {
-        hideOverlay()
-        run.restartRun()
-        loadActiveStep()
+      if (isAuthored) {
+        ui.overlayTitle.textContent = 'Кампания пройдена!'
+        ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}. Все этапы авторской кампании успешно завершены!`
+        ui.overlayNext.textContent = 'В редактор кампании →'
+        ui.overlayNext.onclick = () => {
+          window.location.href = './calibration-editor.html'
+        }
+      } else {
+        ui.overlayTitle.textContent = 'Пролог пройден!'
+        let body = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}. `
+        if (reward > 0) {
+          body += `Награда за босса: +${reward} ROTATE (общий пул: ${run.rotateCharges + reward}). `
+        }
+        body += 'Все 5 этапов текущего пролога успешно завершены! Теперь обсуждаем дальнейшие изменения.'
+        ui.overlayBody.textContent = body
+        ui.overlayNext.textContent = 'Пройти пролог заново'
+        ui.overlayNext.onclick = () => {
+          hideOverlay()
+          run.restartRun()
+          loadActiveStep()
+        }
       }
     } else if (isSeq) {
       ui.overlayTitle.textContent = 'Этап пройден'
@@ -688,13 +710,44 @@ window.addEventListener('keydown', (ev) => {
   ev.preventDefault()
 })
 
+// Populate campaign steps if available
+const loadedCampaignInfo = await loadCampaign()
+if (loadedCampaignInfo?.campaign?.levels?.length > 0) {
+  try {
+    authoredSteps = loadedCampaignInfo.campaign.levels.map(convertLevelToStep)
+  } catch (e) {
+    console.warn('Failed to parse authored campaign steps', e)
+  }
+}
+
 for (const scene of SEQUENCE_STEPS) ui.scenePick.append(new Option(scene.title, scene.key))
+
+if (authoredSteps.length > 0) {
+  const cSep = new Option('── Авторская кампания ──', '')
+  cSep.disabled = true
+  ui.scenePick.append(cSep)
+  authoredSteps.forEach((s, idx) => {
+    ui.scenePick.append(new Option(`${idx + 1}. ${s.title}`, `authored-${idx}`))
+  })
+}
+
 const sep = new Option('── Standalone / Debug ──', '')
 sep.disabled = true
 ui.scenePick.append(sep)
 for (const scene of STANDALONE_SCENES) ui.scenePick.append(new Option(scene.title, scene.key))
 
-const initialKey = new URLSearchParams(location.hash.slice(1)).get('scene') ?? 'prologue-5x5'
+const queryParams = new URLSearchParams(location.search)
+const hashParams = new URLSearchParams(location.hash.slice(1))
+const mode = queryParams.get('mode') ?? hashParams.get('mode')
+const stageParam = queryParams.get('stage') ?? hashParams.get('stage')
+
+let initialKey = queryParams.get('scene') ?? hashParams.get('scene')
+if (mode === 'authored' && authoredSteps.length > 0) {
+  const stIdx = Number(stageParam ?? 0)
+  initialKey = `authored-${stIdx}`
+}
+if (!initialKey) initialKey = 'prologue-5x5'
+
 ui.scenePick.value = initialKey
 await loadScene(initialKey)
 
@@ -719,6 +772,7 @@ if (ui.bakedArenaPick && ui.bakedArenaLoadBtn) {
 window.visualDebug = {
   run: () => run,
   state: () => run.encounter,
+  authoredSteps: () => authoredSteps,
   tap,
   rotate,
   loadScene,

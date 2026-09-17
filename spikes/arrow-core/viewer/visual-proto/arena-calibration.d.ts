@@ -29,5 +29,5 @@ export declare function getArenaCalibration(id: string): ArenaCalibration | null
 export declare function saveArenaCalibrationOverride(id: string, calibration: unknown): boolean
 export declare function clearArenaCalibrationOverride(id: string): boolean
 export declare function hasArenaCalibrationOverride(id: string): boolean
-export declare function resolveArenaPresentation(presentation: { arena?: string; calibration?: string } | null | undefined): ArenaCalibration | null
+export declare function resolveArenaPresentation(presentation: { arena?: string; calibration?: string | ArenaCalibration | object } | null | undefined): ArenaCalibration | null
 

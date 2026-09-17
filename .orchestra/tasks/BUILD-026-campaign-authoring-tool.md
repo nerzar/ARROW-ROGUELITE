@@ -1,6 +1,6 @@
 # TASK: BUILD-026 — Campaign / Level Authoring Tool
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: L
 AGENT: Claude / primary implementation
@@ -113,3 +113,84 @@ Run the normal typecheck/tests/build needed by the touched code, but do not spen
 Short `RESULT / VERIFY / FOUND` plus `USER PLAYTEST` with only the practical steps the user needs tomorrow morning.
 
 Commit, push, verify remote SHA, mark DONE.
+
+---
+
+## RESULT
+
+Campaign & Level Authoring Tool fully implemented and verified in the browser.
+
+### Key features implemented
+
+1. **Square-only level authoring**:
+   - Fixed square ladder: 5x5, 6x6, 7x7, 8x8, 9x9, 10x10 with presets and seed generation.
+   - Seed rolling via UI button `[🎲 Roll]`.
+   - Puzzle regenerates smoothly while keeping level shell, enemies, and calibration intact.
+
+2. **Center-first enemy slot policy**:
+   - First enemy is placed in `slot 0 (TOP / Center)` by default.
+   - Adding subsequent enemies fills `slot 1 (RIGHT)`, then `slot 3 (LEFT)`.
+   - Each enemy allows configuring species (from data-driven catalog), slot, HP, and Attack Timer (interval + damage).
+
+3. **Data-driven asset catalog (`asset-catalog.js`)**:
+   - Arenas catalog: `prologue-5x5-good`, `6x6-5`, `moonlit-fortress`.
+   - Creatures catalog: `goblin-shaman`, `goblin-taunter`, `dire-wolf`, `green-slime`, `small-goblin`, `spider-brute`, `skeleton-child`.
+   - Direct integration hook for upcoming ASSET-001 packs without UI redesign.
+
+4. **Dual persistence (Project File + localStorage)**:
+   - Dev-server endpoint in `tools/serve.mjs`: `POST /api/campaign/save` writes human-readable `spikes/arrow-core/campaigns/campaign.json` directly to the project repository.
+   - Fallback and sync to browser `localStorage` under `arrow_authored_campaign`.
+   - UI shows clear status badges: `✔ Saved to campaigns/campaign.json & storage` or `⚠ Saved to browser storage only`.
+   - Full round-trip restore on reload and restart.
+
+5. **Integrated calibration and live preview**:
+   - Per-level presentation block stores full calibration (board corners, actor anchors, actorScale, spritePivot, effect anchors).
+   - Real-time drag handles and live render pipeline matching the playable game.
+
+6. **Playable game integration**:
+   - `[▶ Play Level]` and `[▶ Play Campaign]` buttons in the editor.
+   - `app.js` supports `?mode=authored&stage=N` and lists authored levels in `#scenePick`.
+   - Campaign sequence runs smoothly in `RunState` with state carry-over, stage progression, and final completion screen.
+
+### USER PLAYTEST
+
+1. Start dev server:
+   ```bash
+   cd spikes/arrow-core
+   node tools/serve.mjs
+   ```
+2. Open Campaign Authoring Tool:
+   `http://localhost:5177/viewer/visual-proto/calibration-editor.html`
+3. Try authoring actions:
+   - Click `+ Level` to add a new stage (notice the default enemy starts in the Center/TOP slot).
+   - Change square size (5x5..10x10), roll a new seed (`🎲 Roll`).
+   - Add a 2nd enemy (`+ Add Enemy`) -> goes to RIGHT slot. Set HP and toggle Attack Timer.
+   - Adjust board corners or actor scale if desired.
+   - Click `💾 Save` -> verify badge turns green: `✔ Saved to campaigns/campaign.json & storage`.
+   - Click `▶ Play Level` or `▶ Play Campaign` -> directly launches the playable game with your authored campaign!
+   - Reload editor page -> all authored levels and calibrations restore from `campaign.json`.
+
+---
+
+## VERIFY
+
+- `npm run typecheck` -> **0 errors** ✅
+- `npm test` -> **281 tests passed across 23 test files (0 failures)** ✅
+- `npm run build` -> **clean build, 0 errors** ✅
+- Headless Chrome browser automated CDP verification (`tools/verify-browser-authoring.mjs`) -> **All checks passed** ✅:
+  1. Campaign editor initial load & level count verified.
+  2. `+ Level` creates square board with center-first enemy (slot 0 / TOP).
+  3. `+ Add Enemy` occupies next available slot (slot 1 / RIGHT).
+  4. Board size and seed tuning generates solvable board.
+  5. `Save` action writes real `campaigns/campaign.json` (4430 bytes) on disk and updates localStorage.
+  6. Page reload restores full authored campaign from disk file with matching calibration and board settings.
+  7. Playable game (`?mode=authored&stage=0`) initializes `RunState`, renders level, and executes player tap/combat actions.
+
+---
+
+## FOUND
+
+1. **EncounterState side notation**: Side numbers are 0 (North/Top), 1 (East/Right), 2 (South), 3 (West/Left). For center-first enemy placement, 0 is the natural choice as it puts the mob on the center platform facing the player board.
+2. **Inline calibration vs ID lookup**: Added support in `resolveArenaPresentation` for inline `presentation.calibration` objects, enabling authored levels to carry custom board/actor calibrations directly in their JSON definition without needing entries hardcoded in `ARENA_CALIBRATIONS`.
+3. **Square presets ladder**: `PRESETS` already defined `square5`; `square6` through `square10` were added to `src/presets.ts` using the consistent area-scaling formula `max(4, round(n * n * 0.12))` for reliable generation.
+
