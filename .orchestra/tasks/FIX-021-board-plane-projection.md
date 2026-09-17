@@ -55,6 +55,20 @@ START_SHA: 19429f3f2cbdc96ddd12cd3da4ceb55b04fa623b
 
 Не строить general-purpose scene engine.
 
+## USER ADDENDUM — Square-first policy
+
+Пользователь отдельно утвердил временную контентную политику для текущего production slice:
+
+- новые боевые поля проектируем преимущественно квадратными;
+- рабочая линейка контента сейчас: `6x6`, `7x7`, `8x8`, `9x9`, `10x10`;
+- арены/board wells визуально проектируются прежде всего под квадратную форму;
+- Rotate на квадратном board не меняет внешний aspect ratio, поэтому это основной визуальный случай;
+- прямоугольные board НЕ удаляются из engine и projection должна оставаться технически способной их отрисовать/кликать;
+- прямоугольники пока считаются compatibility / future-special-case, а не основной контентной формой;
+- НЕ переписывать существующие encounters/seeds ради этого FIX.
+
+Следствие для реализации FIX-021: оптимизировать default board-plane composition под квадратную safe-zone и визуально проверить минимум `6x6`, `8x8`, `10x10`, при этом сохранить regression checks для существующих rectangular boards и Rotate.
+
 ## Suggested files
 
 Разрешено менять только по необходимости:
@@ -89,14 +103,15 @@ Board должен визуально лежать на центральной �
 
 ### Dimensions
 
-Проверить минимум:
+Основной visual target теперь квадратный:
 
-- easy 6x7;
-- medium 8x10;
-- hard 10x12;
-- rotated easy 7x6;
-- rotated medium 10x8;
-- rotated hard 12x10.
+- 6x6;
+- 7x7;
+- 8x8;
+- 9x9;
+- 10x10.
+
+Compatibility/regression проверить также на существующих прямоугольных размерах, которые уже используются проектом, включая Rotate.
 
 Board должен fit'иться без выхода из stone plane и без микроскопических стрел.
 
@@ -215,7 +230,8 @@ Browser минимум на:
 - Act I #2;
 - Act I #3;
 - debug rock/pin scene;
-- medium/hard board через debug/seed viewer, если sequence их ещё не использует.
+- square debug boards 6x6 / 8x8 / 10x10;
+- existing rectangular board regression through debug/seed viewer.
 
 Проверить вручную:
 
@@ -226,18 +242,19 @@ Browser минимум на:
 5. top telegraph/effect не режется каменной стеной;
 6. board кликабелен по всей площади;
 7. rotate CW/CCW не ломает hit-testing;
-8. rotated rectangular board fit'ится;
-9. resize сохраняет projection;
-10. HUD не перекрывает board/actors.
+8. квадратные boards 6x6–10x10 хорошо используют stone plane;
+9. rectangular compatibility не сломана;
+10. resize сохраняет projection;
+11. HUD не перекрывает board/actors.
 
 Сохранить screenshots:
 
-- default easy;
-- rotated easy;
+- square 6x6;
+- square 10x10;
+- existing rectangular regression;
 - side-enemy encounter;
 - Shaman boss;
-- 1366 layout;
-- biggest tested board.
+- 1366 layout.
 
 ## Delivery
 
