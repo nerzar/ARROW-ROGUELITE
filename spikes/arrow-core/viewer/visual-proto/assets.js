@@ -134,22 +134,6 @@ export function resolveWolfImage(pack, pose) {
   return pack[pose] ?? pack.idle ?? null
 }
 
-// VIS-007: Goblin Shaman SLOT reservation only. The source pack exists locally
-// (magicarrowassets/creatures/goblin-shaman/: idle/taunt/cast/stunned-hit/angry/
-// defeat/back) but no shaman state machine is integrated in this task -- these paths
-// reserve the runtime layout so a later task can drop art + machine in without
-// touching the arena layout. Nothing loads this manifest yet.
-export const SHAMAN_PACK_BASE = 'assets/enemies/goblin-shaman/'
-export const SHAMAN_MANIFEST = {
-  idle: `${SHAMAN_PACK_BASE}idle.png`,
-  taunt: `${SHAMAN_PACK_BASE}taunt.png`,
-  cast: `${SHAMAN_PACK_BASE}cast.png`,
-  stunned: `${SHAMAN_PACK_BASE}stunned-hit.png`,
-  angry: `${SHAMAN_PACK_BASE}angry.png`,
-  defeat: `${SHAMAN_PACK_BASE}defeat.png`,
-  back: `${SHAMAN_PACK_BASE}back.png`,
-}
-
 /** Picks the best available portrait for a target box: known id -> its slot, else the side's
  * positional fallback. VIS-008: boss resolves to bossGoblinShaman (the prologue boss) regardless
  * of id -- this legacy flat-portrait layer never falls back to Taunter now that Taunter is the

@@ -95,9 +95,3 @@ a separate plate (see `../arena-layout.js`):
 - HUD (name/HP/ATTACK-CAST-THROW + badge) above the head, below the feet only
   on the S slot; E/W plates clamp outward so they never reach the board.
 
-## VIS-007: Goblin Shaman slot (reserved, not integrated)
-
-`SHAMAN_MANIFEST` in `../assets.js` reserves `assets/enemies/goblin-shaman/`
-(`idle/taunt/cast/stunned-hit/angry/defeat/back` per the source pack in
-`magicarrowassets/creatures/goblin-shaman/`). No PNGs copied, no state machine,
-no rendering -- a later task wires art + machine without touching the layout.
