@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VIS-001 combat shell</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="bg-layer" id="bgLayer"></div>
+
+  <header class="topbar">
+    <strong>VIS-001</strong>
+    <label>scene <select id="scenePick"></select></label>
+    <span id="sceneTitle" class="muted"></span>
+    <button id="restartBtn" title="R">restart</button>
+    <button id="hintBtn" title="H">hint</button>
+    <button id="debugToggle" title="D">debug</button>
+    <a href="../cp-prologue.html" style="color:inherit">gray debug viewer →</a>
+  </header>
+
+  <div class="hint-line" id="msgLine"></div>
+
+  <div class="arena-wrap">
+    <div class="board-frame" id="boardFrame">
+      <canvas id="arena"></canvas>
+    </div>
+  </div>
+
+  <div class="hud hud-left">
+    <div class="player-card" id="playerCard">
+      <div class="name">Игрок</div>
+      <div class="hp-bar"><div class="hp-fill" id="playerHpFill"></div></div>
+      <div class="hp-text" id="playerHpText">—</div>
+    </div>
+  </div>
+
+  <div class="rotate-controls">
+    <button id="rotCcw" class="rotate-btn" title="Q">⟲</button>
+    <div class="rotate-charges" id="rotateCharges"></div>
+    <button id="rotCw" class="rotate-btn" title="E">⟳</button>
+  </div>
+
+  <aside class="debug-panel hidden" id="debugPanel">
+    <h4>Status</h4>
+    <pre id="status"></pre>
+    <h4>Log</h4>
+    <pre id="log"></pre>
+    <h4>Validator</h4>
+    <pre id="report"></pre>
+  </aside>
+
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <h2 id="overlayTitle"></h2>
+      <div id="overlayBody" class="muted"></div>
+      <button id="overlayNext"></button>
+    </div>
+  </div>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
