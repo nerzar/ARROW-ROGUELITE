@@ -252,7 +252,11 @@ function showOverlay(kind) {
     ui.overlayBody.textContent = 'HP игрока закончилось.'
   } else {
     ui.overlayTitle.textContent = 'Цель выполнена'
-    ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}.`
+    // RUN-001: prototype boss-reward notification (no production reward screen): the encounter
+    // def declares the run-pool grant, RunState.advance() claims it exactly once.
+    const reward = def.winRotateReward ?? 0
+    ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}.` +
+      (reward > 0 ? ` Награда: +${reward} ROTATE (общий ресурс забега: ${run.rotateCharges + reward}).` : '')
   }
   ui.overlayNext.textContent = 'restart'
   ui.overlayNext.onclick = () => { hideOverlay(); loadScene(ui.scenePick.value) }
@@ -288,7 +292,10 @@ function renderPanel() {
   ui.rotCcw.disabled = !s.canRotate(-1) || def.rotate.allow.length === 0
   ui.rotCw.style.visibility = def.rotate.allow.includes(1) ? 'visible' : 'hidden'
   ui.rotCcw.style.visibility = def.rotate.allow.includes(-1) ? 'visible' : 'hidden'
-  ui.rotateCharges.textContent = def.rotate.allow.length === 0 ? '' : s.rotateCharges > 0 ? `Rotate ×${s.rotateCharges}` : s.rotatesUsed ? 'Rotate использован' : 'Rotate не получен'
+  // RUN-001: the count is pool-backed for post-prologue encounters (EncounterState reports the
+  // live shared pool via the same getter), encounter-local otherwise. At 0 the buttons stay
+  // visible but disabled (disabled comes from canRotate below); the label always shows the count.
+  ui.rotateCharges.textContent = def.rotate.allow.length === 0 ? '' : `Rotate ×${s.rotateCharges}`
   const statusLines = [
     `${def.title ?? def.id}`,
     `board ${board.preset} seed ${board.seed} (${level.width}x${level.height}, ${level.arrows.length} стрел)`,

@@ -176,15 +176,38 @@ export interface EncounterDef {
   /** Simultaneous regular enemies (EXP-010b). Exactly one of `boss`/`enemies` is set. */
   enemies?: EnemyDef[]
   /** Which quarter turns a Rotate charge may perform, and whether spending one costs a turn. */
-  rotate: { allow: Turn[]; advancesTurn?: boolean }
+  rotate: {
+    allow: Turn[]
+    advancesTurn?: boolean
+    /** RUN-001: when true, Rotate charges come from the shared run pool (RunState) instead of any
+     * encounter-local grant. The pool holder is passed in (constructor/`fromLevel` 4th param) and
+     * ignored entirely when this flag is absent — tutorial/local boss Rotate can never leak into
+     * the global pool. Cannot be combined with `rotateCharges` or phase `grantRotate`
+     * (rejected by `checkEncounter`). */
+    useRunPool?: boolean
+  }
   /** HP lost on a blocked tap. Default 0 (no HP consequence — EXP-009 behaviour, still used by E1). */
   blockedTapDamage?: number
   /** Rotate charges available from the start, for `enemies`-mode encounters (no phases to grant them). */
   rotateCharges?: number
+  /** RUN-001: charges added to the shared run pool when this encounter is completed (claimed once
+   * by `RunState.advance()`). The prologue boss sets this to 2; post-prologue encounters leave it
+   * unset and spend from the pool instead. Not a per-tap/per-phase grant. */
+  winRotateReward?: number
   notes?: string
 }
 
 export type EncounterAction = { kind: 'tap'; id: number } | { kind: 'rotate'; turn: Turn }
+
+/**
+ * RUN-001: the shared run-level Rotate pool. A mutable holder owned by RunState and passed into
+ * pool-backed encounters (`rotate.useRunPool`); spending a Rotate decrements it directly, undo
+ * refunds it. Solver `clone()` gets a fresh holder seeded with the current value, so exploration
+ * never drains the live run pool.
+ */
+export interface RotatePool {
+  charges: number
+}
 
 export type TapResult =
   | { ok: false; reason: 'over' | 'gone'; blocker: -1 }
@@ -280,14 +303,21 @@ export class EncounterState {
   private playerHpValue: number
   /** The HP this encounter started with (constructor param), needed to replay it exactly in clone(). */
   readonly playerHpStart: number
+  /**
+   * RUN-001: live handle on the shared run pool, or null. Set only when `def.rotate.useRunPool`
+   * is true AND a holder was passed in — any other combination behaves exactly as before
+   * (encounter-local grants), so tutorial Rotate stays local by construction.
+   */
+  private readonly rotatePool: RotatePool | null
   private readonly log: Entry[] = []
 
-  constructor(topo: BoardTopology, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP) {
+  constructor(topo: BoardTopology, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null) {
     checkEncounter(def)
     this.def = def
     this.board = new BoardState(topo)
     this.playerHpValue = playerHp
     this.playerHpStart = playerHp
+    this.rotatePool = def.rotate.useRunPool ? rotatePool : null
     this.phaseEnd = []
     this.grantedUpTo = []
     this.pinTurnsLeft = new Array(topo.arrowCount).fill(0)
@@ -312,12 +342,15 @@ export class EncounterState {
     }
   }
 
-  static fromLevel(level: Level, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP): EncounterState {
-    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp)
+  static fromLevel(level: Level, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null): EncounterState {
+    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool)
   }
 
   clone(): EncounterState {
-    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart)
+    // Seed with the entry-time value (current + already-spent): replaying the logged Rotates
+    // decrements back down to exactly the current value instead of double-spending.
+    const pool = this.rotatePool ? { charges: this.rotatePool.charges + this.rotates } : null
+    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart, pool)
     for (const e of this.log) {
       if (e.kind === 'tap') c.tap(e.id)
       else c.rotate(e.turn)
@@ -391,8 +424,13 @@ export class EncounterState {
     const i = this.phaseIndex
     return i < this.phaseEnd.length ? this.phaseEnd[i] - this.hitCount : 0
   }
-  /** Boss mode: charges granted by phases reached so far. Enemies mode: `def.rotateCharges` flat pool. */
+  /**
+   * RUN-001: pool-backed encounters (`rotate.useRunPool`) report the live shared pool remainder;
+   * everything else is unchanged encounter-local accounting (boss mode: charges granted by phases
+   * reached so far. Enemies mode: `def.rotateCharges` flat pool).
+   */
   get rotateCharges(): number {
+    if (this.rotatePool) return this.rotatePool.charges
     if (this.def.enemies) return (this.def.rotateCharges ?? 0) - this.rotates
     return this.grantedUpToPhase(this.phaseIndex) - this.rotates
   }
@@ -808,6 +846,9 @@ export class EncounterState {
     const timerBefore = this.timerSnapshot()
     this.rot = (this.rot + turn + 4) & 3
     this.rotates++
+    // RUN-001: one Rotate = minus 1 charge from the shared run pool (canRotate already ensured
+    // the pool is non-empty via the rotateCharges getter).
+    if (this.rotatePool) this.rotatePool.charges--
     this.log.push({ kind: 'rotate', turn, timerBefore })
     if (this.def.rotate.advancesTurn) {
       if (this.def.enemies) {
@@ -838,6 +879,9 @@ export class EncounterState {
     } else {
       this.rot = (this.rot - e.turn + 4) & 3
       this.rotates--
+      // RUN-001: refund the shared pool charge this Rotate spent (pool membership is fixed for
+      // the encounter instance, so any logged Rotate spent from it).
+      if (this.rotatePool) this.rotatePool.charges++
     }
     return true
   }
@@ -920,6 +964,22 @@ export function checkEncounter(def: EncounterDef): void {
   }
   if (!Array.isArray(def.rotate?.allow) || def.rotate.allow.some((t) => t !== 1 && t !== -1)) {
     throw new Error('rotate.allow must list 1 (cw) and/or -1 (ccw)')
+  }
+  if (def.rotate.useRunPool !== undefined && typeof def.rotate.useRunPool !== 'boolean') {
+    throw new Error('rotate.useRunPool must be a boolean')
+  }
+  if (def.rotate.useRunPool) {
+    // RUN-001: a pool-backed encounter must not also carry encounter-local grants — mixing the
+    // two would let local Rotate leak into (or double-count against) the shared run pool.
+    if (def.rotateCharges !== undefined) {
+      throw new Error('rotate.useRunPool cannot be combined with rotateCharges (encounter-local grant)')
+    }
+    if (def.boss && def.boss.phases.some((p) => (p.grantRotate ?? 0) > 0)) {
+      throw new Error('rotate.useRunPool cannot be combined with phase grantRotate (encounter-local grant)')
+    }
+  }
+  if (def.winRotateReward !== undefined && (!Number.isInteger(def.winRotateReward) || def.winRotateReward < 0)) {
+    throw new Error('winRotateReward must be a non-negative integer')
   }
   if (def.blockedTapDamage !== undefined && (!Number.isInteger(def.blockedTapDamage) || def.blockedTapDamage < 0)) {
     throw new Error('blockedTapDamage must be a non-negative integer')
