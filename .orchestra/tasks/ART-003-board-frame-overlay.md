@@ -151,4 +151,5 @@ Renderer/layout/gameplay/projection/Rotate не тронуты. Frame стати
    FIX-021 одной строкой манифеста (см. doc).
 
 STATUS: DONE
-RESULT_SHA: 7964037fefff309bbdcdc4f4015f414207be0ce1 (verified: local HEAD == origin/build/ART-003-board-frame-overlay)
+RESULT_SHA (assets): 7964037fefff309bbdcdc4f4015f414207be0ce1; this DONE/bookkeeping
+commit is origin HEAD (verified via ls-remote after final push).
