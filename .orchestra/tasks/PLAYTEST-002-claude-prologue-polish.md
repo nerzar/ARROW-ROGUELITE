@@ -95,4 +95,4 @@ Did **not** touch: puzzle/combat rules, encounter content, the "several disconne
 4. Click **"← Playable game"** (or just navigate back to the game URL) and reload -- the scene title now shows "**[custom calibration applied]**" whenever your saved override is live. If it doesn't look right, go back to the editor, adjust, Save again -- or click **"Clear browser override"** in the editor to revert to the built-in calibration.
 5. Play the Prologue with mouse clicks on the arrows, **Q/E** or the on-screen buttons to Rotate, **R** to restart the current step, **H** for a hint, **D** to toggle the debug panel (shows the projected grid mesh, boss/wolf pose buttons, and the validator report). The overlay after each step offers "Следующий этап →"; after step 5 (Goblin Shaman) it shows "Пролог пройден!" with your final HP and Rotate reward.
 
-RESULT_SHA: (filled after commit, see push step below)
+RESULT_SHA (code): 4ce02bb
