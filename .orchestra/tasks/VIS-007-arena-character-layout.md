@@ -1,12 +1,13 @@
 # TASK: VIS-007 — Arena Character Layout
 
-STATUS: IN_PROGRESS
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Muse Spark (visual implementation agent)
 BASE_BRANCH: origin/feat/VIS-006-dire-wolf-presentation
 BRANCH: feat/VIS-007-arena-character-layout
 START_SHA: 6bb7901352cac806f4898d71d14b5f539fc16edb
+RESULT_SHA: a86e1f2e95f7098c10db025189cec93068858a50 (code commit; card DONE сверх)
 
 ## Base
 
