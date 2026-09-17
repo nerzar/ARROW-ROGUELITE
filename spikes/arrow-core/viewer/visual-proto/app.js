@@ -48,6 +48,25 @@ let board = null
 let hint = null
 let overlayTimer = 0
 let targetsBefore = []
+// PLAYTEST-FIX-001: tallest status stack (in text lines) among TOP (N-side) targets, so the
+// renderer can reserve canvas headroom above the top panel instead of overlapping the board.
+// Boss phases can move the boss to N mid-encounter, so this is the max over all phases, computed
+// once per scene (a phase change never re-reserves: the superset already covers it).
+let topReserve = null
+
+function topStatusReserve(d) {
+  if (d.enemies) {
+    let lines = 0
+    for (const e of d.enemies) {
+      if (e.side !== 0) continue
+      lines = Math.max(lines, 2 + (e.attackTimer ? 1 : 0) + (e.ability ? 1 : 0))
+    }
+    return lines > 0 ? { lines, boss: false } : null
+  }
+  const phases = d.boss.phases.filter((p) => p.side === 0)
+  if (!phases.length) return null
+  return { lines: Math.max(...phases.map((p) => 2 + (p.attackTimer ? 1 : 0))), boss: true }
+}
 
 async function loadScene(key) {
   hideOverlay()
@@ -60,7 +79,8 @@ async function loadScene(key) {
   def = parsed.file.encounter
   board = parsed.file.board
   run = new RunState(runConfig, [{ id: scene.key, title: scene.title, level, def }])
-  renderer.resize(level)
+  topReserve = topStatusReserve(def)
+  renderer.resize(level, topReserve)
   renderer.resetFx()
   hint = null
   targetsBefore = renderer.collectTargets(run.encounter, def)
@@ -308,7 +328,7 @@ ui.restartBtn.onclick = () => loadScene(ui.scenePick.value)
 ui.hintBtn.onclick = showHint
 ui.debugToggle.onclick = () => ui.debugPanel.classList.toggle('hidden')
 ui.scenePick.onchange = () => loadScene(ui.scenePick.value)
-window.addEventListener('resize', () => { if (level) { renderer.resize(level); kick() } })
+window.addEventListener('resize', () => { if (level) { renderer.resize(level, topReserve); kick() } })
 window.addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement || ev.target instanceof HTMLSelectElement) return
   const k = ev.key.toLowerCase()

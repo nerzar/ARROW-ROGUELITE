@@ -49,11 +49,26 @@ export function createBoardRenderer(canvas) {
   // Geometry (same span/cell/margin model as the EXP-008/009/010 viewers, tuned for bigger,
   // glow-friendly target panels).
 
-  function resize(level) {
+  // Last top-side status reserve (see resize): reused when resize is called without one
+  // (e.g. the per-frame fallback), so a phase change or a window resize never loses it.
+  let topReserve = null
+
+  function resize(level, reserve) {
+    if (reserve !== undefined) topReserve = reserve
     const wrap = canvas.parentElement
     const { width: w, height: h } = level
     const span = Math.max(w, h)
-    const margin = 4.4
+    // PLAYTEST-FIX-001: the TOP (N-side) enemy stacks its HP bar + status plate ABOVE its panel
+    // (away from the board). A 3-4 line plate (rock-spike's ATTACK + THROW, a boss CAST) needs
+    // more headroom above the target slot than the base margin reserves, or the plate clips at
+    // the canvas edge on smaller desktop viewports. Grow the margin just enough to fit the
+    // tallest possible top-side stack (computed from content, not hardcoded per scene); boards
+    // without a top-side multi-line status keep the exact old geometry (margin 4.4).
+    let margin = 4.4
+    const top = topReserve
+    if (top && top.lines > 2) {
+      margin = marginForTopStack(span, top, wrap)
+    }
     const avail = Math.max(240, Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16))
     const cell = Math.max(10, Math.floor(Math.min(avail / (span + 2 * margin), 58)))
     const size = Math.round((span + 2 * margin) * cell)
@@ -64,6 +79,26 @@ export function createBoardRenderer(canvas) {
     canvas.style.height = `${size}px`
     geo = { w, h, cell, size, cx: size / 2, cy: size / 2, half: (span * cell) / 2, targetR: (span * cell) / 2 + 1.9 * cell }
     return geo
+  }
+
+  // Solve the margin so the top-side stack (panel half + 6px + HP bar + 6px + `lines`-line plate)
+  // fits between the target slot and the canvas edge, mirroring drawTarget's metrics. Iterated
+  // twice because a bigger margin shrinks the cell, which changes the pixel budget slightly
+  // (the 10px font floor and the fixed 6px gaps don't scale with the cell).
+  function marginForTopStack(span, top, wrap) {
+    const avail = Math.max(240, Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16))
+    let margin = 4.4
+    for (let k = 0; k < 3; k++) {
+      const cell = Math.max(10, Math.min(avail / (span + 2 * margin), 58))
+      const panelHalf = (top.boss ? 0.85 : 0.7) * cell
+      const barH = Math.max(5, cell * 0.16)
+      const fontPx = Math.max(10, Math.floor(cell * (top.boss ? 0.3 : 0.25)))
+      const plateH = top.lines * fontPx * 1.15 + fontPx * 0.5
+      const needCells = (panelHalf + 6 + barH + 6 + plateH) / cell
+      // Headroom above the target slot center is (margin - 1.9) cells; require need + 0.2 safety.
+      margin = Math.max(4.4, needCells + 1.9 + 0.2)
+    }
+    return margin
   }
 
   function boardMatrix(angleDeg) {
@@ -217,6 +252,9 @@ export function createBoardRenderer(canvas) {
     // to reach the board's own footprint (e.g. cp-e4's N-side "slow" enemy once its 3-line plate
     // grew past 2 lines), and an opaque board surface drawn afterward silently painted over that
     // text -- a real bug the old 2-line layout happened not to trip.
+    // PLAYTEST-FIX-001: additionally, the TOP (N-side) enemy's whole status block (HP bar +
+    // name/HP/ATTACK-CAST-ability plate) now stacks AWAY from the board (see drawTarget), so its
+    // board-facing edge is the panel itself with a guaranteed visual gap to the board top.
     drawBoardSurface(col)
     drawSideReadouts(col, s, def)
     for (const t of targets) drawTarget(col, t, now)
@@ -319,9 +357,15 @@ export function createBoardRenderer(canvas) {
       // HP bar, directly below the panel in the panel's own local frame -- this and everything
       // below stays anchored to *this* target regardless of which arena side it is on, so two
       // simultaneous targets (e.g. cp-e4's two enemies) can never draw over each other.
+      // PLAYTEST-FIX-001: the TOP enemy (side N) is the exception -- its local +y points straight
+      // at the board, so a below-the-panel status block lands on the clickable board. Its HP bar
+      // and status plate are therefore stacked ABOVE the panel (away from the board), leaving a
+      // visual gap between the panel's board-facing edge and the board itself. Layout, not z-index:
+      // nothing belonging to the HUD may overlap the board footprint.
+      const topSide = t.side === 0
       const barW = long - 14
       const barH = Math.max(5, g.cell * 0.16)
-      const barY = bh / 2 + 6
+      const barY = topSide ? -bh / 2 - 6 - barH : bh / 2 + 6
       if (!t.dead || t.isBoss) {
         const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
         ctx.fillStyle = col.hpTrack
@@ -351,7 +395,10 @@ export function createBoardRenderer(canvas) {
         lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
       }
       const lineH = fontPx * 1.15
-      const firstY = barY + barH + 6 + fontPx * 0.5
+      // PLAYTEST-FIX-001: TOP enemy stacks its text upward (away from the board); every other
+      // side keeps stacking downward. `lineY(i)` is the baseline of line i in local coords.
+      const firstY = topSide ? barY - 6 - fontPx * 0.5 : barY + barH + 6 + fontPx * 0.5
+      const lineY = (i) => (topSide ? firstY - i * lineH : firstY + i * lineH)
       let maxW = 0
       for (const ln of lines) {
         ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
@@ -359,22 +406,29 @@ export function createBoardRenderer(canvas) {
       }
       const padX = 6
       const plateW = maxW + padX * 2
+      const plateH = lineH * lines.length + fontPx * 0.5
       ctx.fillStyle = col.labelBacking
-      roundRect(-plateW / 2, firstY - fontPx * 0.6, plateW, lineH * lines.length + fontPx * 0.5, 6)
+      // Downward stack: top edge sits fontPx*0.6 above the first baseline. Upward stack (TOP
+      // enemy): bottom edge sits fontPx*0.4 below the first (bottom-most) baseline, preserving the
+      // 6px gap to the HP bar in both cases.
+      roundRect(-plateW / 2, topSide ? firstY + fontPx * 0.4 - plateH : firstY - fontPx * 0.6, plateW, plateH, 6)
       ctx.fill()
       lines.forEach((ln, i) => {
         ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
         ctx.fillStyle = ln.color
-        ctx.fillText(ln.text, 0, firstY + i * lineH)
+        ctx.fillText(ln.text, 0, lineY(i))
       })
 
       // ATTACK/CAST IN badge: a small numeric chip at the panel's outer-top corner (outward = away
       // from the board on this target's own side), independent of panel orientation. Colored by
-      // attack kind so it matches the telegraph pulse/text line above.
+      // attack kind so it matches the telegraph pulse/text line above. PLAYTEST-FIX-001: the TOP
+      // enemy's HP bar and status plate moved above the panel, so its badges sit at the
+      // board-facing (bottom) corners instead -- inside the panel-to-board visual gap, clear of
+      // both the plate and the clickable board.
       if (Number.isFinite(t.countdown) && !t.dead) {
         const r = Math.max(9, g.cell * 0.2)
         const bxo = bw / 2 - r * 0.6
-        const byo = -bh / 2 - r * 0.55
+        const byo = topSide ? bh / 2 + r * 0.55 : -bh / 2 - r * 0.55
         ctx.save()
         ctx.fillStyle = isCast ? col.cast : t.countdown <= 1 ? col.danger : col.badgeFill
         ctx.beginPath()
@@ -388,11 +442,12 @@ export function createBoardRenderer(canvas) {
         ctx.restore()
       }
       // THROW IN badge (EXP-013): opposite corner from the attack badge, rock-brown, independent
-      // countdown -- a target can carry both at once (rock-spike's rockthrower does).
+      // countdown -- a target can carry both at once (rock-spike's rockthrower does). Same
+      // PLAYTEST-FIX-001 mirror as the attack badge for the TOP enemy.
       if (!t.dead && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
         const r = Math.max(9, g.cell * 0.2)
         const bxo = -bw / 2 + r * 0.6
-        const byo = -bh / 2 - r * 0.55
+        const byo = topSide ? bh / 2 + r * 0.55 : -bh / 2 - r * 0.55
         ctx.save()
         ctx.fillStyle = col.rock
         ctx.beginPath()

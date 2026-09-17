@@ -49,8 +49,8 @@ import { BoardTopology } from './topology.js'
  * `EnemyDef.ability` — and lets it change the *puzzle board's availability*, not just deal damage.
  * The one concrete ability implemented is Stone Throw: on its own `THROW IN N` countdown (ticks on
  * every legal world turn, alongside but independent of `attackTimer`), it deterministically picks one
- * currently free-and-unpinned arrow (`targetPolicy: 'free-arrow'`, lowest id, never the last playable
- * arrow — see `selectAbilityTarget`) and pins it for `pinDuration` further world turns: a pinned arrow
+ * currently free-and-unpinned arrow (`targetPolicy: 'free-arrow'`, lowest id, only when at least
+ * `pinDuration` other playable arrows remain — see `selectAbilityTarget`) and pins it for `pinDuration` further world turns: a pinned arrow
  * cannot be tapped (no HP cost, no turn spent, no timer movement — this is not a player mistake), its
  * geometry and blocking behaviour are completely unchanged, and it becomes tappable again once its pin
  * expires. `BoardState` (`src/state.ts`) is not touched by this at all and stays pure geometric truth
@@ -122,8 +122,8 @@ export interface BossPhase {
 /**
  * EXP-013: how `EnemyAbility` picks which arrow to affect. Only `'free-arrow'` is implemented —
  * deterministically the lowest-id arrow that is currently free (`BoardState.canExit`) AND not
- * already pinned, and only when pinning it would still leave at least one other such arrow (the
- * no-softlock guarantee; see `EncounterState.selectAbilityTarget`). The type is a union of one so
+ * already pinned, and only when pinning it would still leave at least `pinDuration` other such
+ * arrows (the no-softlock guarantee; see `EncounterState.selectAbilityTarget`). The type is a union of one so
  * that adding a second policy later (telegraphed-specific / random-safe / longest-arrow /
  * direction-specific, per the brief) is a new case in that switch, not a new field shape.
  */
@@ -598,18 +598,19 @@ export class EncounterState {
   /**
    * EXP-013: deterministic target selection for one ability resolution. `'free-arrow'`: the lowest
    * board id among arrows that are both geometrically free (`board.freeArrows()`) and not already
-   * pinned — but ONLY if there is at least one other such arrow, so pinning this one can never remove
-   * the player's last legal tap (the brief's no-softlock requirement). `playableArrows()` already
-   * returns ascending-by-id, so `[0]` is exactly "lowest arrow id" tie-breaking. Returns -1 (fizzle)
-   * when no candidate is safe, including when there are 0 or 1 candidates at all. This is the one
-   * place a future `targetPolicy` (telegraphed-specific / random-safe / longest-arrow / direction-
-   * specific) would add a case, without touching anything else in this class.
+   * pinned — but ONLY when `candidates.length >= ability.pinDuration + 1`, so after the pin at
+   * least `pinDuration` OTHER playable arrows remain and the pin (which ticks down once per world
+   * turn and is never itself a world turn when tapped) always expires before the player can run
+   * out of legal taps. `playableArrows()` already returns ascending-by-id, so `[0]` is exactly
+   * "lowest arrow id" tie-breaking. Returns -1 (fizzle, countdown still resets) when no candidate
+   * is safe. This is the one place a future `targetPolicy` (telegraphed-specific / random-safe /
+   * longest-arrow / direction-specific) would add a case, without touching anything else in this class.
    */
   private selectAbilityTarget(ability: EnemyAbility): number {
     switch (ability.targetPolicy) {
       case 'free-arrow': {
         const candidates = this.playableArrows()
-        return candidates.length >= 2 ? candidates[0] : -1
+        return candidates.length >= ability.pinDuration + 1 ? candidates[0] : -1
       }
       default:
         return -1

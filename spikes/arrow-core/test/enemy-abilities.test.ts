@@ -15,7 +15,7 @@ import { levelXY } from './helpers.js'
  * EXP-013 (experiment, not accepted design): `EnemyDef.ability` — a board-affecting ability on its
  * own `THROW IN N` countdown, independent of `attackTimer`. The one concrete resolution implemented
  * is Stone Throw: deterministically pin one currently free-and-unpinned arrow (`targetPolicy:
- * 'free-arrow'`, lowest id, never the last playable arrow) for `pinDuration` world turns. A pinned
+ * 'free-arrow'`, lowest id, only when at least `pinDuration` other playable arrows remain) for `pinDuration` world turns. A pinned
  * arrow is geometrically unchanged (still blocks/is blocked exactly as before) but cannot be tapped:
  * no HP cost, no timer movement, not a world turn. See src/encounter.ts's module doc comment and
  * EXP-013-REPORT.md for the full model and turn-order rationale.
@@ -105,11 +105,12 @@ describe('Stone Throw: pin blocks tapping, not geometry', () => {
     // fixture, but with the blocker at the LOWEST id so Stone Throw's deterministic lowest-id
     // selection targets it; id2/id3 are independent free fillers so there are always >=2 candidates
     // at resolution time (id0 stays a safe pick).
-    const level = levelXY(3, 4, [
+    const level = levelXY(3, 5, [
       [[2, 1], [2, 0]], // id0: N, blocks id1's ray
       [[0, 1], [1, 1]], // id1: E, blocked by id0's body at (2,1)
       [[0, 2], [1, 2]], // id2: E, free filler
       [[0, 3], [1, 3]], // id3: E, free filler
+      [[0, 4], [1, 4]], // id4: E, free filler (keeps pinDuration=2 safe: 3 candidates left after the tap)
     ])
     const s = EncounterState.fromLevel(level, abilityDef(1, 2), 10)
     expect(s.board.canExit(1)).toBe(false) // blocked by id0, before any pin
@@ -119,7 +120,7 @@ describe('Stone Throw: pin blocks tapping, not geometry', () => {
     expect(s.isPinned(0)).toBe(true)
     expect(s.board.canExit(0)).toBe(true) // still geometrically free -- the pin is a separate veto
     expect(s.board.canExit(1)).toBe(false) // still blocked by id0's (unmoved) body
-    expect(s.playableArrows()).toEqual([3]) // another free, unpinned arrow remains playable
+    expect(s.playableArrows()).toEqual([3, 4]) // other free, unpinned arrows remain playable
   })
 })
 
@@ -181,21 +182,21 @@ describe('Stone Throw: no-softlock guarantee', () => {
   })
 
   it('fizzles safely (no crash, no pin) when there is no free-and-unpinned candidate at all', () => {
-    const s = EncounterState.fromLevel(eArrows(3), abilityDef(1, 2), 10)
-    s.tap(0) // candidates [1,2] -> pins id1 (lowest)
+    const s = EncounterState.fromLevel(eArrows(4), abilityDef(1, 2), 10)
+    s.tap(0) // candidates [1,2,3] (3 >= pinDuration 2 + 1) -> pins id1 (lowest)
     expect(s.pinnedArrows).toEqual([{ id: 1, turnsLeft: 2 }])
-    const r = s.tap(2) // only remaining playable arrow; after removal candidates = [] (id1 pinned)
+    const r = s.tap(2) // after removal only id3 is playable (id1 still pinned): 1 < 3 -> fizzle
     expect(r.ok).toBe(true)
-    if (r.ok) expect(r.pinnedThisTurn ?? []).toEqual([]) // fizzle: zero candidates
+    if (r.ok) expect(r.pinnedThisTurn ?? []).toEqual([]) // fizzle: too few safe candidates
     expect(s.won).toBe(false) // id1 (mandatory, alive, pinned) still stands between here and a win
   })
 })
 
 describe('Stone Throw: state key and undo', () => {
   it('key() distinguishes an otherwise-identical state that differs only by an active pin', () => {
-    const withAbility = EncounterState.fromLevel(eArrows(4), abilityDef(2, 2), 10)
+    const withAbility = EncounterState.fromLevel(eArrows(5), abilityDef(2, 2), 10)
     withAbility.tap(0) // countdown 2 -> 1, no pin yet
-    withAbility.tap(1) // countdown 1 -> 0 -> pins id2 (lowest of remaining [2,3])
+    withAbility.tap(1) // countdown 1 -> 0 -> pins id2 (lowest of remaining [2,3,4])
     expect(withAbility.pinnedArrows.length).toBeGreaterThan(0)
 
     const noAbilityDef: EncounterDef = {
@@ -203,7 +204,7 @@ describe('Stone Throw: state key and undo', () => {
       enemies: [{ id: 'rock', side: E, hp: 99 }], // same enemy, no ability at all
       rotate: { allow: [] },
     }
-    const withoutAbility = EncounterState.fromLevel(eArrows(4), noAbilityDef, 10)
+    const withoutAbility = EncounterState.fromLevel(eArrows(5), noAbilityDef, 10)
     withoutAbility.tap(0)
     withoutAbility.tap(1)
 
