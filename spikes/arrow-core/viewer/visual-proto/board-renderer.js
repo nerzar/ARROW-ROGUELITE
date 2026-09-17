@@ -8,14 +8,14 @@ import { resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets
 import { BOSS_ANCHOR } from './boss-visual-state.js'
 import { ENEMY_ANCHOR } from './enemy-visual-state.js'
 import {
-  BOSS_CHAR, BOSS_SLOT_DIST, charSize, faceRect,
-  HUD_GAP_PX, hudBoxes, rotatedBoardBox, SIDE_CHAR, SIDE_SLOT_DIST, slotCenter, spriteMirror,
+  BOARD_FIT_HEIGHT, BOSS_SLOT_DIST, charSize, faceRect,
+  hudBoxes, podiumSlot, rotatedBoardBox, SLAB_CENTER, spriteMirror,
 } from './arena-layout.js'
 
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
 
-export function createBoardRenderer(canvas) {
+export function createBoardRenderer(canvas, stageEl) {
   const ctx = canvas.getContext('2d')
   let geo = null
   let shownAngle = 0
@@ -52,82 +52,37 @@ export function createBoardRenderer(canvas) {
   }
 
   // -------------------------------------------------------------------------------------------
-  // Geometry (same span/cell/margin model as the EXP-008/009/010 viewers, tuned for bigger,
-  // glow-friendly target panels).
-
-  // Last slot reserve (see resize): reused when resize is called without one
-  // (e.g. the per-frame fallback), so a phase change or a window resize never loses it.
-  let slotReserve = null
-
-  // BUILD-020: E/W slots have no reserve entry (their HUD stacks vertically, mid-canvas -- see
-  // arena-layout.js), so the margin that keeps them on-canvas must cover the side character's
-  // own footprint directly: slot distance + half its width, plus the same fixed safety gap the
-  // margin always carried. This is also the floor marginForSlots falls back to below. Deriving
-  // it from SIDE_SLOT_DIST/SIDE_CHAR instead of a bare constant means a future character-size
-  // tweak can't silently clip the sprite off the canvas the way a hardcoded 4.4 just did here.
-  const DEFAULT_MARGIN = SIDE_SLOT_DIST + SIDE_CHAR.w / 2 + 1.2
+  // Geometry.
+  //
+  // BUILD-020 layout pass v2: the canvas now spans the *whole stage* (like the background
+  // layer), not just a cropped square around the board -- a square canvas sized to the board's
+  // own margin could never reach the side podiums painted near the stage edges (arena-moonlit-
+  // fortress.png's aspect is close to 16:9, so a square inevitably falls far short of its
+  // width). The board itself is drawn as a smaller square sized/centered to sit inside the
+  // stone dais (SLAB_CENTER/BOARD_FIT_HEIGHT); characters anchor to the fixed stage-fraction
+  // podiums (PODIUM_GROUND, in arena-layout.js) instead of a radius from the board edge.
 
   // VIS-007: per-frame debug layout (canvas coords) for automated checks. Reset on every
   // frame; drawTarget appends one entry per live target (key/side/char/face/plate/badge/board).
   let layoutInfo = []
   let boardBox = { x: 0, y: 0, w: 0, h: 0 }
 
-  function resize(level, reserve) {
-    if (reserve !== undefined) slotReserve = reserve
-    const wrap = canvas.parentElement
+  function resize(level) {
     const { width: w, height: h } = level
     const span = Math.max(w, h)
-    // VIS-007: the TOP (N-side) and BOTTOM (S-side) characters stand on arena slots with
-    // their HUD stack (HP bar + name/HP/ATTACK-CAST-ability plate) on the outward side,
-    // away from the board. Grow the margin just enough to fit the tallest such stack
-    // (computed from content + character footprints, not hardcoded per scene); boards
-    // without a top/bottom character keep the exact old geometry (margin DEFAULT_MARGIN).
-    let margin = DEFAULT_MARGIN
-    const res = slotReserve
-    if (res && (res.top || res.bottom)) {
-      margin = marginForSlots(span, res, wrap)
-    }
-    const avail = Math.max(240, Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16))
-    const cell = Math.max(10, Math.floor(Math.min(avail / (span + 2 * margin), 58)))
-    const size = Math.round((span + 2 * margin) * cell)
+    const stageRect = stageEl.getBoundingClientRect()
+    const stageW = Math.max(1, stageRect.width)
+    const stageH = Math.max(1, stageRect.height)
     const dpr = window.devicePixelRatio || 1
-    canvas.width = size * dpr
-    canvas.height = size * dpr
-    canvas.style.width = `${size}px`
-    canvas.style.height = `${size}px`
-    geo = { w, h, cell, size, cx: size / 2, cy: size / 2, half: (span * cell) / 2, targetR: (span * cell) / 2 + 1.9 * cell }
+    canvas.width = Math.round(stageW * dpr)
+    canvas.height = Math.round(stageH * dpr)
+    canvas.style.width = `${stageW}px`
+    canvas.style.height = `${stageH}px`
+    const cell = Math.max(10, (BOARD_FIT_HEIGHT * stageH) / span)
+    const cx = SLAB_CENTER.x * stageW
+    const cy = SLAB_CENTER.y * stageH
+    geo = { w, h, cell, cx, cy, half: (span * cell) / 2, stageW, stageH }
     return geo
-  }
-
-  // Solve the margin so a vertical character stack (slot distance + character half +
-  // gaps + HP bar + `lines`-line plate) fits between the slot and the canvas edge, for the
-  // TOP (N) and BOTTOM (S) slots independently. Iterated because a bigger margin shrinks
-  // the cell, which changes the pixel budget slightly (the 10px font floor and the fixed
-  // 6px gaps don't scale with the cell).
-  function marginForSlots(span, res, wrap) {
-    const avail = Math.max(240, Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16))
-    let margin = DEFAULT_MARGIN
-    for (let k = 0; k < 3; k++) {
-      const cell = Math.max(10, Math.min(avail / (span + 2 * margin), 58))
-      let need = DEFAULT_MARGIN
-      for (const entry of [res.top, res.bottom]) {
-        if (!entry) continue
-        const big = !!entry.big
-        const charH = (big ? BOSS_CHAR.h : SIDE_CHAR.h) * cell
-        const dist = (big ? BOSS_SLOT_DIST : SIDE_SLOT_DIST) * cell
-        const barH = Math.max(5, cell * 0.16)
-        const fontPx = Math.max(10, Math.floor(cell * (big ? 0.3 : 0.25)))
-        const plateH = entry.lines * fontPx * 1.15 + fontPx * 0.5
-        const needCells = (dist + charH / 2 + HUD_GAP_PX * 2 + barH + plateH) / cell
-        // needCells is measured from the BOARD edge (it already includes the slot
-        // distance); require it + 0.5 safety (BUILD-020: was 0.2, too thin once
-        // BOSS_SLOT_DIST/SIDE_SLOT_DIST grew -- left the plate ~1px from the canvas edge,
-        // close enough that an in-flight appear/tween frame could push it negative).
-        need = Math.max(need, needCells + 0.5)
-      }
-      margin = Math.max(DEFAULT_MARGIN, need)
-    }
-    return margin
   }
 
   function boardMatrix(angleDeg) {
@@ -317,7 +272,7 @@ export function createBoardRenderer(canvas) {
       const size = charSize(t.isBoss)
       const charW = size.w * cell
       const charH = size.h * cell
-      const slot = slotCenter(g.cx, g.cy, g.half, t.side, t.isBoss, cell, DX, DY)
+      const slot = podiumSlot(t.side, t.isBoss, g.stageW, g.stageH, cell)
       const idle = Math.sin(now / 900 + t.side * 1.7) * 1.6
       const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
       const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * g.cell : 0
@@ -385,8 +340,13 @@ export function createBoardRenderer(canvas) {
         if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH)
         else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, charW, charH)
         if (t.dead) {
+          // Same alpha-masked tint as the hit-flash below -- a dead sprite darkens, it
+          // doesn't grow a translucent box around its transparent edges.
+          ctx.save()
+          ctx.globalCompositeOperation = 'source-atop'
           ctx.fillStyle = col.deadOverlay
           ctx.fillRect(-charW / 2, -charH / 2, charW, charH)
+          ctx.restore()
         }
       } else {
         // Missing art fallback: a soft radial glow, deliberately NOT a box.
@@ -403,9 +363,16 @@ export function createBoardRenderer(canvas) {
         ctx.ellipse(0, 0, charW / 2, charH / 2, 0, 0, Math.PI * 2)
         ctx.fill()
       }
+      // Hit-flash: tint the sprite's own opaque pixels white, not a hard-edged box over
+      // transparent art -- 'source-atop' masks the fill to whatever alpha the just-drawn
+      // character art (or its fallback glow) already left in this rect, so on real art with
+      // a non-rectangular silhouette the flash never reads as a floating translucent square.
       if (flashWhite) {
+        ctx.save()
+        ctx.globalCompositeOperation = 'source-atop'
         ctx.fillStyle = 'rgba(255,255,255,0.55)'
         ctx.fillRect(-charW / 2, -charH / 2, charW, charH)
+        ctx.restore()
       }
 
       // VIS-007: HUD is a separate plate near the character -- same content (name / HP /

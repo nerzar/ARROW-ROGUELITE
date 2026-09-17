@@ -15,8 +15,12 @@
 
 // Visual footprints (cells). Boss is the dominant top element; side enemies are clearly
 // smaller yet full-size characters.
-export const BOSS_CHAR = { w: 5.6, h: 7.2 }
-export const SIDE_CHAR = { w: 5.2, h: 5.2 }
+// BUILD-020 layout pass v2: bumped again per user request ("boss ещё увеличить; side enemies
+// тоже немного увеличить"). The boss's ceiling is set by real headroom, not taste: its feet are
+// pinned to PODIUM_GROUND[0] (y 0.40 of the stage), so its height + the HUD stack above it must
+// fit above that line without reaching the topbar -- see board-renderer.js's resize().
+export const BOSS_CHAR = { w: 6.4, h: 6.4 }
+export const SIDE_CHAR = { w: 6.0, h: 6.0 }
 
 // Slot distance from the board edge (cells). The boss stands slightly further out so its
 // strike lunge never touches the board.
@@ -32,6 +36,36 @@ export function charSize(isBoss) {
 export function slotDist(isBoss) {
   return isBoss ? BOSS_SLOT_DIST : SIDE_SLOT_DIST
 }
+
+// BUILD-020 layout pass v2: the approved Moonlit Fortress background (arena-moonlit-fortress.png,
+// 1672x941, ~1:1 under the 16:9 stage via background-size:cover) has three actual painted standing
+// spots -- the round mosaic platform at the back, and a floor medallion at the foot of each
+// staircase -- not a symmetric ring around the board. These are fixed fractions of the STAGE
+// (measured directly on the art), used instead of slotCenter's board-relative radius so a
+// character's feet land on the real podium regardless of how big the board itself is drawn.
+export const PODIUM_GROUND = {
+  0: { x: 0.469, y: 0.445 }, // N: boss / back-row podium (round platform, front edge)
+  1: { x: 0.86, y: 0.60 }, // E: right podium (foot of the right staircase)
+  2: { x: 0.469, y: 0.95 }, // S: not used by any current encounter -- symmetric fallback
+  3: { x: 0.14, y: 0.60 }, // W: left podium (foot of the left staircase)
+}
+
+/** Ground-anchored slot: same body-center contract charBox/drawTarget expect (the box is
+ * centered on this point, offset up by half the character height), but measured from the
+ * STAGE size instead of the board -- see PODIUM_GROUND. */
+export function podiumSlot(side, isBoss, stageW, stageH, cell) {
+  const g = PODIUM_GROUND[side]
+  const h = charSize(isBoss).h * cell
+  return { x: g.x * stageW, y: g.y * stageH - h / 2 }
+}
+
+// The board's own footprint: the blank stone dais in the art sits in this stage-fraction band
+// (measured the same way as PODIUM_GROUND above). BOARD_FIT_HEIGHT is the fraction of the
+// stage's height the square board's side should occupy -- sized to sit inside the dais at every
+// board size (6x7 or 8x10) with a visible stone margin, never wider than the dais's narrowest
+// (top) edge.
+export const SLAB_CENTER = { x: 0.469, y: 0.6615 }
+export const BOARD_FIT_HEIGHT = 0.36
 
 /** Slot center (the character's ground-center x, body-center y) in canvas px. */
 export function slotCenter(boardCx, boardCy, boardHalfPx, side, isBoss, cell, DX, DY) {

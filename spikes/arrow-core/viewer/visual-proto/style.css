@@ -37,15 +37,12 @@ body { font: 14px/1.4 system-ui, sans-serif; color: var(--ink); background: #111
 }
 .topbar button { cursor: pointer; }
 
-/* BUILD-020: shifted down from a symmetric 12% so the board lands on the blank stone plate on
-   the Moonlit Fortress arena's central podium (the art's plate sits well below canvas-center) --
-   same 76% box height as before, just re-anchored lower. */
-.arena-wrap { position: absolute; inset: 0; display: grid; place-items: center; padding: 20% 22% 4%; }
-.board-frame {
-  position: relative; width: 100%; height: 100%; display: grid; place-items: center;
-  border-radius: 18px;
-}
-canvas#arena { max-width: 100%; max-height: 100%; touch-action: manipulation; }
+/* BUILD-020 layout pass v2: the canvas now spans the whole stage (like .bg-layer) instead of a
+   padded, cropped square -- board-renderer.js positions the board and characters itself, in
+   stage pixels, so they can reach the arena art's real podiums near the stage edges. */
+.arena-wrap { position: absolute; inset: 0; }
+.board-frame { position: absolute; inset: 0; }
+canvas#arena { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: manipulation; }
 
 .hud { position: absolute; z-index: 20; display: flex; flex-direction: column; gap: 8px; }
 .hud-left { left: 14px; bottom: 14px; width: 220px; }

@@ -65,7 +65,7 @@ async function getStep(scene) {
   return step
 }
 
-const renderer = createBoardRenderer(ui.canvas)
+const renderer = createBoardRenderer(ui.canvas, ui.stage)
 const assets = await loadAssets(ASSET_MANIFEST)
 // VIS-005/VIS-008: per-pose boss packs, one per species (missing files -> null -> idle ->
 // placeholder fallback, same contract for both). `bossPack` (used for rendering/debug buttons)
@@ -123,32 +123,6 @@ function tickAndSyncWolves(now) {
     wolfVisuals.set(e.id, v)
   }
 }
-// VIS-007: per-side arena slot reserve (N = top, S = bottom) so the renderer can fit
-// the character + HUD stack between the slot and the canvas edge. Boss phases can move
-// the boss between sides mid-encounter, so this is the max over all phases per side,
-// computed once per scene (a phase change never re-reserves: the superset covers it).
-// E/W slots never need a margin reserve (their HUD stacks vertically, mid-canvas).
-let slotReserve = null
-
-function slotStatusReserve(d) {
-  const pick = (dir) => {
-    if (d.enemies) {
-      const es = d.enemies.filter((e) => e.side === dir)
-      if (!es.length) return null
-      return {
-        lines: Math.max(...es.map((e) => 2 + (e.attackTimer ? 1 : 0) + (e.ability ? 1 : 0))),
-        big: false,
-      }
-    }
-    const phases = d.boss.phases.filter((p) => p.side === dir)
-    if (!phases.length) return null
-    return { lines: Math.max(...phases.map((p) => 2 + (p.attackTimer ? 1 : 0))), big: true }
-  }
-  const top = pick(0)
-  const bottom = pick(2)
-  return top || bottom ? { top, bottom } : null
-}
-
 async function loadScene(key) {
   hideOverlay()
   ui.stage.classList.remove('hit-flash')
@@ -178,8 +152,7 @@ function loadActiveStep() {
   board = step.board ?? { preset: 'unknown', seed: 0 }
   ui.scenePick.value = step.id
   ui.sceneTitle.textContent = step.title ?? step.id
-  slotReserve = slotStatusReserve(def)
-  renderer.resize(level, slotReserve)
+  renderer.resize(level)
   renderer.resetFx()
   hint = null
   // VIS-008: which species pack this scene's boss uses (null in enemies-mode scenes).
@@ -582,7 +555,7 @@ ui.restartBtn.onclick = () => {
 ui.hintBtn.onclick = showHint
 ui.debugToggle.onclick = () => ui.debugPanel.classList.toggle('hidden')
 ui.scenePick.onchange = () => loadScene(ui.scenePick.value)
-window.addEventListener('resize', () => { if (level) { renderer.resize(level, slotReserve); kick() } })
+window.addEventListener('resize', () => { if (level) { renderer.resize(level); kick() } })
 window.addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement || ev.target instanceof HTMLSelectElement) return
   const k = ev.key.toLowerCase()
