@@ -1,6 +1,6 @@
 # TASK: ARENA-001 — Runtime Arena Candidate Pack
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Muse / asset-presentation agent
@@ -73,9 +73,50 @@ Manifest пока НЕ должен автоматически переключ�
 - убедиться, что repo не раздут сотнями source images;
 - никакого runtime regression.
 
-## RESULT / VERIFY / FOUND
+## RESULT
 
-Заполнить перед сдачей.
+7 candidates in `spikes/arrow-core/viewer/visual-proto/assets/arenas/candidates/` (original
+filenames, untouched, ~22 MB total; 20 remaining source files NOT imported):
+
+- `6x6 (4).png` — goblin-jungle, baked 6x6 counted on 2x crop, `boardSizeLocked: 6`;
+- `6x6 (2).png` — fel-skull, baked 6x6 counted, `boardSizeLocked: 6`;
+- `6x6-2.png` — inferno lava, baked 6x6 counted, `boardSizeLocked: 6`;
+- `6x6-3.png` — frost aurora, baked 6x6 counted, `boardSizeLocked: 6`;
+- `6x6-4.png` — ocean pearl reef, baked 6x6 counted, `boardSizeLocked: 6`;
+- `5x5.png` — violet ruins, baked 5x5 counted, `boardSizeLocked: 5`, tutorial candidate only
+  (NOT a 5x5 production policy decision);
+- `na.png` — waterfall fortress, NO baked grid (irregular stonework + mosaic platform),
+  `boardSizeFlexible: true`.
+
+Also delivered: `docs/ARENA-001-RUNTIME-CANDIDATES.md` (per-candidate theme / boardPlane /
+TOP-LEFT-RIGHT anchors approx ±0.03 / risks / quota check / rejected list),
+`spikes/arrow-core/viewer/visual-proto/arena-candidates.js` (ESM data-only, no loader, no
+background switch) + matching `arena-candidates.d.ts`,
+`candidates/_contact-sheet.jpg` (proof only, not runtime).
+RESULT_SHA: fe1255bab8204001e5df68275c806ff5b0e30bd5 (code pack commit, pushed + remote
+verified before STATUS DONE; task-card close is a separate docs commit — see git log).
+
+## VERIFY
+
+- All 27 source files listed + dimension-checked via PIL (1672x941 RGB, 6x6-2..6x6-7 1619x971
+  RGB); all 7 picks visually inspected as thumbnails, baked grids counted on 2x board crops.
+- `node -e import(arena-candidates.js)`: 7 entries, 5x locked6, 1x flexible, lookup ok / null ok.
+- Contact sheet rendered and eyeballed (7 labeled thumbs, distinct biomes).
+- `git status`: no renderer/projection/encounter/app.js changes; only pack + doc + manifest + card.
+- Remote verify: `origin/design/ARENA-001-runtime-candidate-pack` == local HEAD after push.
+
+## FOUND
+
+- Incidental (NOT fixed, not mine): working tree carries unrelated leftovers —
+  `donors.md`, `spikes/arrow-core/encounters/multi-shortlist.json` (untracked), plus ART-003
+  deliverables (`docs/ART-003-BOARD-FRAME-OVERLAY.md`, `assets/board/*.png`) which were found
+  STAGED in the index on arrival although byte-identical copies are already committed on
+  `build/ART-003-board-frame-overlay`. Unstaged them (`git reset` on those paths only) so this
+  branch's commits contain only ARENA-001 files. Owner of that residue should clean it up.
+- All shortlisted arenas are RGB without alpha; any future overlay compositing must not assume
+  an alpha channel in these backgrounds.
+- `na.png` well is a sloped irregular ramp — integration will need a projected overlay
+  (FIX-021 territory), recorded as a risk, not solved here.
 
 ## Delivery
 
