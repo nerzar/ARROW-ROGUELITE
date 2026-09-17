@@ -16,38 +16,52 @@ the projected grid inward, off the baked lines).
 
 ## Measurement method
 
-1. **Pixel-level edge detection**: loaded the candidate PNG into an offscreen canvas in the
-   browser, computed luminance, smoothed it (moving-average, window ~3-4px) to suppress stone
-   texture/crack noise, then found the steepest luminance-gradient peak in the left/right (or
-   top/bottom) half of several scanlines -- the ornate metal frame band is reliably brighter than
-   the dark tile interior, so its inner edge shows up as a strong derivative peak independent of
-   the tile's own absolute brightness (which varies row to row with in-scene lighting).
-2. **Linear fit through the cleanest samples**: plotted several scanlines' detected edges,
-   discarded obvious outliers (occasional decorative elements -- skulls, banners, gems -- break
-   the gradient-peak heuristic on a given row), and fit a line through the rest to get the four
-   corner intersections (the frame's left/right edges are straight but not vertical; top/bottom
-   are horizontal).
-3. **`background-size: cover` correction**: `.bg-layer` (style.css) fits the arena PNG to the
-   stage with `background-size: cover; background-position: center`. The stage is forced to
-   exactly 16:9. When a candidate's own aspect ratio isn't 16:9, cover scales the image to match
-   stage width (or height) and **crops the overflow, centered** -- so a raw `imgPixelY / imgHeight`
-   fraction is *not* the on-screen stage fraction. `boss-shadow-moon` (1619x971, aspect 1.667) is
-   scaled to stage width and loses ~3.1% of its height off the top and bottom equally; the visible
-   middle stretches by a `stageAspect / imgAspect ≈ 1.066` factor. Left uncorrected, this misplaces
-   the plane by several percent of stage height -- exactly what an initial by-eye pass without this
-   correction produced (grid rendered visibly too low/short vs. the baked lines). `prologue-5x5-good`
-   (1672x941, aspect 1.777) is within 0.06% of 16:9, so the correction is negligible there.
-4. **Final visual pass**: rendered the projected grid MESH (not just cell-center dots) via the new
-   debug overlay (`board-renderer.js`'s `drawBoardSurface`, gated behind the debug-panel toggle)
-   directly over the baked art and screenshotted at a few zoom levels to confirm the lines sit on
-   the painted mortar lines and the four corners land on the frame's corner gem studs.
+**What was tried first and didn't work:** source-PNG pixel-level edge detection (luminance
+gradient/variance peaks along scanlines, smoothed to suppress texture noise, linear-fit through
+the cleanest samples), with the result hand-converted from image-pixel fractions to stage
+fractions through the `background-size: cover` crop math (see below). This produced a
+`boss-shadow-moon` quad that *looked* internally consistent (the math checked out against its own
+inputs) but was visibly wrong once rendered -- off by roughly 60-70px in a 540px-tall stage. Root
+cause: this art's frame border is itself densely decorated -- corner gem studs, skull medallions,
+and a repeating inline-diamond pattern along every edge -- so a gradient/variance scan repeatedly
+locked onto a decoration's edge instead of the true frame/tile boundary. It did so *confidently*
+(strong, clean signal at the wrong location), which is what made the error easy to miss without
+an independent check.
+
+**What actually worked:** calibrate directly in STAGE pixel space against the rendered result,
+not the source image:
+
+1. Render this module's `boardPlaneFrac` as the in-app debug grid-line MESH (`board-renderer.js`'s
+   `drawBoardSurface`, gated behind the debug-panel toggle) directly over the arena art in the
+   running viewer.
+2. Screenshot at a precisely known viewport size (so screenshot-px -> stage-px is a known constant
+   scale factor).
+3. Read the pixel offset between the projected quad's corners and the baked grid's corners (the
+   corner gem studs are unambiguous, high-contrast landmarks) **directly in that one composited
+   image** -- both the "what we drew" and "what's actually painted" are in the same picture, so
+   there's no separate coordinate space or conversion step that can silently diverge from what's
+   on screen.
+4. Convert the measured screenshot-px offset to a stage-fraction correction and apply it to
+   `boardPlaneFrac`.
+5. Re-render, re-screenshot, repeat until the corners sit on the studs and the mesh lines track the
+   tile mortar cracks. `boss-shadow-moon` needed one large corrective pass (all four corners moved
+   substantially) after the source-image approach's error was caught; `prologue-5x5-good`'s
+   corners (inherited from a prior, differently-measured 5x5 candidate at the same resolution/
+   composition) were already close and needed no correction once checked this way.
+
+**`background-size: cover` is still real and still matters** -- `.bg-layer` (style.css) fits each
+arena PNG to the forced-16:9 stage with `background-size: cover; background-position: center`,
+and `boss-shadow-moon` (1619x971, aspect 1.667) is noticeably off 16:9, so it gets cropped/
+stretched on display. The lesson from the failed first attempt isn't "the cover-fit math was
+wrong" (it wasn't, verified independently) -- it's that calibrating in stage space sidesteps the
+conversion entirely, which is more robust than getting the conversion right on paper and still
+measuring the wrong source-image feature.
 
 No per-arena row/column calibration table (`fitGrid`'s optional `colFracs`/`rowFracs`) was needed
 for either arena -- a plain 4-corner homography matched the baked grid closely enough once the
-corners themselves were measured precisely and the cover-fit crop was accounted for. The plumbing
-for non-uniform per-row/column calibration exists in `board-plane.js` (`fitGrid` opts,
-`cellToScreen`/`screenToCell`'s `colFracs`/`rowFracs` buckets) for a future arena whose generated
-grid turns out to be visibly irregular.
+corners themselves were correctly located. The plumbing for non-uniform per-row/column calibration
+exists in `board-plane.js` (`fitGrid` opts, `cellToScreen`/`screenToCell`'s `colFracs`/`rowFracs`
+buckets) for a future arena whose generated grid turns out to be visibly irregular.
 
 ## Selected arenas
 

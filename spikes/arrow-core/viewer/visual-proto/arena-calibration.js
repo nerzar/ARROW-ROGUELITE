@@ -1,12 +1,22 @@
 // FIX-023: per-arena calibration for TRUE baked-grid arenas (ARENA-002 pack). Unlike
 // PLANE_CORNERS_FRAC in board-plane.js (a flexible dais with NO baked grid, calibrated once by
-// eye for a generous stone margin), these corners are measured pixel positions of the actual
-// painted tile grid's outer edge in each arena's art -- gradient-edge-detected off the source PNG
-// (luminance derivative peaks along scanlines, several rows/cols, linear-fit through the cleanest
-// samples), then refined by eye against the in-app debug grid-line overlay (see board-renderer.js
-// `debug` mode) until projected lines visually sit on the baked lines. `margin: 0` on every entry
-// here is deliberate: the quad below already IS the tile grid's outer edge, not a looser dais
-// footprint, so fitGrid() must fill it corner-to-corner for cell-to-cell alignment.
+// eye for a generous stone margin), these corners must sit precisely on the actual painted tile
+// grid's outer edge. `margin: 0` on every entry here is deliberate: the quad below already IS
+// the tile grid's outer edge, not a looser dais footprint, so fitGrid() must fill it
+// corner-to-corner for cell-to-cell alignment.
+//
+// Source-PNG gradient-edge detection (luminance derivative peaks along scanlines) was tried
+// first and looked plausible in isolation, but produced a visibly wrong `boss-shadow-moon` quad
+// (~60-70px off in stage space) -- this art's frame border is itself densely decorated (corner
+// gem studs, skull medallions, inline diamonds along every edge), so a plain gradient/variance
+// scan repeatedly locked onto a decoration's edge instead of the true frame/tile boundary,
+// confidently and wrong. The reliable method that replaced it: render this module's quad as the
+// in-app debug grid-line overlay (board-renderer.js's `debug` mode) directly over the arena art,
+// screenshot, and read the pixel offset between the projected corners and the baked corners (the
+// unmistakable gem studs) *directly in that one composited image* -- no source-image measurement,
+// no cover-fit conversion, nothing to get out of sync with what's actually on screen. Apply the
+// correction, re-screenshot, repeat until the corners sit on the studs and the mesh lines track
+// the tile mortar cracks.
 //
 // `anchors` are per-arena actor foot-baseline points (normalized stage fractions, same contract
 // as arena-layout.js's PODIUM_GROUND) -- TOP/LEFT/RIGHT stair platforms as painted in this
@@ -40,15 +50,13 @@ export const ARENA_CALIBRATIONS = {
     background: 'assets/arenas/prologue-act1/6x6-5.png',
     boardSizeLocked: 6,
     // FIX-023: this PNG is 1619x971 (aspect 1.667), noticeably off the stage's forced 16:9
-    // (1.778) -- .bg-layer's `background-size: cover` therefore scales it to the stage WIDTH and
-    // crops ~3.1% off the top and bottom equally (centered), stretching the *visible* vertical
-    // range by a ~1.066 factor relative to raw image-pixel fractions. These y values are already
-    // that cover-fit correction applied to the measured image-pixel corners (578,365)/(1130,365)/
-    // (1110,764)/(390,764) -- see docs/FIX-023-GRID-CALIBRATED-BOARD.md's derivation. Using raw
-    // imgY/imgH fractions here (as if background-size were `contain`) would misplace the plane by
-    // several percent of stage height, most visible on this 6:6 arena.
+    // (1.778) -- .bg-layer's `background-size: cover` scales it to the stage width and crops
+    // the top/bottom, which is exactly why these values were calibrated directly in STAGE space
+    // (via the debug-overlay screenshot method above) rather than measured on the source PNG and
+    // hand-converted through the cover-fit math -- that conversion is real but easy to get subtly
+    // wrong, and stage-space calibration sidesteps it entirely by construction.
     boardPlaneFrac: {
-      tl: [0.357, 0.368], tr: [0.698, 0.368], br: [0.686, 0.806], bl: [0.241, 0.806],
+      tl: [0.2775, 0.329], tr: [0.621, 0.329], br: [0.6875, 0.711], bl: [0.2125, 0.711],
     },
     // FIX-023: x=0.09/0.91 first tried here -- measured via debugLayout(), the (~6-cell, 313px
     // at 960 stage width) side sprite's char rect spanned x 717..1030 at x=0.91, clipping ~70px
