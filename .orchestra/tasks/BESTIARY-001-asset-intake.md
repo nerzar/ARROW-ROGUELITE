@@ -1,12 +1,13 @@
 # TASK: BESTIARY-001 — Creature Asset Intake
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: asset/content agent
 BASE_BRANCH: fix/FIX-021-board-plane-projection
 BRANCH: design/BESTIARY-001-asset-intake
 START_SHA: edb56232beb3b46d322388c369cb598ccf9dccc1
+RESULT_SHA: <set-after-push>
 
 ## Goal
 
@@ -83,3 +84,49 @@ Caster/special actors могут требовать дополнительные
 
 Commit -> push -> verify remote RESULT_SHA -> STATUS DONE.
 Не merge main.
+
+## RESULT
+
+Audited all 10 folders in `C:\Users\nerza\Projects\magicarrowassets\creatures\`
+(78 PNGs): PIL stats per file (dimensions, mode, alpha range, transparent %)
++ visual sampling of every pose/cutout. Deliverable:
+`docs/BESTIARY-001-ASSET-INVENTORY.md` (per-folder files, transparency,
+states, identity, missing states, suggested runtime mapping, readiness,
+defects) + data-only draft manifests for the shortlist under
+`spikes/arrow-core/viewer/visual-proto/assets/enemies/_candidates/`
+(no PNGs copied, nothing wired into loaders).
+
+Readiness: READY (rename-only) — `green-slime`, `small-goblin`,
+`toxic-demonic-spider`, `small-spider`, `spider-brute`. NEEDS_CLEANUP —
+`skeleton-child` (helmet/shield variant drift, no clean hit), `small-green-slime`
+(no attack state). REFERENCE_ONLY — all 10 opaque concept/turnaround sheets.
+INTEGRATED already (excluded from shortlist) — `dire_wolf`, `goblin-shaman`,
+`goblin-king` (runtime packs exist via VIS-005/VIS-006/VIS-008).
+SHORTLIST (readiness only, no gameplay ranking): `small-spider`,
+`spider-brute`, `green-slime`; equal-cost alternates `small-goblin`,
+`toxic-demonic-spider`. No gameplay roles assigned, no images generated,
+no renderer/layout/mechanics changes.
+
+## VERIFY
+
+- `python3 -c` PIL audit over all 78 source files: dimensions/mode/alpha recorded
+  in the inventory tables; one byte-duplicate found by md5
+  (`goblin-king/ChatGPT …10_30_02 AM (3).png` == `stuned.png`).
+- Every gameplay cutout visually sampled (thumbnails in Temp, originals untouched);
+  identity/defect notes in the doc are backed by viewed pixels.
+- Candidate JSONs parsed (`JSON OK`); `git status` confirms no PNGs copied and no
+  loader/renderer files touched by this task.
+- Pre-existing dirty `board-renderer.js` ( чужой BUILD-022 change) left untouched
+  and NOT committed; only task files staged by explicit path.
+
+## FOUND
+
+- `goblin-king` duplicate file (delete candidate) + 2 spares with painted
+  backgrounds (need bg removal if ever used) + `indle`/`stuned` typos.
+- `skeleton-child` helmet/shield variant drift; only dazed cutout wears helmet.
+- `small-green-slime` has no attack state; worst filename hygiene
+  (`taunt. - jump -up.png`).
+- Light AI-cutout edge fringe on all packs (uniform, incl. integrated ones) —
+  defringe-on-import suffices.
+- Suggested follow-ups (not started): skeleton variant decision, small-green-slime
+  attack state, goblin-king spare bg removal.

@@ -1,0 +1,19 @@
+{
+  "_note": "BESTIARY-001 draft. Data only: source->runtime filename map. No PNGs copied, not imported by any loader.",
+  "task": "BESTIARY-001",
+  "species": "green-slime",
+  "source_dir": "magicarrowassets/creatures/green-slime",
+  "runtime_dir": "assets/enemies/green-slime",
+  "reference_only": ["concept.png"],
+  "poses": {
+    "idle": "idle.png",
+    "attack-ready": "angry.png",
+    "attack": "cast  shot.png",
+    "hit": "stun-hit.png",
+    "defeat": "death.png"
+  },
+  "extras": {
+    "taunt": "taunt.png",
+    "back": "back.png"
+  }
+}

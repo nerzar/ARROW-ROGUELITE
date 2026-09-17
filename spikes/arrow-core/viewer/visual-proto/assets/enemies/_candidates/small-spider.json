@@ -1,0 +1,19 @@
+{
+  "_note": "BESTIARY-001 draft. Data only: source->runtime filename map. No PNGs copied, not imported by any loader.",
+  "task": "BESTIARY-001",
+  "species": "small-spider",
+  "source_dir": "magicarrowassets/creatures/small-spider",
+  "runtime_dir": "assets/enemies/small-spider",
+  "reference_only": ["ChatGPT Image Sep 17, 2026, 01_53_21 PM (1).png"],
+  "poses": {
+    "idle": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (6).png",
+    "attack-ready": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (7).png",
+    "attack": "ChatGPT Image Sep 17, 2026, 01_53_23 PM (5).png",
+    "hit": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (8).png",
+    "defeat": "ChatGPT Image Sep 17, 2026, 01_53_21 PM (2).png"
+  },
+  "extras": {
+    "attack-ready-alt": "ChatGPT Image Sep 17, 2026, 01_53_21 PM (4).png",
+    "back": "ChatGPT Image Sep 17, 2026, 01_53_21 PM (3).png"
+  }
+}
