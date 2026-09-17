@@ -1,13 +1,13 @@
 # TASK: ACT-I-REV-01 — First 6 Encounters Canonical Revision
 
-STATUS: IN_PROGRESS
+STATUS: DONE
 TYPE: DESIGN
 SIZE: M
 AGENT: Gemini 3.8 Flash (Medium)
 BASE_BRANCH: origin/main
 BRANCH: design/ACT-I-REV-01-first-six
 START_SHA: 9cfd9c5029e624b801f697e3c13e20043bc4d6f1
-RESULT_SHA: pending-push
+RESULT_SHA: 78a31bc4459f1eb84f2cdb050f8f706e16370ab0
 
 ## Зачем
 
