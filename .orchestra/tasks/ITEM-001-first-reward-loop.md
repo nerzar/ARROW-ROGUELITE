@@ -1,13 +1,13 @@
 # TASK: ITEM-001 — First Reward Loop
 
-STATUS: IN_PROGRESS
+STATUS: DONE
 TYPE: DESIGN
 SIZE: S
 AGENT: Gemini 3.8 Flash (Medium)
 BASE_BRANCH: origin/main
 BRANCH: design/ITEM-001-first-reward-loop
 START_SHA: 9cfd9c5029e624b801f697e3c13e20043bc4d6f1
-RESULT_SHA: not-yet-committed
+RESULT_SHA: 349aa3fd95c6f42642c8796d8cfad49608d9271d
 
 ## Зачем
 
