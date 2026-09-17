@@ -1,52 +1,49 @@
 {
   "format": "arrow-campaign",
   "v": 1,
-  "id": "authored-campaign",
-  "title": "Авторская кампания",
+  "id": "square-prologue",
+  "title": "Квадратный Пролог (5 этапов)",
   "levels": [
     {
-      "id": "stage-1",
-      "title": "Этап 1 · Квадрат 5x5",
+      "id": "prologue-stage-1",
+      "title": "Этап 1 · 5x5 Чистый выстрел",
       "board": {
         "preset": "square-5",
         "size": 5,
-        "seed": 1077
+        "seed": 1107
       },
       "presentation": {
         "arena": "prologue-5x5-good",
         "background": "assets/arenas/prologue-act1/5x5-good.png",
-        "calibration": null
+        "calibration": "prologue-5x5-good"
       },
       "encounter": {
         "id": "enc_stage_1",
-        "title": "Этап 1",
+        "title": "Этап 1 · Базовый выстрел",
         "enemies": [
           {
             "id": "mob_top",
             "species": "dire-wolf",
-            "label": "Dire Wolf (Enemy)",
+            "label": "Dire Wolf (Target)",
             "side": 0,
-            "hp": 2,
-            "attackTimer": {
-              "interval": 3,
-              "damage": 2
-            }
+            "hp": 1,
+            "attackTimer": null
           }
         ],
         "rotate": {
           "allow": []
         },
-        "blockedTapDamage": 1,
-        "notes": "Authored square level 5x5"
+        "blockedTapDamage": 0,
+        "notes": "Stage 1: Basic shot. Board 5x5 seed 1107. 5 arrows. Passive target at center/TOP (side 0), 1 HP. Arrow #0 (N) hits boss on North and kills directly. 0 damage."
       }
     },
     {
-      "id": "stage-2",
-      "title": "Этап 2 · Квадрат 6x6",
+      "id": "prologue-stage-2",
+      "title": "Этап 2 · 5x5 Ошибка стоит HP",
       "board": {
-        "preset": "square-6",
-        "size": 6,
-        "seed": 1154
+        "preset": "square-5",
+        "size": 5,
+        "seed": 1
       },
       "presentation": {
         "arena": "prologue-5x5-good",
@@ -55,16 +52,49 @@
       },
       "encounter": {
         "id": "enc_stage_2",
-        "title": "Этап 2",
+        "title": "Этап 2 · Цена ошибки",
         "enemies": [
           {
             "id": "mob_top",
             "species": "dire-wolf",
-            "label": "Dire Wolf (Enemy)",
+            "label": "Dire Wolf (Target)",
             "side": 0,
             "hp": 2,
+            "attackTimer": null
+          }
+        ],
+        "rotate": {
+          "allow": []
+        },
+        "blockedTapDamage": 1,
+        "notes": "Stage 2: Mistake cost & unlock order. Board 5x5 seed 1. 5 arrows. Target at center/TOP (side 0), 2 HP. Free arrows peel blocker so target can be defeated safely without blocked tap penalties. 0 damage."
+      }
+    },
+    {
+      "id": "prologue-stage-3",
+      "title": "Этап 3 · 5x5 Время имеет цену",
+      "board": {
+        "preset": "square-5",
+        "size": 5,
+        "seed": 4
+      },
+      "presentation": {
+        "arena": "prologue-5x5-good",
+        "background": "assets/arenas/prologue-act1/5x5-good.png",
+        "calibration": null
+      },
+      "encounter": {
+        "id": "enc_stage_3",
+        "title": "Этап 3 · Давление таймера",
+        "enemies": [
+          {
+            "id": "mob_top",
+            "species": "dire-wolf",
+            "label": "Dire Wolf (Aggressive)",
+            "side": 0,
+            "hp": 3,
             "attackTimer": {
-              "interval": 3,
+              "interval": 4,
               "damage": 2
             }
           }
@@ -73,110 +103,41 @@
           "allow": []
         },
         "blockedTapDamage": 1,
-        "notes": "Authored square level 6x6"
+        "notes": "Stage 3: Timer pressure. Board 5x5 seed 4. 7 arrows. Target at center/TOP (side 0), 3 HP, ATTACK IN 4 dmg 2. Clean 4-turn solve kills mob on turn 4 before retaliation. 0 damage."
       }
     },
     {
-      "id": "stage-3",
-      "title": "Verified Square 6x6",
+      "id": "prologue-stage-4",
+      "title": "Этап 4 · 6x6 Приоритет целей",
       "board": {
         "preset": "square-6",
         "size": 6,
-        "seed": 2026
+        "seed": 282
       },
       "presentation": {
-        "arena": "prologue-5x5-good",
-        "background": "assets/arenas/prologue-act1/5x5-good.png",
-        "calibration": {
-          "id": "prologue-5x5-good",
-          "background": "assets/arenas/prologue-act1/5x5-good.png",
-          "boardSizeLocked": 5,
-          "boardPlaneFrac": {
-            "tl": [
-              0.35,
-              0.42
-            ],
-            "tr": [
-              0.63,
-              0.45
-            ],
-            "br": [
-              0.655,
-              0.818
-            ],
-            "bl": [
-              0.348,
-              0.82
-            ]
-          },
-          "anchors": {
-            "top": {
-              "x": 0.5,
-              "y": 0.43
-            },
-            "left": {
-              "x": 0.17,
-              "y": 0.62
-            },
-            "right": {
-              "x": 0.83,
-              "y": 0.62
-            }
-          },
-          "effectAnchors": {
-            "top": {
-              "x": 0.5,
-              "y": 0.37
-            },
-            "left": {
-              "x": 0.17,
-              "y": 0.62
-            },
-            "right": {
-              "x": 0.83,
-              "y": 0.62
-            }
-          },
-          "actorScale": {
-            "top": 0.75,
-            "left": 1,
-            "right": 1
-          },
-          "spritePivot": {
-            "top": {
-              "dx": 0,
-              "dy": 0
-            },
-            "left": {
-              "dx": 0,
-              "dy": 0
-            },
-            "right": {
-              "dx": 0,
-              "dy": 0
-            }
-          }
-        }
+        "arena": "6x6-5",
+        "background": "assets/arenas/prologue-act1/6x6-5.png",
+        "calibration": "boss-shadow-moon"
       },
       "encounter": {
-        "id": "enc_stage_3",
-        "title": "Этап 3",
+        "id": "enc_stage_4",
+        "title": "Этап 4 · Два врага одновременно",
         "enemies": [
           {
-            "id": "mob_top",
+            "id": "grunt_top",
             "species": "dire-wolf",
-            "label": "Dire Wolf (Enemy)",
+            "label": "Slow Grunt (TOP)",
             "side": 0,
             "hp": 2,
             "attackTimer": {
-              "interval": 3,
+              "interval": 5,
               "damage": 2
             }
           },
           {
-            "id": "mob_5164",
+            "id": "grunt_right",
             "species": "dire-wolf",
-            "label": "Dire Wolf (Enemy)",
+            "label": "Urgent Grunt (RIGHT)",
             "side": 1,
             "hp": 2,
             "attackTimer": {
@@ -189,7 +150,66 @@
           "allow": []
         },
         "blockedTapDamage": 1,
-        "notes": "Authored square level 5x5"
+        "notes": "Stage 4: Multi-enemy priority. Board 6x6 seed 282. Primary slow enemy center/TOP (side 0, IN 5), secondary urgent enemy RIGHT (side 1, IN 3). Focusing East first kills urgent enemy on turn 2 (0 damage). Wrong path (focusing North) results in East attacking for 2 damage."
+      }
+    },
+    {
+      "id": "prologue-stage-5",
+      "title": "Этап 5 · 6x6 Goblin Shaman",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 7
+      },
+      "presentation": {
+        "arena": "6x6-5",
+        "background": "assets/arenas/prologue-act1/6x6-5.png",
+        "calibration": "boss-shadow-moon"
+      },
+      "encounter": {
+        "id": "enc_stage_5",
+        "title": "Этап 5 · Босс Goblin Shaman",
+        "boss": {
+          "id": "goblin-shaman",
+          "phases": [
+            {
+              "side": 0,
+              "hpUnits": 3,
+              "attackTimer": {
+                "interval": 4,
+                "damage": 2
+              },
+              "label": "Phase 1: Center/TOP (North)"
+            },
+            {
+              "side": 1,
+              "hpUnits": 4,
+              "grantRotate": 1,
+              "attackTimer": {
+                "interval": 3,
+                "damage": 2,
+                "kind": "cast",
+                "interruptible": true,
+                "interruptedAttack": {
+                  "interval": 4,
+                  "damage": 2,
+                  "kind": "normal"
+                }
+              },
+              "label": "Phase 2: Moves East, CAST interrupt & Rotate grant"
+            }
+          ]
+        },
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false
+        },
+        "blockedTapDamage": 1,
+        "winRotateReward": 2,
+        "notes": "Stage 5: Goblin Shaman boss. Board 6x6 seed 7. Starts center/TOP (side 0, 3 HP, IN 4 dmg 2). Phase 2 moves East (side 1, 4 HP, CAST IN 3 dmg 2, grants +1 Rotate). Rotate CCW turns board to hit East, interrupting CAST and defeating boss with 0 damage. Win awards +2 Rotate."
       }
     }
   ]

@@ -115,8 +115,27 @@ export function convertLevelToStep(levelDef) {
 
   // If encounter is boss-type
   if (levelDef.encounter.boss) {
-    encounterData.boss = levelDef.encounter.boss
+    const normalizedPhases = (levelDef.encounter.boss.phases ?? []).map((p) => {
+      let side = p.side
+      if (typeof side === 'string') side = sideMap[side] ?? 0
+      return {
+        ...p,
+        side,
+      }
+    })
+    encounterData.boss = {
+      ...levelDef.encounter.boss,
+      phases: normalizedPhases,
+    }
     delete encounterData.enemies
+  }
+
+  // Normalize rotate allow (support 'cw' / 'ccw' strings as well as 1 / -1)
+  if (encounterData.rotate?.allow) {
+    encounterData.rotate = {
+      ...encounterData.rotate,
+      allow: encounterData.rotate.allow.map((t) => (t === 'cw' ? 1 : t === 'ccw' ? -1 : t)),
+    }
   }
 
   return {
