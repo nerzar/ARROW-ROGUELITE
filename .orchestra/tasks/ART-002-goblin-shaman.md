@@ -1,13 +1,13 @@
 # TASK: ART-002 — Goblin Shaman Runtime Asset Spec
 
-STATUS: IN_PROGRESS
+STATUS: DONE
 TYPE: DESIGN
 SIZE: S
 AGENT: Gemini 3.8 Flash (Medium)
 BASE_BRANCH: design/ACT-I-REV-01-first-six
 BRANCH: design/ART-002-goblin-shaman
 START_SHA: 7daef013bf768df61eae01810f9740437666d115
-RESULT_SHA: pending-push
+RESULT_SHA: 2e88818dcc2790e527e3493316ef821ffe6b1238
 
 ## Зачем
 
