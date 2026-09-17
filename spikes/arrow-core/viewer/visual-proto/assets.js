@@ -1,4 +1,5 @@
 import { BOSS_POSES } from './boss-visual-state.js'
+import { ENEMY_POSES } from './enemy-visual-state.js'
 
 // VIS-001: declarative asset manifest + graceful-placeholder loader for the visual combat shell.
 // Nothing here is combat logic -- it only resolves image keys to HTMLImageElement|null so
@@ -31,6 +32,14 @@ export const ASSET_MANIFEST = {
 // per pose and the renderer falls back to the idle pose, then to the legacy placeholder.
 export const BOSS_PACK_BASE = 'assets/bosses/goblin-taunter/'
 export const BOSS_MANIFEST = Object.fromEntries(BOSS_POSES.map((p) => [p, `${BOSS_PACK_BASE}${p}.png`]))
+
+const WOLF_RUNTIME = { idle: 'idle.png', attackReady: 'attack-ready.png', attack: 'lunge.png', hit: 'hit.png', defeat: 'defeat.png' }
+// VIS-006: Dire Wolf runtime pack -- one PNG per ordinary-enemy presentation pose (canonical
+// source: magicarrowassets/creatures/dire_wolf; generic source names mapped in the VIS-006
+// task card). Runtime `attack` pose lives in `lunge.png` (a lunge IS the wolf's attack).
+// Missing files resolve to `null` per pose and the renderer falls back to idle, then legacy placeholder.
+export const WOLF_PACK_BASE = 'assets/enemies/dire-wolf/'
+export const WOLF_MANIFEST = Object.fromEntries(ENEMY_POSES.map((p) => [p, `${WOLF_PACK_BASE}${WOLF_RUNTIME[p]}`]))
 
 /** Enemy/boss id -> manifest key, for the three VS-001 scenes' known cast (cp-e4, cp-e5,
  * rock-spike). A future encounter with an unlisted id still gets *a* portrait, not a blank panel,
@@ -73,8 +82,23 @@ export async function loadBossPack(manifest = BOSS_MANIFEST) {
   return pack
 }
 
+/** VIS-006: loads the Dire Wolf pose pack in parallel; same null-on-missing contract. */
+export async function loadWolfPack(manifest = WOLF_MANIFEST) {
+  const poses = Object.keys(manifest)
+  const imgs = await Promise.all(poses.map((p) => loadImage(manifest[p])))
+  const pack = {}
+  poses.forEach((p, i) => (pack[p] = imgs[i]))
+  return pack
+}
+
 /** VIS-005: pose -> image with graceful degradation (pose -> idle -> null placeholder). */
 export function resolveBossImage(pack, pose) {
+  if (!pack) return null
+  return pack[pose] ?? pack.idle ?? null
+}
+
+/** VIS-006: same contract for the wolf pack (pose -> idle -> null placeholder). */
+export function resolveWolfImage(pack, pose) {
   if (!pack) return null
   return pack[pose] ?? pack.idle ?? null
 }

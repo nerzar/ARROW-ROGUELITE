@@ -4,8 +4,9 @@
 // It never mutates combat state and never invents rules -- game state changes are driven entirely
 // by EncounterState; this module only plays back the *result* of a tap/rotate as animation.
 import { DX, DY } from '../../dist/src/index.js'
-import { resolveBossImage, resolveTargetImage } from './assets.js'
+import { resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets.js'
 import { BOSS_ANCHOR } from './boss-visual-state.js'
+import { ENEMY_ANCHOR } from './enemy-visual-state.js'
 
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
@@ -252,6 +253,13 @@ export function createBoardRenderer(canvas) {
     // keep the loop alive until it expires so the beat always plays to the baseline.
     const bossHold = view.boss?.visual
     if (bossHold && !bossHold.manual && now < bossHold.holdUntil) animating = true
+    // VIS-006: same for per-actor wolf holds (attack/hit beats) -- each actor ticks independently.
+    const wolfVisuals = view.wolf?.visuals
+    if (wolfVisuals) {
+      for (const w of wolfVisuals.values()) {
+        if (!w.manual && now < w.holdUntil) { animating = true; break }
+      }
+    }
     // VS-001: board surface first, target panels on top -- a target panel's label plate (name/HP/
     // CAST-ATTACK-THROW text) can extend far enough toward the board on a short/wide N or S panel
     // to reach the board's own footprint (e.g. cp-e4's N-side "slow" enemy once its 3-line plate
@@ -328,13 +336,21 @@ export function createBoardRenderer(canvas) {
       // bottom-center (ground) anchored per BOSS_ANCHOR, so poses with different aspect ratios
       // (angry, defeat) never jump or resize the footprint. The panel clip stays active, so art
       // can never spill onto the board, the projectile corridor, or the HUD.
+      // VIS-006: ordinary enemies draw the Dire Wolf pack the same way (per-actor pose from
+      // view.wolf.visuals, shared ENEMY_ANCHOR ground model). Missing pack -> legacy placeholder.
       const bossPack = t.isBoss ? view.boss?.pack ?? null : null
       const bossPose = t.isBoss ? view.boss?.visual?.pose ?? 'idle' : null
       const bossImg = bossPack ? resolveBossImage(bossPack, bossPose) : null
-      const img = bossImg ?? resolveTargetImage(assets, t)
+      const wolfVisual = !t.isBoss ? view.wolf?.visuals?.get(key) ?? null : null
+      const wolfPose = !t.isBoss ? wolfVisual?.pose ?? 'idle' : null
+      const wolfPack = !t.isBoss ? view.wolf?.pack ?? null : null
+      const wolfImg = wolfPack ? resolveWolfImage(wolfPack, wolfPose) : null
+      const img = bossImg ?? wolfImg ?? resolveTargetImage(assets, t)
       const bossSince = t.isBoss && view.boss?.visual ? now - view.boss.visual.startedAt : -1e9
+      const wolfSince = wolfVisual ? now - wolfVisual.startedAt : -1e9
       const flashWhite = (now - fx.hitT >= 0 && now - fx.hitT < 110) ||
-        (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130)
+        (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130) ||
+        (wolfPose === 'hit' && wolfSince >= 0 && wolfSince < 130)
       ctx.save()
       ctx.shadowColor = t.isBoss ? col.bossGlow : col.enemyGlow
       ctx.shadowBlur = t.dead ? 0 : 14
@@ -342,6 +358,7 @@ export function createBoardRenderer(canvas) {
       ctx.clip()
       if (img) {
         if (bossImg) drawBossArt(img, bossPose, bossSince, t, bw, bh)
+        else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, bw, bh)
         else ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh)
         if (t.dead) {
           ctx.fillStyle = col.deadOverlay
@@ -545,6 +562,58 @@ export function createBoardRenderer(canvas) {
         tr.sx = tr.sy = 1 + 0.1 * (1 - p) * (1 - p)
         tr.ty = 4 * (1 - p)
       }
+      return tr
+    }
+
+    // VIS-006: anchored wolf draw + presentation-only transforms. Same ground-anchor
+    // contract as the boss: fixed panel footprint, contain-fit, bottom-center locked.
+    // The side-profile sprites face right, so E-side panels (right of the board) mirror
+    // about the anchor x -- the wolf faces the board on every side without moving the
+    // ground point. All motion is wall-clock cosmetics; simulation timers are untouched.
+    function drawWolfArt(img, pose, since, t, bw, bh) {
+      const iw = img.naturalWidth || img.width
+      const ih = img.naturalHeight || img.height
+      if (!iw || !ih) return
+      const fit = Math.min(bw / iw, bh / ih)
+      const dw = iw * fit
+      const dh = ih * fit
+      const off = ENEMY_ANCHOR.offsets[pose] ?? { dx: 0, dy: 0 }
+      const gx = off.dx * bw
+      const gy = bh / 2 + off.dy * bh
+      const mirror = t.side === 1 ? -1 : 1 // E side: face the board
+      const tr = wolfPoseTransform(pose, since, t)
+      ctx.save()
+      ctx.translate(gx, gy)
+      ctx.scale(mirror * tr.sx, tr.sy)
+      ctx.translate(-gx + tr.tx, -gy + tr.ty)
+      ctx.drawImage(img, gx - dw * ENEMY_ANCHOR.anchorX, gy - dh * ENEMY_ANCHOR.anchorY, dw, dh)
+      ctx.restore()
+    }
+
+    function wolfPoseTransform(pose, since, t) {
+      const tr = { sx: 1, sy: 1, tx: 0, ty: 0 }
+      const toBoard = { x: -DX[t.side], y: -DY[t.side] }
+      if (pose === 'idle') {
+        tr.sy = 1 + 0.012 * Math.sin(now / 1000) // breathing
+        tr.tx = 1.5 * Math.sin(now / 1400 + 0.9) // shifting weight
+      } else if (pose === 'attackReady') {
+        tr.sy = 0.96 // low stance: squash...
+        tr.sx = 1.03 // ...and coil
+        tr.tx = toBoard.x * 4 // forward tension toward the board
+        tr.ty = toBoard.y * 4 + 0.8 * Math.sin(now / 500)
+      } else if (pose === 'attack' && since >= 0) {
+        // Pose swap carries the lunge; the fx lunge offset adds travel. A short pop + recoil
+        // sells the strike without a skeletal rig.
+        const p = Math.max(0, 1 - since / 450)
+        tr.sx = tr.sy = 1 + 0.03 * p
+        tr.tx = toBoard.x * 6 * p
+        tr.ty = toBoard.y * 6 * p
+      } else if (pose === 'hit' && since >= 0 && since < 260) {
+        tr.tx = Math.sin(since / 16) * 3 // shake, decaying with the hold
+        tr.ty = DY[t.side] * 6 * Math.max(0, 1 - since / 180) // recoil outward
+        tr.tx += DX[t.side] * 6 * Math.max(0, 1 - since / 180)
+      }
+      // defeat: static -- the death fade (globalAlpha 1-deathP) is the terminal hold/fade.
       return tr
     }
 
