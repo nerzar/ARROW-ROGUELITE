@@ -32,5 +32,6 @@ createServer(async (req, res) => {
   console.log(`arrow-core viewer: http://localhost:${port}/viewer/#preset=medium&seed=1
  mini-boss:         http://localhost:${port}/viewer/encounter.html
  gray prologue:     http://localhost:${port}/viewer/prologue.html
- combat prologue:   http://localhost:${port}/viewer/cp-prologue.html`)
+ combat prologue:   http://localhost:${port}/viewer/cp-prologue.html
+ visual shell:      http://localhost:${port}/viewer/visual-proto/`)
 })

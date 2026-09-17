@@ -1,0 +1,518 @@
+// VIS-001: presentation-only board/target renderer. Reads EncounterState/Level/BoardTopology
+// (via the same s.board.isAlive/canExit/ownerAt, s.arenaDir, s.enemies/bossSide accessors the
+// EXP-008/009/010 debug viewers already use) and draws arrows exactly where Level says they are.
+// It never mutates combat state and never invents rules -- game state changes are driven entirely
+// by EncounterState; this module only plays back the *result* of a tap/rotate as animation.
+import { DX, DY } from '../../dist/src/index.js'
+import { resolveTargetImage } from './assets.js'
+
+const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
+const clamp01 = (t) => Math.max(0, Math.min(1, t))
+
+export function createBoardRenderer(canvas) {
+  const ctx = canvas.getContext('2d')
+  let geo = null
+  let shownAngle = 0
+  let rotAnim = null // { from, to, t0, dur }
+  let shots = [] // { cells, dir, arenaDir, hit, t0 }
+  const targetFx = new Map() // key -> { hitT, deathT, attackT, interruptT }
+  let hoverId = -1
+  let flash = { blocked: -1, blocker: -1 }
+
+  function fxFor(key) {
+    let fx = targetFx.get(key)
+    if (!fx) {
+      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9 }
+      targetFx.set(key, fx)
+    }
+    return fx
+  }
+
+  function targetKey(t) {
+    return t.isBoss ? 'boss' : t.id
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Geometry (same span/cell/margin model as the EXP-008/009/010 viewers, tuned for bigger,
+  // glow-friendly target panels).
+
+  function resize(level) {
+    const wrap = canvas.parentElement
+    const { width: w, height: h } = level
+    const span = Math.max(w, h)
+    const margin = 4.4
+    const avail = Math.max(240, Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16))
+    const cell = Math.max(10, Math.floor(Math.min(avail / (span + 2 * margin), 58)))
+    const size = Math.round((span + 2 * margin) * cell)
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = size * dpr
+    canvas.height = size * dpr
+    canvas.style.width = `${size}px`
+    canvas.style.height = `${size}px`
+    geo = { w, h, cell, size, cx: size / 2, cy: size / 2, half: (span * cell) / 2, targetR: (span * cell) / 2 + 1.9 * cell }
+    return geo
+  }
+
+  function boardMatrix(angleDeg) {
+    const g = geo
+    return new DOMMatrix().translate(g.cx, g.cy).rotate(angleDeg).translate((-g.w * g.cell) / 2, (-g.h * g.cell) / 2)
+  }
+
+  function cellCenter(c) {
+    const x = c % geo.w
+    return [(x + 0.5) * geo.cell, ((c - x) / geo.w + 0.5) * geo.cell]
+  }
+
+  function hitTest(clientX, clientY, s, level) {
+    if (!geo || rotAnim) return -1
+    const r = canvas.getBoundingClientRect()
+    const p = boardMatrix(s.rotation * 90).inverse().transformPoint(new DOMPoint(clientX - r.left, clientY - r.top))
+    const x = Math.floor(p.x / geo.cell)
+    const y = Math.floor(p.y / geo.cell)
+    if (x < 0 || y < 0 || x >= level.width || y >= level.height) return -1
+    return s.board.ownerAt(y * level.width + x)
+  }
+
+  function setHover(id) {
+    hoverId = id
+  }
+  function setFlash(f) {
+    flash = f
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Event hooks: the caller (app.js) tells us *what happened*; we own *how it looks*. Called once
+  // per tap()/rotate() result, never on every frame.
+
+  function onTapResult(level, id, r, targetsBefore) {
+    const now = performance.now()
+    const local = level.arrows[id].dir
+    shots.push({ cells: level.arrows[id].cells, dir: local, arenaDir: r.arenaDir, hit: r.hit, t0: now })
+    if (r.hit) {
+      const hitTarget = targetsBefore.find((t) => t.side === r.arenaDir)
+      if (hitTarget) {
+        const fx = fxFor(targetKey(hitTarget))
+        fx.hitT = now + 220 // shots already carry a ~220ms travel delay before impact
+        if (r.interrupted) fx.interruptT = now + 220
+      }
+    }
+    if (r.enemyAttacks && r.enemyAttacks.length) {
+      for (const a of r.enemyAttacks) fxFor(a.id).attackT = now
+    } else if (r.enemyAttacked) {
+      // Boss mode has one active target; attribute the attack to it directly.
+      fxFor('boss').attackT = now
+    }
+  }
+
+  function onRotateStart(fromDeg, toDeg) {
+    rotAnim = { from: fromDeg, to: toDeg, t0: performance.now(), dur: 260 }
+  }
+
+  function onRotateEnemyAttack() {
+    // Rotate can also trigger an attack timer tick; the API does not say which enemy, so this is a
+    // board-wide cue rather than a per-target one.
+    fxFor('__board__').attackT = performance.now()
+  }
+
+  function markDeaths(targetsBefore, targetsAfter) {
+    const now = performance.now()
+    for (const before of targetsBefore) {
+      const after = targetsAfter.find((t) => targetKey(t) === targetKey(before))
+      if (!before.dead && (after ? after.dead : true)) fxFor(targetKey(before)).deathT = now
+    }
+  }
+
+  function resetFx() {
+    shots = []
+    targetFx.clear()
+    rotAnim = null
+    flash = { blocked: -1, blocker: -1 }
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Frame
+
+  function collectTargets(s, def) {
+    if (def.enemies) return s.enemies.map((e) => ({ id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead, countdown: e.countdown, isBoss: false }))
+    const side = s.bossSide
+    if (side < 0) return []
+    const phase = def.boss.phases[Math.min(s.phaseIndex, def.boss.phases.length - 1)]
+    return [{ id: def.boss.id, label: phase.label ?? def.boss.id, side, hp: s.hp, hpMax: s.totalHp, dead: s.won, countdown: s.countdownTurns, isBoss: true }]
+  }
+
+  function frame(now, view) {
+    const { s, def, level, assets, hint } = view
+    if (!geo) resize(level)
+    let animating = false
+
+    if (rotAnim) {
+      const t = clamp01((now - rotAnim.t0) / rotAnim.dur)
+      shownAngle = rotAnim.from + (rotAnim.to - rotAnim.from) * EASE(t)
+      if (t >= 1) {
+        shownAngle = s.rotation * 90
+        rotAnim = null
+      } else animating = true
+    } else {
+      shownAngle = s.rotation * 90
+    }
+    shots = shots.filter((sh) => now - sh.t0 < 420)
+    if (shots.length) animating = true
+    for (const fx of targetFx.values()) {
+      if (now - fx.hitT < 260 || now - fx.attackT < 320 || now - fx.interruptT < 700 || now - fx.deathT < 550) animating = true
+    }
+
+    const dark = matchMedia('(prefers-color-scheme: dark)').matches
+    const col = palette(dark)
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const dpr = window.devicePixelRatio || 1
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+    const targets = collectTargets(s, def)
+    // Idle bob + cast-pulse are continuous functions of `now`, not one-shot fx: keep the loop
+    // alive while any target is alive so they never visibly freeze between combat events.
+    if (targets.some((t) => !t.dead)) animating = true
+    drawSideReadouts(col, s, def)
+    for (const t of targets) drawTarget(col, t, now)
+    drawBoardSurface(col)
+    ctx.save()
+    ctx.setTransform(new DOMMatrix().scale(dpr, dpr).multiply(boardMatrix(shownAngle)))
+    for (const a of level.arrows) drawArrow(col, s, def, a, hint)
+    for (const sh of shots) drawShot(col, sh, now)
+    ctx.restore()
+
+    return animating
+
+    function drawTarget(col, t, now) {
+      const g = geo
+      const key = targetKey(t)
+      const fx = fxFor(key)
+      const long = Math.min(g.half * (t.isBoss ? 1.35 : 1.05), (t.isBoss ? 5.2 : 3.4) * g.cell)
+      const thick = (t.isBoss ? 1.7 : 1.4) * g.cell
+      const horizontal = t.side === 0 || t.side === 2
+      const idle = Math.sin(now / 900 + t.side * 1.7) * 1.6
+      const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
+      const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * g.cell : 0
+      const deathT = now - fx.deathT
+      const dying = t.dead && deathT >= 0 && deathT < 550
+      const deathP = dying ? clamp01(deathT / 550) : t.dead ? 1 : 0
+      if (t.dead && deathP >= 1 && !t.isBoss) return // fully dead regular enemy: slot stays empty
+
+      const cx = g.cx + DX[t.side] * g.targetR
+      const cy = g.cy + DY[t.side] * g.targetR
+      const towardBoard = { x: -DX[t.side], y: -DY[t.side] }
+      const ox = (horizontal ? shake : 0) + towardBoard.x * lunge
+      const oy = (horizontal ? 0 : shake) + towardBoard.y * lunge + (horizontal ? idle : 0)
+      const bw = (horizontal ? long : thick) * (1 - 0.3 * deathP)
+      const bh = (horizontal ? thick : long) * (1 - 0.3 * deathP)
+
+      ctx.save()
+      ctx.globalAlpha = 1 - deathP
+      ctx.translate(cx + ox, cy + oy)
+      ctx.scale(1 - 0.3 * deathP, 1 - 0.3 * deathP)
+
+      // Cast pulse: a ring that grows/fades faster and redder as the attack countdown nears 0.
+      if (Number.isFinite(t.countdown) && !t.dead) {
+        const urgency = t.countdown <= 1 ? 1 : t.countdown === 2 ? 0.55 : 0.3
+        const cyc = (now / (520 - urgency * 260)) % 1
+        ctx.save()
+        ctx.globalAlpha = (1 - cyc) * 0.5 * urgency
+        ctx.strokeStyle = urgency >= 1 ? col.danger : col.aim
+        ctx.lineWidth = 2.5
+        roundRect(-bw / 2 - cyc * 10, -bh / 2 - cyc * 10, bw + cyc * 20, bh + cyc * 20, 10 + cyc * 6)
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      // Panel: portrait image if resolved, else a gradient placeholder in the same footprint.
+      const img = resolveTargetImage(assets, t)
+      const flashWhite = now - fx.hitT >= 0 && now - fx.hitT < 110
+      ctx.save()
+      ctx.shadowColor = t.isBoss ? col.bossGlow : col.enemyGlow
+      ctx.shadowBlur = t.dead ? 0 : 14
+      roundRect(-bw / 2, -bh / 2, bw, bh, 10)
+      ctx.clip()
+      if (img) {
+        ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh)
+        if (t.dead) {
+          ctx.fillStyle = col.deadOverlay
+          ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
+        }
+      } else {
+        const grad = ctx.createLinearGradient(0, -bh / 2, 0, bh / 2)
+        if (t.dead) {
+          grad.addColorStop(0, col.deadA)
+          grad.addColorStop(1, col.deadB)
+        } else {
+          grad.addColorStop(0, t.isBoss ? col.bossA : col.enemyA)
+          grad.addColorStop(1, t.isBoss ? col.bossB : col.enemyB)
+        }
+        ctx.fillStyle = grad
+        ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
+      }
+      if (flashWhite) {
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'
+        ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
+      }
+      ctx.restore()
+      ctx.strokeStyle = col.panelBorder
+      ctx.lineWidth = 1.5
+      roundRect(-bw / 2, -bh / 2, bw, bh, 10)
+      ctx.stroke()
+
+      // HP bar, directly below the panel in the panel's own local frame -- this and everything
+      // below stays anchored to *this* target regardless of which arena side it is on, so two
+      // simultaneous targets (e.g. cp-e4's two enemies) can never draw over each other.
+      const barW = long - 14
+      const barH = Math.max(5, g.cell * 0.16)
+      const barY = bh / 2 + 6
+      if (!t.dead || t.isBoss) {
+        const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
+        ctx.fillStyle = col.hpTrack
+        roundRect(-barW / 2, barY, barW, barH, barH / 2)
+        ctx.fill()
+        ctx.fillStyle = frac <= 0.25 ? col.danger : col.hpFill
+        roundRect(-barW / 2, barY, Math.max(barH, barW * frac), barH, barH / 2)
+        ctx.fill()
+      }
+
+      // Name + HP text, stacked under the bar. Two short lines instead of one long one so it
+      // never needs more horizontal room than the panel itself already has.
+      const fontPx = Math.max(10, Math.floor(g.cell * (t.isBoss ? 0.3 : 0.25)))
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      const line1Y = barY + barH + 6 + fontPx * 0.5
+      const line2Y = line1Y + fontPx * 1.15
+      const name = t.label ?? t.id
+      const line2 = t.dead ? 'повержен' : `HP ${t.hp}/${t.hpMax}`
+      ctx.font = `700 ${fontPx}px system-ui`
+      const w1 = ctx.measureText(name).width
+      ctx.font = `600 ${fontPx}px system-ui`
+      const w2 = ctx.measureText(line2).width
+      const padX = 6
+      const plateW = Math.max(w1, w2) + padX * 2
+      ctx.fillStyle = col.labelBacking
+      roundRect(-plateW / 2, line1Y - fontPx * 0.6, plateW, (line2Y - line1Y) + fontPx * 1.1, 6)
+      ctx.fill()
+      ctx.font = `700 ${fontPx}px system-ui`
+      ctx.fillStyle = col.text
+      ctx.fillText(name, 0, line1Y)
+      ctx.font = `600 ${fontPx}px system-ui`
+      ctx.fillStyle = t.dead ? col.muted : (t.hp / t.hpMax <= 0.25 ? col.danger : col.text)
+      ctx.fillText(line2, 0, line2Y)
+
+      // ATTACK IN badge: a small numeric chip at the panel's outer-top corner (outward = away
+      // from the board on this target's own side), independent of panel orientation.
+      if (Number.isFinite(t.countdown) && !t.dead) {
+        const r = Math.max(9, g.cell * 0.2)
+        const bxo = bw / 2 - r * 0.6
+        const byo = -bh / 2 - r * 0.55
+        const urgent = t.countdown <= 1
+        ctx.save()
+        ctx.fillStyle = urgent ? col.danger : col.badgeFill
+        ctx.beginPath()
+        ctx.arc(bxo, byo, r, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = '#fff'
+        ctx.font = `800 ${Math.floor(r * 1.15)}px system-ui`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(String(t.countdown), bxo, byo + 1)
+        ctx.restore()
+      }
+
+      // CAST INTERRUPTED burst, rising just above the panel -- local coords again, so it always
+      // reads next to its own target.
+      const sinceInterrupt = now - fx.interruptT
+      if (sinceInterrupt >= 0 && sinceInterrupt < 700) {
+        const p = sinceInterrupt / 700
+        ctx.save()
+        ctx.globalAlpha = 1 - p
+        ctx.fillStyle = col.good
+        ctx.font = `700 ${Math.max(10, Math.floor(g.cell * 0.24))}px system-ui`
+        ctx.textAlign = 'center'
+        ctx.fillText('ПРЕРВАНО', 0, -bh / 2 - 10 - p * 12)
+        ctx.restore()
+      }
+
+      ctx.restore()
+    }
+
+    function drawSideReadouts(col, s, def) {
+      const g = geo
+      const alive = s.aliveByArenaDir()
+      const free = s.aliveByArenaDir(true)
+      ctx.font = `600 ${Math.max(10, Math.floor(g.cell * 0.24))}px system-ui`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      for (let d = 0; d < 4; d++) {
+        const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead) : d === s.bossSide
+        if (isLive) continue // the target panel itself already shows this side clearly
+        const r = g.targetR + 1.05 * g.cell
+        const x = g.cx + DX[d] * r
+        const y = g.cy + DY[d] * r
+        ctx.fillStyle = col.muted
+        ctx.save()
+        ctx.translate(x, y)
+        if (d === 1 || d === 3) ctx.rotate(d === 1 ? Math.PI / 2 : -Math.PI / 2)
+        ctx.fillText(`${alive[d]} (своб. ${free[d]})`, 0, 0)
+        ctx.restore()
+      }
+    }
+
+    function drawBoardSurface(col) {
+      const g = geo
+      ctx.save()
+      ctx.setTransform(new DOMMatrix().scale(dpr, dpr).multiply(boardMatrix(shownAngle)))
+      const pad = g.cell * 0.22
+      ctx.save()
+      ctx.shadowColor = col.boardGlow
+      ctx.shadowBlur = 22
+      const grad = ctx.createLinearGradient(0, -pad, 0, g.h * g.cell + pad)
+      grad.addColorStop(0, col.boardTop)
+      grad.addColorStop(1, col.boardBottom)
+      ctx.fillStyle = grad
+      roundRect(-pad, -pad, g.w * g.cell + pad * 2, g.h * g.cell + pad * 2, g.cell * 0.4)
+      ctx.fill()
+      ctx.restore()
+      ctx.strokeStyle = col.boardBorder
+      ctx.lineWidth = 2
+      roundRect(-pad, -pad, g.w * g.cell + pad * 2, g.h * g.cell + pad * 2, g.cell * 0.4)
+      ctx.stroke()
+      ctx.fillStyle = col.dot
+      for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) ctx.fillRect((x + 0.5) * g.cell - 1, (y + 0.5) * g.cell - 1, 2, 2)
+      ctx.restore()
+    }
+
+    function drawArrow(col, s, def, a, hint) {
+      const alive = s.board.isAlive(a.id)
+      if (!alive) return
+      const arena = s.arenaDir(a.id)
+      const free = s.board.canExit(a.id)
+      const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead) : arena === s.bossSide
+      const pts = a.cells.map(cellCenter)
+      const lw = Math.max(3, geo.cell * 0.27)
+      const isHint = hint && hint.kind === 'tap' && hint.id === a.id
+      const isHover = a.id === hoverId
+      const isBlocked = a.id === flash.blocked
+      const isBlocker = a.id === flash.blocker
+
+      // Outer glow: strong + colored for a free/aimed arrow, faint for a blocked one.
+      ctx.save()
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.shadowBlur = free ? (aims ? 16 : 9) : 3
+      ctx.shadowColor = aims ? col.aimGlow : free ? col.freeGlow : col.mutedGlow
+      ctx.strokeStyle = aims ? col.aim : free ? col.arrow : col.arrowDim
+      ctx.globalAlpha = free ? 1 : 0.55
+      ctx.setLineDash(free ? [] : [lw * 0.9, lw * 0.9])
+      ctx.lineWidth = lw
+      polyline(pts)
+      ctx.restore()
+
+      // Inner highlight: a thin near-white core along the same path for a glossy look (free only).
+      if (free) {
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.globalAlpha = 0.22
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = Math.max(1, lw * 0.32)
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        polyline(pts)
+        ctx.restore()
+      }
+
+      if (isHover || isBlocked || isBlocker || isHint) {
+        ctx.save()
+        ctx.strokeStyle = isBlocked ? '#e53935' : isBlocker ? '#fb8c00' : isHint ? '#43a047' : col.muted
+        ctx.lineWidth = lw + 6
+        ctx.globalAlpha = 0.55
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        polyline(pts)
+        ctx.restore()
+      }
+
+      // Arrowhead: a filled kite with a small highlight edge.
+      const [hx, hy] = pts[pts.length - 1]
+      const d = a.dir
+      const sz = geo.cell * 0.42
+      ctx.save()
+      ctx.shadowBlur = free ? 10 : 0
+      ctx.shadowColor = aims ? col.aimGlow : col.freeGlow
+      ctx.fillStyle = aims ? col.aim : free ? col.arrow : col.arrowDim
+      ctx.globalAlpha = free ? 1 : 0.6
+      ctx.beginPath()
+      ctx.moveTo(hx + DX[d] * sz, hy + DY[d] * sz)
+      ctx.lineTo(hx - DY[d] * sz * 0.82, hy + DX[d] * sz * 0.82)
+      ctx.lineTo(hx + DY[d] * sz * 0.82, hy - DX[d] * sz * 0.82)
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
+    }
+
+    function drawShot(col, sh, now) {
+      const t = clamp01((now - sh.t0) / 300)
+      const [hx, hy] = cellCenter(sh.cells[sh.cells.length - 1])
+      const dist = (Math.max(geo.w, geo.h) + 3.5) * geo.cell * t
+      const x = hx + DX[sh.dir] * dist
+      const y = hy + DY[sh.dir] * dist
+      ctx.save()
+      ctx.shadowBlur = 10
+      ctx.shadowColor = sh.hit ? col.aimGlow : col.mutedGlow
+      ctx.strokeStyle = sh.hit ? col.aim : col.arrowDim
+      ctx.lineWidth = Math.max(3, geo.cell * 0.22)
+      ctx.lineCap = 'round'
+      ctx.globalAlpha = 1 - t * 0.5
+      ctx.beginPath()
+      ctx.moveTo(x - DX[sh.dir] * geo.cell * 1.1, y - DY[sh.dir] * geo.cell * 1.1)
+      ctx.lineTo(x, y)
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+
+  function polyline(pts) {
+    ctx.beginPath()
+    ctx.moveTo(pts[0][0], pts[0][1])
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1])
+    ctx.stroke()
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath()
+    ctx.moveTo(x + r, y)
+    ctx.arcTo(x + w, y, x + w, y + h, r)
+    ctx.arcTo(x + w, y + h, x, y + h, r)
+    ctx.arcTo(x, y + h, x, y, r)
+    ctx.arcTo(x, y, x + w, y, r)
+    ctx.closePath()
+  }
+
+  function palette(dark) {
+    return {
+      board: dark ? '#26262a' : '#ffffff',
+      boardTop: dark ? '#2c2c31' : '#ffffff', boardBottom: dark ? '#1d1d20' : '#ece9e2',
+      boardBorder: dark ? '#4a4a52' : '#c9c2b0', boardGlow: dark ? 'rgba(120,140,255,0.25)' : 'rgba(140,110,40,0.18)',
+      dot: dark ? '#4a4a4f' : '#c9c9c6',
+      arrow: dark ? '#a9a9b0' : '#8d8a80', arrowDim: dark ? '#55555a' : '#c4c4c0', aim: dark ? '#ffd76a' : '#b8791a',
+      aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',
+      text: dark ? '#eee' : '#20180f', muted: dark ? '#999' : '#777',
+      bossA: dark ? '#5b4a63' : '#8d7a96', bossB: dark ? '#332a3a' : '#5c4d63', bossGlow: dark ? 'rgba(180,120,220,0.5)' : 'rgba(120,70,150,0.4)',
+      enemyA: dark ? '#4a5563' : '#7c8ea0', enemyB: dark ? '#2b323c' : '#54606e', enemyGlow: dark ? 'rgba(120,170,220,0.45)' : 'rgba(70,100,140,0.35)',
+      deadA: dark ? '#333336' : '#cfcac0', deadB: dark ? '#222224' : '#a8a299', deadOverlay: 'rgba(20,20,22,0.55)',
+      panelBorder: dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.28)',
+      labelBacking: dark ? 'rgba(10,8,14,0.6)' : 'rgba(255,252,244,0.72)',
+      badgeFill: dark ? '#4a4a52' : '#5c5348',
+      hpTrack: dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)', hpFill: dark ? '#7be08a' : '#2e8b3d',
+      danger: dark ? '#ff6b6b' : '#c62828', good: dark ? '#7be08a' : '#1a7f37',
+    }
+  }
+
+  return {
+    resize, hitTest, setHover, setFlash, onTapResult, onRotateStart, onRotateEnemyAttack, markDeaths, resetFx, frame,
+    get geo() { return geo },
+    collectTargets,
+  }
+}
