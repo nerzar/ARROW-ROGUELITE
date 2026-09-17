@@ -12,8 +12,18 @@ import { BoardTopology } from './topology.js'
 
 /**
  * EXP-008 encounter validator. Exhaustive depth-first search over taps and Rotates with a memo of
- * failed states and cheap upper bounds on reachable hits. Built for one small hand-authored
- * encounter at a time (boards of ~10–30 arrows), not as the future general EncounterSolver.
+ * failed states. Built for one small hand-authored encounter at a time (boards of ~10–30 arrows),
+ * not as the future general EncounterSolver.
+ *
+ * EXP-010: `EncounterState.lost` is now player-death only, and `won` also fires on "board fully
+ * cleared, player still alive" (docs/COMBAT-RULES.md 7/8: running out of useful ammo against a live
+ * target is not an automatic loss). So `findWin` answers "can this be finished at all" — which,
+ * because dying is the only `lost` path, is the same question as "can it be finished without
+ * dying". What's new here is `minDamageToWin`: "what is the least HP a perfect player loses on the
+ * way to finishing this", 0 meaning a no-damage path exists (E3/E4's requirement). EXP-008's
+ * ammo-based upper-bound prune was removed: it assumed "can't reach the target enough times" implied
+ * death, which the board-clear-alive win path made unsound. Search is plain memoized DFS now —
+ * still correct, just slower; budget exhaustion still degrades to UNKNOWN rather than a false answer.
  */
 
 export interface WinQuery {
@@ -53,10 +63,6 @@ export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
     }
     const key = s.key()
     if (failed.has(key)) return false
-    if (!canStillWin(s, maxRotates)) {
-      failed.add(key)
-      return false
-    }
     const free = s.board.freeArrows()
     const tryTap = (id: number) => {
       s.tap(id)
@@ -87,52 +93,13 @@ export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
 }
 
 /**
- * Upper bound check. For every remaining phase, count the alive arrows that could point at that
- * phase's side after the Rotates still obtainable by then; if any phase cannot be filled, or the
- * total HP exceeds the alive arrows, the state is dead.
+ * EXP-008 had an upper-bound prune here ("not enough alive arrows can ever reach this phase's side
+ * -> dead"). EXP-010 removed it: docs/COMBAT-RULES.md 7/8 made "board cleared, target still alive,
+ * player survived" a valid win, so running out of useful ammo no longer proves a state is dead —
+ * only `EncounterState.over` (player HP 0) does. Without that prune, `findWin`/`minDamageToWin` fall
+ * back to plain memoized DFS, which is what keeps them correct under the new rule; it costs some
+ * search speed, acceptable at this spike's board sizes (tiny/easy/medium, ≤ ~20 arrows).
  */
-function canStillWin(s: EncounterState, maxRotates: number): boolean {
-  const need = s.totalHp - s.hits
-  if (need > s.board.remaining) return false
-  const phases = s.def.boss.phases
-  const byDir = s.aliveByArenaDir()
-  for (let i = s.phaseIndex; i < phases.length; i++) {
-    const needHere = i === s.phaseIndex ? s.phaseHpLeft : phases[i].hpUnits
-    const rotations = Math.max(0, Math.min(maxRotates, s.grantedUpToPhase(i)) - s.rotatesUsed)
-    const offsets = reachableOffsets(s.def.rotate.allow, rotations)
-    let supply = 0
-    for (let d = 0; d < 4; d++) {
-      for (const off of offsets) {
-        if (((d + off) & 3) === phases[i].side) {
-          supply += byDir[d]
-          break
-        }
-      }
-    }
-    if (supply < needHere) return false
-  }
-  return true
-}
-
-const offsetCache = new Map<string, number[]>()
-function reachableOffsets(allow: readonly Turn[], rotations: number): number[] {
-  const r = Math.min(rotations, 4)
-  const k = `${allow.join(',')}:${r}`
-  let out = offsetCache.get(k)
-  if (!out) {
-    let cur = new Set([0])
-    const all = new Set([0])
-    for (let i = 0; i < r; i++) {
-      const next = new Set<number>()
-      for (const o of cur) for (const t of allow) next.add((o + t + 4) & 3)
-      for (const o of next) all.add(o)
-      cur = next
-    }
-    out = [...all]
-    offsetCache.set(k, out)
-  }
-  return out
-}
 
 /** Most hits reachable from `start` (exact unless `proven` is false). */
 export function maxHits(start: EncounterState, q: WinQuery = {}): { hits: number; proven: boolean; nodes: number } {
@@ -179,6 +146,97 @@ export function maxHits(start: EncounterState, q: WinQuery = {}): { hits: number
   return { hits: s.hits + extra, proven: !aborted, nodes }
 }
 
+export interface MinDamageResult {
+  /** A winning path was found (dying mid-path is never part of a "win": see EncounterState.over). */
+  win: boolean
+  /** true: `minDamage` is the exhaustively-verified minimum, not a budget-limited best-effort guess. */
+  proven: boolean
+  /** Minimum total player damage among winning paths found; -1 if no win was found. 0 = a perfect,
+   * no-damage path exists. */
+  minDamage: number
+  /** One sequence that achieves `minDamage` (empty if no win was found). */
+  sequence: EncounterAction[]
+  nodes: number
+}
+
+/**
+ * Exhaustive DFS+memo over taps/Rotates minimizing total player HP lost among all paths that reach
+ * `s.won` (a path that lets the player die is not a win — it never reaches `s.won`, see
+ * EncounterState.over/lost). Structurally the mirror of `maxHits`, but minimizing a cost instead of
+ * maximizing a count, and reconstructing the actual best sequence (`maxHits`/`findWin` don't need to:
+ * `findWin` already returns one, and `maxHits` only reports a number).
+ */
+export function minDamageToWin(start: EncounterState, q: WinQuery = {}): MinDamageResult {
+  const s = start.clone()
+  const maxRotates = q.maxRotates ?? Infinity
+  const budget = q.nodeBudget ?? DEFAULT_BUDGET
+  const memo = new Map<string, number>()
+  const choice = new Map<string, EncounterAction>()
+  let nodes = 0
+  let aborted = false
+
+  const visit = (): number => {
+    if (s.won) return 0
+    if (s.over) return Infinity
+    if (++nodes > budget) {
+      aborted = true
+      return Infinity
+    }
+    const key = s.key()
+    const cached = memo.get(key)
+    if (cached !== undefined) return cached
+    let best = Infinity
+    let bestAction: EncounterAction | null = null
+    for (const id of s.board.freeArrows()) {
+      const hpBefore = s.playerHp
+      s.tap(id)
+      const dmg = hpBefore - s.playerHp
+      const rest = visit()
+      if (rest !== Infinity && dmg + rest < best) {
+        best = dmg + rest
+        bestAction = { kind: 'tap', id }
+      }
+      s.undo()
+      if (best === 0) break
+    }
+    if (best !== 0 && s.rotatesUsed < maxRotates) {
+      for (const turn of s.def.rotate.allow) {
+        if (!s.canRotate(turn)) continue
+        const hpBefore = s.playerHp
+        s.rotate(turn)
+        const dmg = hpBefore - s.playerHp
+        const rest = visit()
+        if (rest !== Infinity && dmg + rest < best) {
+          best = dmg + rest
+          bestAction = { kind: 'rotate', turn }
+        }
+        s.undo()
+        if (best === 0) break
+      }
+    }
+    if (!aborted) {
+      memo.set(key, best)
+      if (bestAction) choice.set(key, bestAction)
+    }
+    return best
+  }
+
+  const total = visit()
+  const win = total !== Infinity
+  const sequence: EncounterAction[] = []
+  if (win) {
+    const t = start.clone()
+    let guard = 0
+    while (!t.won && guard++ < 10_000) {
+      const a = choice.get(t.key())
+      if (!a) break
+      t.apply(a)
+      sequence.push(a)
+    }
+  }
+  return { win, proven: !aborted, minDamage: win ? total : -1, sequence, nodes }
+}
+
 export interface EncounterReport {
   totalHp: number
   phases: string[]
@@ -193,12 +251,19 @@ export interface EncounterReport {
   minRotates: number
   /** Best damage without Rotate — how close the player gets before Rotate is needed. */
   maxHitsWithoutRotate: { hits: number; proven: boolean }
+  /** Minimum player HP lost among winning paths; `minDamageWin.minDamage === 0` = a perfect path exists. */
+  minDamageWin: MinDamageResult
+  /** Trace of the min-damage winning sequence (falls back to `win.sequence` if that search aborted). */
   exampleTrace: string[]
 }
 
-export function validateEncounter(level: Level, def: EncounterDef, q: Pick<WinQuery, 'nodeBudget'> = {}): EncounterReport {
-  const start = new EncounterState(BoardTopology.fromLevel(level), def)
-  const granted = def.boss.phases.reduce((s, p) => s + (p.grantRotate ?? 0), 0)
+export function validateEncounter(
+  level: Level,
+  def: EncounterDef,
+  q: Pick<WinQuery, 'nodeBudget'> & { playerHp?: number } = {},
+): EncounterReport {
+  const start = new EncounterState(BoardTopology.fromLevel(level), def, q.playerHp)
+  const granted = def.boss ? def.boss.phases.reduce((s, p) => s + (p.grantRotate ?? 0), 0) : (def.rotateCharges ?? 0)
   const byRotates = []
   let minRotates = -1
   let winWithoutRotate: WinResult | null = null
@@ -210,43 +275,66 @@ export function validateEncounter(level: Level, def: EncounterDef, q: Pick<WinQu
   }
   const win = findWin(start, q)
   const noRot = maxHits(start, { ...q, maxRotates: 0 })
+  const minDamageWin = minDamageToWin(start, q)
+  const bestSequence = minDamageWin.win ? minDamageWin.sequence : win.win ? win.sequence : []
+  const phasesText = def.boss
+    ? def.boss.phases.map(
+        (p, i) =>
+          `${i + 1}: side ${DIR_NAMES[p.side]}, ${p.hpUnits} hp${p.grantRotate ? `, grants Rotate ×${p.grantRotate}` : ''}` +
+          (p.attackTimer ? `, ATTACK IN ${p.attackTimer.interval} (dmg ${p.attackTimer.damage}, interrupt ${p.attackTimer.interruptHits ?? 1} hit(s))` : ''),
+      )
+    : (def.enemies ?? []).map(
+        (e, i) =>
+          `${i + 1}: ${e.id}, side ${DIR_NAMES[e.side]}, ${e.hp} hp${e.mandatory === false ? ' (optional)' : ''}` +
+          (e.attackTimer ? `, ATTACK IN ${e.attackTimer.interval} (dmg ${e.attackTimer.damage}, interrupt ${e.attackTimer.interruptHits ?? 1} hit(s))` : ''),
+      )
   return {
     totalHp: start.totalHp,
-    phases: def.boss.phases.map(
-      (p, i) => `${i + 1}: side ${DIR_NAMES[p.side]}, ${p.hpUnits} hp${p.grantRotate ? `, grants Rotate ×${p.grantRotate}` : ''}`,
-    ),
+    phases: phasesText,
     grantedRotates: granted,
     win,
     winWithoutRotate: winWithoutRotate as WinResult,
     byRotates,
     minRotates,
     maxHitsWithoutRotate: { hits: noRot.hits, proven: noRot.proven },
-    exampleTrace: win.win ? traceActions(level, def, win.sequence) : [],
+    minDamageWin,
+    exampleTrace: bestSequence.length ? traceActions(level, def, bestSequence, start.playerHpStart) : [],
   }
 }
 
-/** Replays actions through a fresh EncounterState and describes every step. */
-export function traceActions(level: Level, def: EncounterDef, actions: readonly EncounterAction[]): string[] {
-  const s = EncounterState.fromLevel(level, def)
+/** Replays actions through a fresh EncounterState and describes every step, including combat pressure. */
+export function traceActions(level: Level, def: EncounterDef, actions: readonly EncounterAction[], playerHp?: number): string[] {
+  const s = EncounterState.fromLevel(level, def, playerHp)
   const lines: string[] = []
   actions.forEach((a, i) => {
     const n = String(i + 1).padStart(3)
     if (a.kind === 'rotate') {
+      const hpBefore = s.playerHp
       const ok = s.rotate(a.turn)
-      lines.push(`${n}. ${formatAction(a)}${ok ? '' : '  !! illegal'}  -> rotation ${s.rotation * 90}°, charges ${s.rotateCharges}`)
+      let text = `${n}. ${formatAction(a)}${ok ? '' : '  !! illegal'}  -> rotation ${s.rotation * 90}°, charges ${s.rotateCharges}`
+      if (ok && s.playerHp !== hpBefore) text += `  ENEMY ATTACK -${hpBefore - s.playerHp} hp (player ${s.playerHp})`
+      lines.push(text)
       return
     }
     const local = DIR_NAMES[level.arrows[a.id].dir]
     const r = s.tap(a.id)
     if (!r.ok) {
-      lines.push(`${n}. ${formatAction(a)}  !! ${r.reason}`)
+      const dmg = r.reason === 'blocked' ? `  -${r.damage} hp (player ${r.playerHp})` : ''
+      lines.push(`${n}. ${formatAction(a)}  !! ${r.reason}${dmg}`)
       return
     }
     let text = `${n}. ${formatAction(a).padEnd(8)} ${local}->${DIR_NAMES[r.arenaDir]}  ${r.hit ? 'HIT ' : 'miss'}  hp ${s.hp}/${s.totalHp}`
+    if (r.interrupted) text += '  interrupt (attack timer reset)'
+    if (r.enemyAttacks && r.enemyAttacks.length) {
+      text += `  ENEMY ATTACK: ${r.enemyAttacks.map((e) => `${e.id} -${e.damage}`).join(', ')} (player ${r.playerHp})`
+    } else if (r.enemyAttacked) {
+      text += `  ENEMY ATTACK -${r.enemyDamage} hp (player ${r.playerHp})`
+    }
     if (r.phaseAfter !== r.phaseBefore) {
       text += r.won ? '  => WIN' : `  => phase ${r.phaseAfter + 1}, boss on ${DIR_NAMES[s.bossSide as number]}`
       if (r.granted) text += `, Rotate +${r.granted}`
     }
+    if (r.playerDead) text += '  => PLAYER DEAD'
     lines.push(text)
   })
   return lines
@@ -265,7 +353,10 @@ export function formatEncounterReport(r: EncounterReport): string {
     `min Rotates needed:            ${r.minRotates < 0 ? '—' : r.minRotates}`,
     `max damage without Rotate:     ${r.maxHitsWithoutRotate.hits}/${r.totalHp}${r.maxHitsWithoutRotate.proven ? '' : ' (not proven)'}`,
     '',
-    'example winning sequence:',
+    `no-damage path exists:         ${r.minDamageWin.win ? (r.minDamageWin.minDamage === 0 ? 'YES' : `NO (min damage ${r.minDamageWin.minDamage})`) : r.minDamageWin.proven ? 'NO (unwinnable)' : 'UNKNOWN (budget)'}`,
+    `min unavoidable player damage: ${r.minDamageWin.win ? r.minDamageWin.minDamage : '—'}${r.minDamageWin.proven ? '' : ' (not proven optimal)'}   nodes ${r.minDamageWin.nodes}`,
+    '',
+    'example winning sequence (minimum damage):',
     ...(r.exampleTrace.length ? r.exampleTrace : ['  (none)']),
   ].join('\n')
 }
@@ -291,9 +382,11 @@ export interface Phase2Probe {
  * Simulates players who do not plan ahead through phase 1 and looks at the moment phase 2 starts.
  * greedy: tap a hitting arrow if one is free, else Rotate if that makes a free arrow hit, else a
  * random free arrow. sloppy: same, but phase 1 taps uniformly random free arrows, ignoring hits.
- * Deterministic for a given seed.
+ * Deterministic for a given seed. Boss mode only (probes a sequential phase transition) — not
+ * meaningful for `enemies`-mode encounters, which have no phases.
  */
 export function probePhase2(level: Level, def: EncounterDef, policy: PlayPolicy, samples = 30, seed = 1): Phase2Probe {
+  if (!def.boss) throw new Error('probePhase2 requires a boss encounter (sequential phases)')
   const topo = BoardTopology.fromLevel(level)
   const rng = createRng(seed)
   const pick = <T>(xs: T[]) => xs[rng.int(xs.length)]

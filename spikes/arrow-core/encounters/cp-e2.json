@@ -1,0 +1,22 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "tiny",
+    "seed": 300,
+    "levelHash": "e1910ddc"
+  },
+  "encounter": {
+    "id": "cp_e2",
+    "title": "Combat pressure 2 — a mistake now costs HP",
+    "boss": {
+      "id": "grunt_passive",
+      "phases": [
+        { "side": "E", "hpUnits": 2, "label": "passive mob, does not attack yet" }
+      ]
+    },
+    "rotate": { "allow": [] },
+    "blockedTapDamage": 1,
+    "notes": "tiny 4x5, 4 arrows: N=1 E=2 S=0 W=1. Only one of the two E arrows (#1) is free at start; the other (#3) is blocked and only frees after clearing #0 (N) then #2 (W). Reused from EXP-009's E2 (same seed, same shape) because it already puts a second, still-blocked E arrow in plain sight next to the free one -- a natural blocked-tap temptation, now with a real cost: blockedTapDamage 1. No enemy attack timer yet, per docs/COMBAT-RULES.md 10 (encounter 2 introduces the blocked-tap cost, not the attack timer). Provisional: the exact damage value (1) is tuning, not user-approved."
+  }
+}

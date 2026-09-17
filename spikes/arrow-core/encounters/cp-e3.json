@@ -1,0 +1,32 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 522,
+    "levelHash": "5ca80632"
+  },
+  "encounter": {
+    "id": "cp_e3",
+    "title": "Combat pressure 3 — time has a cost — PROVISIONAL (shortlist #1, seed 522)",
+    "boss": {
+      "id": "grunt_timed",
+      "phases": [
+        {
+          "side": "E",
+          "hpUnits": 3,
+          "attackTimer": {
+            "interval": 4,
+            "damage": 2
+          },
+          "label": "ATTACK IN 4"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 1,
+    "notes": "EXP-010 provisional, not user-approved. easy 6x7, 13 arrows, target E, 3 hp, ATTACK IN 4 dmg 2 (Gemini-suggested tuning). Proven no-damage path exists (minDamageToWin = 0): docs/COMBAT-RULES.md 10 requires E3 to allow finishing without unavoidable damage. blockedTapDamage 1 (shared provisional default)."
+  }
+}

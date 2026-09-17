@@ -23,6 +23,17 @@ npm run cli -- analyze --preset medium --seed 2908          # seed analyzer
 npm run cli -- shortlist --count 3000                       # encounters/shortlist.json
 npm run cli -- encounter encounters/prologue-miniboss.json  # validator
 # viewer: http://localhost:5177/viewer/encounter.html
+
+# EXP-009: gray prologue, encounters 1-4 chained (см. .orchestra/archive)
+# viewer: http://localhost:5177/viewer/prologue.html
+
+# EXP-010: combat pressure — player HP, blocked-tap damage, ATTACK IN N (см. EXP-010-REPORT.md)
+npm run cli -- cp-shortlist --step 3 --count 4000            # encounters/cp-e3-shortlist.json
+npm run cli -- encounter encounters/cp-e5.json --player-hp 10  # validator with a real starting HP
+
+# EXP-010b: two simultaneous enemies (E4 redesign, см. EXP-010b-REPORT.md)
+npm run cli -- encounter encounters/cp-e4.json --player-hp 10  # seed 10, grunt_e (E) + grunt_n (N)
+# viewer: http://localhost:5177/viewer/cp-prologue.html  (E1-E5 chained through RunState)
 ```
 
 Node ≥ 20.
@@ -53,9 +64,14 @@ validateLevel / replayOrder  независимая проверка без Boar
 | [src/generator.ts](src/generator.ts) | генератор |
 | [src/metrics.ts](src/metrics.ts) | метрики |
 | [src/presets.ts](src/presets.ts) | пресеты бенчмарка (не кривая сложности игры) |
-| [tools/cli.ts](tools/cli.ts) | CLI `gen` / `verify` / `bench` |
+| [tools/cli.ts](tools/cli.ts) | CLI `gen` / `verify` / `bench` / `analyze` / `encounter` / `shortlist` / `prologue` / `cp-shortlist` |
 | [viewer/](viewer/index.html) | debug viewer |
 | [test/](test/property.test.ts) | unit + property tests |
+| [src/encounter.ts](src/encounter.ts) | `EncounterState`: boss phases OR simultaneous `enemies` (EXP-010b), Rotate, player HP / blocked-tap damage / `attackTimer` (EXP-010) |
+| [src/encounter-solver.ts](src/encounter-solver.ts) | `findWin`, `maxHits`, `minDamageToWin` (EXP-010, both encounter shapes since EXP-010b), validator report |
+| [src/run-state.ts](src/run-state.ts) | EXP-010 `RunState`: HP across chained encounters, restart-step/restart-run |
+| [src/analyze.ts](src/analyze.ts) | seed analyzer; `hitTiming` (EXP-010) for timed-encounter shortlisting |
+| [tools/cp-shortlist.ts](tools/cp-shortlist.ts) | seed shortlist for single-target timed encounters (EXP-010 E3; E4 is hand-authored multi-enemy content since EXP-010b) |
 
 ## Правила, на которых стоит ядро
 

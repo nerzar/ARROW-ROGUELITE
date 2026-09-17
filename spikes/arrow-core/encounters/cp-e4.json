@@ -1,0 +1,22 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 10,
+    "levelHash": "91dc659d"
+  },
+  "encounter": {
+    "id": "cp_e4",
+    "title": "Combat pressure 4 — two enemies at once — PROVISIONAL (seed 10)",
+    "enemies": [
+      { "id": "grunt_e", "side": "E", "hp": 2, "attackTimer": { "interval": 3, "damage": 2 }, "label": "urgent" },
+      { "id": "grunt_n", "side": "N", "hp": 2, "attackTimer": { "interval": 5, "damage": 2 }, "label": "slow" }
+    ],
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 1,
+    "notes": "EXP-010b, not user-approved. Replaces the old single-target seed-1638 E4 (6 unavoidable damage), which the user's overnight brief explicitly removed. easy 6x7 seed 10 (10 arrows, N3 E5 S1 W1; id0 E, id3 N, id6 S, id9 W all free at start; id3 additionally unlocks id2 (E) and id5 (N)). Two simultaneous enemies, first use of EXP-010b's `enemies` array: E side (urgent, hp 2, ATTACK IN 3, dmg 2) and N side (slow, hp 2, ATTACK IN 5, dmg 2). No Rotate in this encounter by design (the brief: 'the only new idea is priority, not a direction resource'). Verified clean path (minDamageToWin = 0, 4 taps): tap id0 (E, hits grunt_e 2->1), tap id3 (N, hits grunt_n 2->1, unlocks id2/id5), tap id2 (E, kills grunt_e — dies same turn it would have ticked to ATTACK IN 0, no retaliation), tap id5 (N, kills grunt_n) -> immediate WIN, 0 damage, 4 world turns. Natural wrong-priority path: tap id3, tap id5 (kills the slow N enemy first) — grunt_e is now down to ATTACK IN 1 turn with 2 hp still up; any 3rd legal tap ticks its countdown to 0 and it attacks for -2 hp before the player gets back to it. This is the intended lesson: with two independent attack timers, priority (not direction) is the new decision. blockedTapDamage 1 (shared provisional default, matches cp-e2/cp-e3). Backup candidate kept for a future shortlist if this one plays badly: seed 112 (not implemented this pass, per the brief — seed 3 explicitly rejected)."
+  }
+}

@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { performance } from 'node:perf_hooks'
+import { type CpScanOptions, scanCpEncounter } from './cp-shortlist.js'
 import { type PrologueStep, scanPrologueStep } from './prologue-shortlist.js'
 import { scanShortlist } from './shortlist.js'
 import {
@@ -36,12 +37,15 @@ const HELP = `arrow-core spike CLI
   verify <level.json>
   analyze --preset <name> --seed <n> [--json] [--out file]
          seed analyzer: arrows / initial free by N E S W, direction sequence, per-step dirs, branch points
-  encounter <encounter.json> [--budget 2000000] [--json]
+  encounter <encounter.json> [--budget 2000000] [--player-hp 10] [--json]
          validator: win? win without Rotate? win with <= k Rotate? example winning sequence
   shortlist [--preset medium] [--start 1] [--count 3000] [--side1 E] [--side2 N]
          [--min-arrows 12] [--max-arrows 24] [--top 10] [--out encounters/shortlist.json]
   prologue --step 1|2|3 [--start 1] [--count 5000] [--top 8] [--out encounters/prologue-eN-shortlist.json]
          seed shortlist for one of the three single-target prologue encounters (EXP-009)
+  cp-shortlist --step 3 [--start 1] [--count 4000] [--top 8] [--out encounters/cp-eN-shortlist.json]
+         seed shortlist for the timed single-target E3 (EXP-010), proven no-damage path. E4 is now
+         hand-authored multi-enemy content (EXP-010b, encounters/cp-e4.json) and no longer scanned here.
   bench  [--count 10000] [--presets tiny,easy,medium,hard,expert] [--seed 1]
          [--extra huge:500,xl:100,strict:1000|none] [--out bench-results/latest.json]
 
@@ -150,7 +154,10 @@ function cmdEncounter(pos: string[], opt: Record<string, string>): void {
   if (!file) throw new Error('encounter <encounter.json>')
   const { file: enc, level } = encounterFromJson(JSON.parse(readFileSync(file, 'utf8')))
   const t0 = performance.now()
-  const report = validateEncounter(level, enc.encounter, { nodeBudget: Number(opt.budget ?? 2_000_000) })
+  const report = validateEncounter(level, enc.encounter, {
+    nodeBudget: Number(opt.budget ?? 2_000_000),
+    playerHp: opt['player-hp'] !== undefined ? Number(opt['player-hp']) : undefined,
+  })
   const ms = performance.now() - t0
   if (opt.json) {
     console.log(JSON.stringify({ file, board: enc.board, report }))
@@ -277,6 +284,75 @@ scanned ${o.count}/${o.count} in ${sec.toFixed(1)}s
   for (const c of res.candidates) {
     console.log(
       `| ${c.rank} | ${c.seed} | ${c.score} | ${c.arrows} | ${c.dirCounts.join('/')} | ${c.initialFree.join('/')} | ${c.branchPoints}/${c.dirBranchPoints} |`,
+    )
+  }
+  console.log(`
+json: ${out}`)
+}
+
+// EXP-010 provisional tuning for the timed single-target encounter — data, not a hardcoded engine
+// rule; explicitly not user-approved (docs/COMBAT-RULES.md 12, Gemini-suggested starting points).
+// EXP-010b note: E4 is no longer part of this scanner — it was redesigned as hand-authored
+// simultaneous-enemy content (encounters/cp-e4.json, seed 10) per the overnight multi-enemy brief,
+// which removed the old single-target seed-1638 E4 (6 unavoidable damage) entirely. This single-
+// target scanner remains useful for E3 and for any future single-target timed encounter.
+const CP_STEPS: Record<3, { preset: PresetName; side: Dir; hp: number; interval: number; damage: number; id: string; title: string }> = {
+  3: { preset: 'easy', side: 1, hp: 3, interval: 4, damage: 2, id: 'cp_e3', title: 'Combat pressure 3 — time has a cost' },
+}
+
+function cmdCpShortlist(opt: Record<string, string>): void {
+  const step = Number(opt.step ?? 3) as 3
+  if (step !== 3) throw new Error('--step must be 3 (E4 is hand-authored multi-enemy content, see encounters/cp-e4.json)')
+  const spec = CP_STEPS[step]
+  const playerHp = Number(opt['player-hp'] ?? 10)
+  const o: CpScanOptions = {
+    preset: spec.preset,
+    side: spec.side,
+    hp: spec.hp,
+    attackTimer: { interval: spec.interval, damage: spec.damage },
+    blockedTapDamage: Number(opt['blocked-damage'] ?? 1),
+    playerHp,
+    start: parseSeed(opt.start, 1),
+    count: Number(opt.count ?? 4000),
+    minArrows: Number(opt['min-arrows'] ?? 8),
+    maxArrows: Number(opt['max-arrows'] ?? 18),
+    top: Number(opt.top ?? 8),
+    requireNoDamage: true,
+  }
+  const t0 = performance.now()
+  const res = scanCpEncounter(o, spec.id, spec.title, (i) => process.stderr.write(`
+scanned ${i}/${o.count}`))
+  const sec = (performance.now() - t0) / 1000
+  process.stderr.write(`
+scanned ${o.count}/${o.count} in ${sec.toFixed(1)}s
+`)
+  const out = opt.out ?? `encounters/cp-e${step}-shortlist.json`
+  mkdirSync(dirname(out), { recursive: true })
+  writeFileSync(
+    out,
+    JSON.stringify(
+      {
+        generatedBy: 'npm run cli -- cp-shortlist',
+        step,
+        options: { ...o, side: DIR_NAMES[o.side] },
+        scanned: res.scanned,
+        passed: res.passed,
+        candidates: res.candidates.map((c) => ({ ...c, file: encounterToJson(c.file) })),
+      },
+      null,
+      2,
+    ),
+  )
+  console.log(
+    `${spec.preset} seeds ${o.start}..${o.start + o.count - 1}: ${res.passed} boards pass "${o.requireNoDamage ? 'proven no-damage path' : `min damage in [${o.damageRange?.[0]}, ${o.damageRange?.[1]}]`}" for ` +
+      `step ${step} (${DIR_NAMES[o.side]}, ${o.hp} hp, ATTACK IN ${spec.interval} dmg ${spec.damage})
+`,
+  )
+  console.log('| rank | seed | score | arrows | N/E/S/W | earliest hit | clear turns | min damage |')
+  console.log('|---|---|---|---|---|---|---|---|')
+  for (const c of res.candidates) {
+    console.log(
+      `| ${c.rank} | ${c.seed} | ${c.score} | ${c.arrows} | ${c.dirCounts.join('/')} | ${c.earliestHitTurn} | ${c.boardClearTurns} | ${c.minDamageOnIntendedPath} |`,
     )
   }
   console.log(`
@@ -525,6 +601,7 @@ try {
   else if (cmd === 'encounter') cmdEncounter(pos, opt)
   else if (cmd === 'shortlist') cmdShortlist(opt)
   else if (cmd === 'prologue') cmdPrologue(opt)
+  else if (cmd === 'cp-shortlist') cmdCpShortlist(opt)
   else console.log(HELP)
 } catch (e) {
   console.error((e as Error).message)
