@@ -7,7 +7,6 @@ AGENT: asset/content agent
 BASE_BRANCH: fix/FIX-021-board-plane-projection
 BRANCH: design/BESTIARY-001-asset-intake
 START_SHA: edb56232beb3b46d322388c369cb598ccf9dccc1
-RESULT_SHA: <set-after-push>
 
 ## Goal
 
