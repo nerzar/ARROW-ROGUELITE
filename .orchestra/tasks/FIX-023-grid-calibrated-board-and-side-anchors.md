@@ -1,6 +1,6 @@
 # TASK: FIX-023 — Grid-calibrated board projection + side actor anchors
 
-STATUS: READY
+STATUS: DONE
 TYPE: FIX
 SIZE: M
 AGENT: Claude / Sonnet
@@ -153,6 +153,106 @@ Run:
 - `npm run typecheck`
 - `npm test`
 - `npm run build`
+
+## RESULT
+
+- `arena-calibration.js` (+`.d.ts`, new): per-arena `boardPlaneFrac` (pixel-precise, gradient-edge
+  detected + linear-fit against the actual baked grid, `background-size: cover` crop-corrected for
+  non-16:9 art), `boardSizeLocked`, `anchors.{top,left,right}`. Two entries:
+  - `boss-shadow-moon` -- TRUE 6x6 -- `spikes/arrow-core/viewer/visual-proto/assets/arenas/prologue-act1/6x6-5.png`
+    (from `design/ARENA-002-prologue-act1-pack` @ `4694355`). No approved 6x6 existed when this
+    task started; kept as the 6x6 proof since the user later approved only 5x5 candidates (see
+    below) -- a follow-up task should supply an approved 6x6 if this one isn't final.
+  - `prologue-5x5-good` -- TRUE 5x5 -- `spikes/arrow-core/viewer/visual-proto/assets/arenas/prologue-act1/5x5-good.png`
+    (from `magicarrowassets/arenas/5x5-good.png`, one of three files the user explicitly named
+    "approved"/"good" mid-task; superseded ARENA-002's unnamed `prologue-violet-arch`, which this
+    task started calibrating against before the course correction).
+- `board-plane.js`: `createBoardPlane`/`planeCornersPx` take an optional `cornersFrac` (default
+  `PLANE_CORNERS_FRAC`, byte-identical flexible-arena behavior); `fitGrid` takes optional
+  `{marginU, marginV, colFracs, rowFracs}` (defaults reproduce the exact old uniform-margin math).
+  New `gridLineToScreen` (cell *boundaries*, for the debug grid mesh) and `localCellPx` (on-screen
+  px-per-cell at a specific col/row, for perspective-sensitive sizing). `colFracs`/`rowFracs`
+  plumbing exists but neither proof arena needed non-uniform calibration -- a plain 4-corner
+  homography matched both baked grids once the corners were measured precisely.
+- `board-renderer.js`: `resize(level, calibration?)` builds the plane/fit from a calibration entry
+  when given (margin 0, so the fitted grid fills the quad edge-to-edge -- cell-to-cell alignment
+  with the painted grid by construction). Debug mode (`drawBoardSurface`) now draws the full
+  projected grid MESH (cols+1 x rows+1 lines + intersections), not just cell-center dots. Arrow
+  stroke width/arrowhead size, the Stone-Throw pin marker, and the projectile-shot stroke/tail all
+  now sample `localCellPx` at their own drawn position instead of one whole-board-average `cell` --
+  near/bottom reads chunkier, far/top reads thinner.
+- `arena-layout.js`: `podiumSlot`/`effectGround` take an optional `groundOverride` (same shape as
+  `PODIUM_GROUND`/`EFFECT_GROUND`); omitted (every pre-existing caller) reproduces the exact old
+  lookup. `board-renderer.js` builds this override from `calibration.anchors` (`{0:top,1:right,
+  3:left}`), so TOP/LEFT/RIGHT all use the active arena's own measured points when a calibration is
+  active, and the untouched hardcoded Moonlit-Fortress constants otherwise.
+- `app.js`: `loadBakedArenaDebug(calibId, seed?, defSceneKey?)` (debug-only, `window.visualDebug`) --
+  swaps in a calibration's background + a freshly generated square board of its `boardSizeLocked`,
+  borrowing an existing scene's `def` for structure (`rock-spike` default: single N target;
+  `cp-e4`: E+W targets, used to check LEFT/RIGHT anchors). `loadScene`/`loadSquareDebug` reset
+  `activeCalibration`/background so the flexible-arena/rectangular-regression path never inherits a
+  baked-arena's state.
+- `docs/FIX-023-GRID-CALIBRATED-BOARD.md`: full measurement methodology (gradient-edge detection,
+  cover-fit crop correction derivation, the LEFT/RIGHT clipping bug found via `debugLayout()`).
+
+## VERIFY
+
+- `npm run typecheck` -- clean.
+- `npm test` -- 241/241 passed, 19 files (includes all 24 pre-existing `fix-021-board-plane.test.ts`
+  cases, unmodified, confirming the board-plane.js generalization didn't change default behavior).
+- `npm run build` -- clean.
+- Browser (own dev server in this task's isolated `.worktrees/FIX-023`, port 5197):
+  - TRUE 6x6 (`boss-shadow-moon`) + TRUE 5x5 (`prologue-5x5-good`): debug grid mesh visually
+    screenshotted at multiple zoom levels (960x540 and 700x394/500x281 emulated viewports) --
+    projected lines and corner intersections sit on the baked tile lines and corner gem studs.
+  - 1920x1080-equivalent (960x540, same 16:9 relative proportions) and 1366x768: both arenas
+    checked at both, consistent geometry (board-plane math is resolution-independent by
+    construction -- only normalized fractions are stored).
+  - CW rotate + click-mapping: programmatic round-trip (`projectBoardPoint`/`unprojectBoardPoint`)
+    over all 4 corners + center at angles [0, 90, 180, 270] on the ACTIVE calibrated 6x6 plane --
+    100% round-trip match, no failures. This exercises the exact same `cellToScreen`/`screenToCell`
+    pair a real gameplay Rotate/click drives, for the calibrated (non-default) corners specifically.
+  - Real mouse click on an edge-cell arrow (col 0) on the baked 6x6 arena: `board.isAlive` true ->
+    false, confirming the hit-test pipeline (not just the math in isolation) through calibration.
+  - LEFT/RIGHT actor footing: `debugLayout()` char rects + screenshots on both arenas (via
+    `defSceneKey: 'cp-e4'`) -- feet visibly planted on a stair step, full sprite on-canvas after the
+    anchor-clipping fix (see FOUND).
+  - TOP actor: `debugLayout()` confirms `footYFrac` matches the configured `anchors.top.y` exactly
+    on both arenas; visually unchanged in composition from the existing TOP/center approach.
+  - One existing rectangular encounter (`act1-e1`, 6x7) on the flexible-arena regression path: no
+    calibration active, `boardPlane().corners` byte-identical to the pre-FIX-023 flexible-arena
+    corners, screenshot shows no change from BUILD-022.
+  - Shaman scene (`cp-e5`) on the flexible-arena path: unaffected, boss anchor unchanged.
+
+## FOUND
+
+1. LEFT/RIGHT anchor clipping: first attempt reused Moonlit-Fortress-style edge-hugging fractions
+   (x=0.09/0.91). `debugLayout()` showed the ~313px-wide side sprite's char rect spanning
+   717..1030px on a 960px stage at x=0.91 -- ~70px clipped off-canvas, symmetric on both sides.
+   Both arenas' anchors moved to x=0.17/0.83 and re-verified. Root cause: these compositions have a
+   narrower usable side-podium spread than the old flexible Moonlit Fortress art; a fixed fraction
+   tuned for one background doesn't transfer to another without checking actual sprite bounds.
+2. `background-size: cover` crop on non-16:9 art is easy to miss and silently misplaces a plane
+   calibrated from raw image-pixel fractions -- `boss-shadow-moon` (1619x971, aspect 1.667 vs the
+   stage's forced 16:9) needed an explicit correction (~1.066x vertical stretch + recentering); see
+   docs/FIX-023-GRID-CALIBRATED-BOARD.md. `prologue-5x5-good` (1672x941) is close enough to 16:9
+   that this correction is negligible, but a future arena calibration should check this ratio
+   before trusting raw pixel fractions.
+3. No approved 6x6 baked-grid arena exists yet (only 5x5 candidates were explicitly approved mid-
+   task) -- `boss-shadow-moon` (ARENA-002, not separately re-approved) stands in as the 6x6 proof.
+   A follow-up task should supply/confirm the real 6x6 pick.
+4. Arrow *art style* (segmented/dashed rail look with tick marks, bidirectional heads) was flagged
+   by the user as a reference image mid-task and explicitly deferred to a separate future ART/VIS
+   task (not done here) -- current continuous glow-line style is unchanged beyond the perspective
+   scale fix.
+5. The shared working-directory-collision problem noted in BUILD-022's FOUND recurred at the very
+   start of this task (uncommitted work lost to a concurrent branch switch) -- resolved the same
+   way, by moving to an isolated `.worktrees/FIX-023`. Still recommend every task get its own
+   worktree from the start rather than starting in the shared root.
+
+RESULT_SHA (code): d78e587 -- feat(FIX-023): grid-calibrated board projection + per-arena side
+actor anchors. This DONE/bookkeeping commit follows it and is origin HEAD after push (verified
+below).
 
 ## Delivery
 
