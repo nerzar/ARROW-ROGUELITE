@@ -206,7 +206,8 @@ function tap(id) {
     text += ` · ВРАГ АТАКУЕТ: ${attackDetail} (HP игрока ${r.playerHp})`
     flashHit()
   }
-  if (r.interrupted) text += ' · подготовка сбита'
+  if (r.castInterrupted) text += ' · CAST ПРЕРВАН (следующая атака — обычная)'
+  else if (r.interrupted) text += ' · подготовка сбита'
   if (r.won) text = `Цель выполнена. ${text}`
   else if (r.phaseAfter !== r.phaseBefore) {
     text += ` · Цель переместилась ${SIDE_RU[s.bossSide]}!`
@@ -214,6 +215,7 @@ function tap(id) {
   } else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
   ui.msg.innerHTML = r.playerDead ? `<span class="bad">${text}</span>` : text
   log.push(`${formatAction({ kind: 'tap', id })}  ${DIR_NAMES[local]}→${DIR_NAMES[r.arenaDir]}  ${r.hit ? 'HIT' : 'miss'}  hp ${s.hp}` +
+    (r.castInterrupted ? '  CAST INTERRUPTED' : r.interrupted ? '  interrupt' : '') +
     (r.enemyAttacked ? `  ENEMY ${attackDetail} (player ${r.playerHp})` : '') +
     (r.phaseAfter !== r.phaseBefore ? (r.won ? '  WIN' : `  → phase ${r.phaseAfter + 1} (${DIR_NAMES[s.bossSide]})${r.granted ? ` +Rotate ${r.granted}` : ''}`) : ''))
   afterAction()
@@ -490,7 +492,8 @@ function drawEnemies(col, s, now) {
     ctx.font = `600 ${Math.max(10, Math.floor(g.cell * 0.3))}px system-ui`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    const attackText = Number.isFinite(en.countdown) && !en.dead ? `  ATTACK IN ${en.countdown}` : ''
+    const attackLabel = en.attackKind === 'cast' ? 'CAST IN' : 'ATTACK IN'
+    const attackText = Number.isFinite(en.countdown) && !en.dead ? `  ${attackLabel} ${en.countdown}` : ''
     const label = en.dead ? 'убит' : `HP ${en.hp}/${en.hpMax}${attackText}`
     const ly = side === 2 ? cy - thick / 2 - 0.4 * g.cell : side === 0 ? cy + thick / 2 + 0.4 * g.cell : cy - long / 2 - 0.4 * g.cell
     ctx.fillStyle = Number.isFinite(en.countdown) && en.countdown <= 1 && !en.dead ? col.hp : col.text
@@ -540,7 +543,8 @@ function drawBoss(col, s, now) {
   ctx.font = `600 ${Math.max(11, Math.floor(g.cell * 0.34))}px system-ui`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  const attackText = Number.isFinite(s.countdownTurns) ? `  ATTACK IN ${s.countdownTurns}` : ''
+  const attackLabel = s.attackKind === 'cast' ? 'CAST IN' : 'ATTACK IN'
+  const attackText = Number.isFinite(s.countdownTurns) ? `  ${attackLabel} ${s.countdownTurns}` : ''
   const label = s.won ? 'цель выполнена' : `HP ${s.hp}/${s.totalHp}${attackText}` + (def.boss.phases.length > 1 ? ` · фаза ${s.phaseIndex + 1}/${def.boss.phases.length}` : '')
   const ly = side === 2 ? cy - thick / 2 - 0.45 * g.cell : side === 0 ? cy + thick / 2 + 0.45 * g.cell : cy - long / 2 - 0.45 * g.cell
   ctx.fillStyle = Number.isFinite(s.countdownTurns) && s.countdownTurns <= 1 ? col.hp : col.text
@@ -653,17 +657,19 @@ function renderPanel() {
   if (def.enemies) {
     lines.push('враги (одновременно):')
     for (const en of s.enemies) {
-      const at = en.dead ? '' : Number.isFinite(en.countdown) ? `, ATTACK IN ${en.countdown}` : ', пассивен'
+      const label = en.attackKind === 'cast' ? 'CAST IN' : 'ATTACK IN'
+      const at = en.dead ? '' : Number.isFinite(en.countdown) ? `, ${label} ${en.countdown}` : ', пассивен'
       lines.push(`  ${en.label ?? en.id} (${SIDE_RU[en.side]}): ${en.dead ? 'убит' : `HP ${en.hp}/${en.hpMax}${at}`}`)
     }
   } else {
+    const label = s.attackKind === 'cast' ? 'CAST IN' : 'ATTACK IN'
     lines.push(
       `HP цели:    ${s.hp}/${s.totalHp}   ${'■'.repeat(s.hp)}${'□'.repeat(s.totalHp - s.hp)}`,
       def.boss.phases.length > 1
         ? `фаза:       ${Math.min(s.phaseIndex + 1, def.boss.phases.length)}/${def.boss.phases.length}` +
           (s.won ? '' : `  цель ${SIDE_RU[s.bossSide]}, до смены фазы ${s.phaseHpLeft} hp`)
         : `сторона:    ${SIDE_RU[s.bossSide]}`,
-      Number.isFinite(s.countdownTurns) ? `ATTACK IN:  ${s.countdownTurns}` : 'ATTACK IN:  — (пассивный)',
+      Number.isFinite(s.countdownTurns) ? `${label}:  ${s.countdownTurns}` : 'ATTACK IN:  — (пассивный)',
     )
   }
   lines.push(
