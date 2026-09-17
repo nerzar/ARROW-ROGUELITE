@@ -8,47 +8,75 @@ BASE_BRANCH: build/BUILD-025-unified-prologue-playtest
 BRANCH: fix/PLAYTEST-002-claude-prologue-polish
 START_SHA: 548ddbeadcacfe05a096f472f27c574f0e3be0cc
 
-## User goal
+## Goal
 
-Take the current playable Prologue and make it actually usable for manual playtesting. The user can launch the game now, but the scene is not practically calibrated, some arrows are hard or impossible to see, and the current calibration workflow is not usable enough for the user to tune the scene and then play through the Prologue.
+Make the current playable Prologue actually usable for the user's own calibration and end-to-end playtest.
 
-This is not a narrow patch. Treat the current branch as a working but rough integration and bring the whole Prologue playtest experience to a coherent, usable state.
+This is the current practical project priority.
 
-## What matters most
+## What is wrong now
 
-- The user must be able to calibrate the current arena in the calibration editor and have those changes visibly affect the playable game without fighting the tooling.
-- Arrow paths must be readable enough to play. Some are currently nearly invisible against the board/background; fix contrast/readability/presentation as needed.
-- The playable Prologue flow must work end-to-end in the browser without console/debug-only rituals.
-- Board geometry, actor placement/scale, effects, HUD and pointer hit-testing must stay aligned with the active calibration.
-- Prefer practical working results over preserving awkward implementation details from earlier experiments.
+- Calibration exists, but the workflow is still awkward enough that the user cannot comfortably tune the scene and immediately test it.
+- Some arrow paths are hard or nearly impossible to read against the board/background.
+- The integrated Prologue is technically playable, but not yet a coherent user-facing playtest experience.
 
-## Existing pieces to inspect and reuse where useful
+## Required result
 
-- CAL-001 calibration editor
-- CAL-002 independent actor scale
-- BUILD-024 runtime calibration integration
-- BUILD-025 unified Prologue flow and browser/localStorage calibration override
-- VIS-010 / VIS-011 arrow presentation work, as visual references only
+The user must be able to:
+1. open the calibration editor;
+2. move/resize the board and tune actor/effect placement/scale;
+3. save/apply calibration without fighting copy/paste/debug rituals;
+4. return to the normal playable game and see the same calibration;
+5. clearly see and interact with every arrow needed to play;
+6. play the current Prologue sequence end-to-end without console helpers or branch/page hopping.
 
-Do not assume any of those are perfect. Inspect the current result in Chrome and fix what is actually wrong.
+Board geometry, actor placement/scale, effects, HUD and pointer hit-testing must stay aligned with the active calibration.
 
-## Expected approach
+## Existing pieces
 
-Use browser playtesting heavily. Start from what the user sees now. Reproduce the bad calibration/readability issues, then improve the system until the user can:
+Reuse only as useful:
+- CAL-001 calibration editor;
+- CAL-002 independent actor scale;
+- BUILD-024 runtime calibration integration;
+- BUILD-025 unified Prologue + browser/local calibration override;
+- VIS-010 / VIS-011 as arrow visual references, not automatically accepted final art.
 
-1. open calibration editor;
-2. move/resize the board and actors/effects;
-3. save/apply calibration;
-4. return to the game and see that exact calibration;
-5. clearly see and interact with all arrows;
-6. play the Prologue sequence normally.
+Do not reread every old task-card unless a concrete implementation question requires it. Start from what the current playable build actually does.
 
-You may change renderer/editor/CSS/runtime wiring as needed. Keep gameplay rules stable unless a clear integration bug prevents play.
+## Boundaries
+
+- Preserve current gameplay canon from `PROJECT.md`.
+- Do not invent new enemies/mechanics or rebalance encounters unless fixing an objectively broken/unplayable integration.
+- Practical renderer/editor/CSS/runtime fixes are allowed.
+- Arrow readability may be improved enough for playtest, but do not silently declare a final arrow-art direction.
+- No merge to `main`.
+- Do not touch a shared/dirty checkout; use an isolated worktree if another agent is using the repo.
+
+## Verify
+
+Check the result in a browser, using whatever browser/tool is convenient.
+
+Prove at minimum:
+- calibration editor -> save/apply -> playable game round-trip;
+- board/input alignment after calibration;
+- readable/interactable arrows;
+- full Prologue progression, win/lose/retry and Shaman boss flow;
+- current gameplay canon remains intact;
+- sane layout around 1920x1080 and 1366x768;
+- `npm run typecheck`;
+- `npm test`;
+- `npm run build`.
+
+Do enough browser testing to prove these points; do not keep looping once the criteria are met.
 
 ## Delivery
 
-Use an isolated worktree. Do not merge main.
+Use short `RESULT / VERIFY / FOUND`.
 
-When done, provide a short USER PLAYTEST section with exactly what to open and how to calibrate + start the Prologue.
+Include a short `USER PLAYTEST` section with exactly:
+- what the user opens/runs;
+- how to calibrate and save;
+- how to return to/start the Prologue;
+- what still needs the user's visual/game-feel judgement.
 
-Fill RESULT / VERIFY / FOUND honestly, commit, push, verify remote SHA, then mark DONE.
+Commit, push, verify remote delivery, mark DONE and stop.
