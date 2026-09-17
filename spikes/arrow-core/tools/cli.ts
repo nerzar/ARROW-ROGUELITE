@@ -2,6 +2,12 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { type CpScanOptions, scanCpEncounter } from './cp-shortlist.js'
+import {
+  type MultiScanOptions,
+  parseEnemySpec,
+  parseSeedRange,
+  scanMultiEncounter,
+} from './multi-shortlist.js'
 import { type PrologueStep, scanPrologueStep } from './prologue-shortlist.js'
 import { scanShortlist } from './shortlist.js'
 import {
@@ -43,9 +49,17 @@ const HELP = `arrow-core spike CLI
          [--min-arrows 12] [--max-arrows 24] [--top 10] [--out encounters/shortlist.json]
   prologue --step 1|2|3 [--start 1] [--count 5000] [--top 8] [--out encounters/prologue-eN-shortlist.json]
          seed shortlist for one of the three single-target prologue encounters (EXP-009)
-  cp-shortlist --step 3 [--start 1] [--count 4000] [--top 8] [--out encounters/cp-eN-shortlist.json]
-         seed shortlist for the timed single-target E3 (EXP-010), proven no-damage path. E4 is now
-         hand-authored multi-enemy content (EXP-010b, encounters/cp-e4.json) and no longer scanned here.
+   cp-shortlist --step 3 [--start 1] [--count 4000] [--top 8] [--out encounters/cp-eN-shortlist.json]
+          seed shortlist for the timed single-target E3 (EXP-010), proven no-damage path. E4 is now
+          hand-authored multi-enemy content (EXP-010b, encounters/cp-e4.json) and no longer scanned here.
+   multi-shortlist --preset easy --enemy E:2:3:2 --enemy N:2:5:2 --max-damage 0 --seeds 1:5000
+          [--player-hp 10] [--top 20] [--out encounters/multi-shortlist.json] [--json]
+          seed shortlist for a simultaneous multi-enemy encounter (EXP-012). Facts only, no ranking:
+          keeps seeds with a proven win and proven min unavoidable damage <= --max-damage,
+          in ascending seed order. --enemy SIDE:HP[:INTERVAL:DAMAGE[:INTERRUPT_HITS]],
+          e.g. E:2:3:2 (side E, 2 hp, ATTACK IN 3, dmg 2), N:2 (passive, never attacks).
+          INTERRUPT_HITS is the opt-in hit-interrupt (combat rules 5); omit for default no-interrupt.
+          --seeds START:COUNT (or --start N --count N). Unproven seeds (budget exhausted) are skipped.
   bench  [--count 10000] [--presets tiny,easy,medium,hard,expert] [--seed 1]
          [--extra huge:500,xl:100,strict:1000|none] [--out bench-results/latest.json]
 
@@ -60,7 +74,12 @@ function parseArgs(argv: string[]): { cmd: string; pos: string[]; opt: Record<st
     if (a.startsWith('--')) {
       const next = rest[i + 1]
       if (next === undefined || next.startsWith('--')) opt[a.slice(2)] = 'true'
-      else opt[a.slice(2)] = rest[++i]
+      else {
+        // Repeatable flags (e.g. --enemy) accumulate, one spec per line.
+        const v = rest[++i]
+        const k = a.slice(2)
+        opt[k] = opt[k] === undefined ? v : `${opt[k]}\n${v}`
+      }
     } else pos.push(a)
   }
   return { cmd, pos, opt }
@@ -359,6 +378,87 @@ scanned ${o.count}/${o.count} in ${sec.toFixed(1)}s
 json: ${out}`)
 }
 
+// EXP-012: simultaneous multi-enemy shortlist. Facts only — no score, no ranking. Candidates are
+// the first `top` passing seeds in ascending seed order; output order is stable by construction.
+function cmdMultiShortlist(opt: Record<string, string>): void {
+  const presetName = (opt.preset ?? 'easy') as PresetName
+  preset(presetName)
+  const rawEnemies = (opt.enemy ?? '').split(/[\n,]+/).map((s) => s.trim()).filter(Boolean)
+  if (rawEnemies.length === 0) throw new Error('multi-shortlist needs at least one --enemy SIDE:HP[:INTERVAL:DAMAGE[:INTERRUPT_HITS]]')
+  const enemies = rawEnemies.map(parseEnemySpec)
+  const range = opt.seeds !== undefined ? parseSeedRange(opt.seeds) : { start: parseSeed(opt.start, 1), count: Number(opt.count ?? 5000) }
+  const o: MultiScanOptions = {
+    preset: presetName,
+    enemies,
+    playerHp: Number(opt['player-hp'] ?? 10),
+    maxDamage: Number(opt['max-damage'] ?? 0),
+    start: range.start,
+    count: range.count,
+    top: Number(opt.top ?? 20),
+    minArrows: Number(opt['min-arrows'] ?? 6),
+    maxArrows: Number(opt['max-arrows'] ?? 24),
+    blockedTapDamage: Number(opt['blocked-damage'] ?? 1),
+    nodeBudget: Number(opt.budget ?? 200_000),
+  }
+  if (!Number.isInteger(o.maxDamage) || o.maxDamage < 0) throw new Error('--max-damage must be a non-negative integer')
+  const t0 = performance.now()
+  const res = scanMultiEncounter(o, 'multi_scan', 'Multi-enemy shortlist scan (provisional)', (i) =>
+    process.stderr.write(`\rscanned ${i}/${o.count}`),
+  )
+  const sec = (performance.now() - t0) / 1000
+  process.stderr.write(`\rscanned ${o.count}/${o.count} in ${sec.toFixed(1)}s\n`)
+  if (opt.json) {
+    console.log(
+      JSON.stringify({
+        generatedBy: 'npm run cli -- multi-shortlist',
+        options: o,
+        scanned: res.scanned,
+        passed: res.passed,
+        unproven: res.unproven,
+        candidates: res.candidates,
+      }),
+    )
+    return
+  }
+  const out = opt.out ?? 'encounters/multi-shortlist.json'
+  mkdirSync(dirname(out), { recursive: true })
+  writeFileSync(
+    out,
+    JSON.stringify(
+      {
+        generatedBy: 'npm run cli -- multi-shortlist',
+        options: o,
+        scanned: res.scanned,
+        passed: res.passed,
+        unproven: res.unproven,
+        candidates: res.candidates.map((c) => ({ ...c, file: encounterToJson(c.file) })),
+      },
+      null,
+      2,
+    ),
+  )
+  const spec = rawEnemies.join(' + ')
+  console.log(
+    `${presetName} seeds ${o.start}..${o.start + o.count - 1}: ${res.passed} pass ` +
+      `"proven win, min unavoidable damage <= ${o.maxDamage}" for ${spec} (player ${o.playerHp} hp, ${res.unproven} unproven skipped)\n`,
+  )
+  const sides = [...new Set(enemies.map((e) => DIR_NAMES[e.side]))].join('/')
+  console.log(`| seed | arrows | N/E/S/W | free0 N/E/S/W | earliest hit ${sides} | min dmg | clean | 1st dmg | clear-alive | nodes |`)
+  console.log('|---|---|---|---|---|---|---|---|---|---|')
+  for (const c of res.candidates) {
+    const hit = Object.entries(c.earliestHitTurn)
+      .map(([side, t]) => `${side}:${t < 0 ? '-' : t}`)
+      .join(' ')
+    console.log(
+      `| ${c.seed} | ${c.arrows} | ${c.dirCounts.join('/')} | ${c.initialFree.join('/')} | ${hit} | ` +
+        `${c.minDamage} | ${c.cleanPath ? 'yes' : 'no'} | ${c.firstDamageTurnCanonical < 0 ? '-' : c.firstDamageTurnCanonical} | ` +
+        `${c.boardClearAlive ? 'yes' : c.boardClearAliveProven ? 'no' : '?'} | ${c.nodesTotal} |`,
+    )
+  }
+  console.log(`\njson: ${out}`)
+  console.log('(example winning paths are in the json: candidate.examplePath)')
+}
+
 // ---------------------------------------------------------------------------------------------
 
 function quantiles(values: number[], qs: number[]): number[] {
@@ -602,6 +702,7 @@ try {
   else if (cmd === 'shortlist') cmdShortlist(opt)
   else if (cmd === 'prologue') cmdPrologue(opt)
   else if (cmd === 'cp-shortlist') cmdCpShortlist(opt)
+  else if (cmd === 'multi-shortlist') cmdMultiShortlist(opt)
   else console.log(HELP)
 } catch (e) {
   console.error((e as Error).message)
