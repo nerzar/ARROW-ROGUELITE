@@ -25,6 +25,13 @@ import { BoardTopology } from './topology.js'
  * ammo-based upper-bound prune was removed: it assumed "can't reach the target enough times" implied
  * death, which the board-clear-alive win path made unsound. Search is plain memoized DFS now —
  * still correct, just slower; budget exhaustion still degrades to UNKNOWN rather than a false answer.
+ *
+ * EXP-013: every place this file used to iterate `s.board.freeArrows()` (geometric truth) now
+ * iterates `s.playableArrows()` instead (free AND not currently pinned by an enemy ability). Calling
+ * `s.tap(id)` for a pinned `id` would return the EXP-013 `'pinned'` rejection without logging
+ * anything, which would silently desync this file's `s.undo()` bookkeeping — `playableArrows()` keeps
+ * the invariant "every id this file taps is a real, undoable, logged action" intact. `s.key()` and
+ * `s.wouldHit()` already account for pin state on their own, so no other change was needed here.
  */
 
 export interface WinQuery {
@@ -80,7 +87,7 @@ export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
     }
     const key = s.key()
     if (failed.has(key)) return false
-    const free = s.board.freeArrows()
+    const free = s.playableArrows()
     const tryTap = (id: number) => {
       s.tap(id)
       if (visit()) return true
@@ -139,7 +146,7 @@ export function maxHits(start: EncounterState, q: WinQuery = {}): { hits: number
     if (cached !== undefined) return cached
     let best = 0
     const cap = Math.min(s.totalHp - s.hits, s.board.remaining)
-    for (const id of s.board.freeArrows()) {
+    for (const id of s.playableArrows()) {
       const hit = s.wouldHit(id)
       s.tap(id)
       best = Math.max(best, (hit ? 1 : 0) + visit())
@@ -204,7 +211,7 @@ export function minDamageToWin(start: EncounterState, q: WinQuery = {}): MinDama
     if (cached !== undefined) return cached
     let best = Infinity
     let bestAction: EncounterAction | null = null
-    for (const id of s.board.freeArrows()) {
+    for (const id of s.playableArrows()) {
       const hpBefore = s.playerHp
       s.tap(id)
       const dmg = hpBefore - s.playerHp
@@ -303,7 +310,8 @@ export function validateEncounter(
     : (def.enemies ?? []).map(
         (e, i) =>
           `${i + 1}: ${e.id}, side ${DIR_NAMES[e.side]}, ${e.hp} hp${e.mandatory === false ? ' (optional)' : ''}` +
-          (e.attackTimer ? `, ${describeAttackTimer(e.attackTimer)}` : ''),
+          (e.attackTimer ? `, ${describeAttackTimer(e.attackTimer)}` : '') +
+          (e.ability ? `, THROW IN ${e.ability.interval} (${e.ability.targetPolicy}, pin ${e.ability.pinDuration} turns)` : ''),
       )
   return {
     totalHp: start.totalHp,
@@ -337,7 +345,8 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
     const r = s.tap(a.id)
     if (!r.ok) {
       const dmg = r.reason === 'blocked' ? `  -${r.damage} hp (player ${r.playerHp})` : ''
-      lines.push(`${n}. ${formatAction(a)}  !! ${r.reason}${dmg}`)
+      const pin = r.reason === 'pinned' ? `  PINNED / BLOCKED BY ROCK (${r.pinTurnsLeft} turn(s) left)` : ''
+      lines.push(`${n}. ${formatAction(a)}  !! ${r.reason}${dmg}${pin}`)
       return
     }
     let text = `${n}. ${formatAction(a).padEnd(8)} ${local}->${DIR_NAMES[r.arenaDir]}  ${r.hit ? 'HIT ' : 'miss'}  hp ${s.hp}/${s.totalHp}`
@@ -347,6 +356,12 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
       text += `  ENEMY ATTACK: ${r.enemyAttacks.map((e) => `${e.id} -${e.damage}`).join(', ')} (player ${r.playerHp})`
     } else if (r.enemyAttacked) {
       text += `  ENEMY ATTACK -${r.enemyDamage} hp (player ${r.playerHp})`
+    }
+    if (r.pinnedThisTurn && r.pinnedThisTurn.length) {
+      text += `  ROCK THROWN: #${r.pinnedThisTurn.map((p) => `${p.id} (${p.turnsLeft}t)`).join(', #')}`
+    }
+    if (r.pinExpired && r.pinExpired.length) {
+      text += `  UNPINNED: #${r.pinExpired.join(', #')}`
     }
     if (r.phaseAfter !== r.phaseBefore) {
       text += r.won ? '  => WIN' : `  => phase ${r.phaseAfter + 1}, boss on ${DIR_NAMES[s.bossSide as number]}`
@@ -435,7 +450,7 @@ export function probePhase2(level: Level, def: EncounterDef, policy: PlayPolicy,
         }
         rotateSupply += best
       }
-      const free = s.board.freeArrows()
+      const free = s.playableArrows()
       if (policy === 'sloppy' && s.phaseIndex === 0) {
         s.tap(pick(free))
         continue

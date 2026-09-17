@@ -38,6 +38,10 @@ npm run cli -- encounter encounters/cp-e4.json --player-hp 10  # seed 10, grunt_
 # EXP-011: attack types — normal vs interruptible cast (см. EXP-011-REPORT.md)
 npm run cli -- encounter encounters/cp-e5.json --player-hp 10  # mini-boss phase 2 now CAST IN N, proven 0-damage
 # viewer shows CAST IN N / ATTACK IN N and "CAST ПРЕРВАН" on an interrupted cast
+
+# EXP-013: enemy board abilities — Stone Throw pins an arrow (experiment, см. EXP-013-REPORT.md)
+npm run cli -- encounter encounters/rock-spike.json --player-hp 10  # debug encounter, easy seed 15
+# viewer: http://localhost:5177/viewer/rock-spike.html  (separate from the accepted prologue chain)
 ```
 
 Node ≥ 20.
@@ -71,8 +75,8 @@ validateLevel / replayOrder  независимая проверка без Boar
 | [tools/cli.ts](tools/cli.ts) | CLI `gen` / `verify` / `bench` / `analyze` / `encounter` / `shortlist` / `prologue` / `cp-shortlist` |
 | [viewer/](viewer/index.html) | debug viewer |
 | [test/](test/property.test.ts) | unit + property tests |
-| [src/encounter.ts](src/encounter.ts) | `EncounterState`: boss phases OR simultaneous `enemies` (EXP-010b), Rotate, player HP / blocked-tap damage / `attackTimer` (EXP-010), `attackTimer.kind` normal/cast + interrupt (EXP-011) |
-| [src/encounter-solver.ts](src/encounter-solver.ts) | `findWin`, `maxHits`, `minDamageToWin` (EXP-010, both encounter shapes since EXP-010b), validator report, cast/interrupt-aware `describeAttackTimer`/`traceActions` (EXP-011) |
+| [src/encounter.ts](src/encounter.ts) | `EncounterState`: boss phases OR simultaneous `enemies` (EXP-010b), Rotate, player HP / blocked-tap damage / `attackTimer` (EXP-010), `attackTimer.kind` normal/cast + interrupt (EXP-011), `EnemyDef.ability` (Stone Throw pin, EXP-013) |
+| [src/encounter-solver.ts](src/encounter-solver.ts) | `findWin`, `maxHits`, `minDamageToWin` (EXP-010, both encounter shapes since EXP-010b), validator report, cast/interrupt-aware `describeAttackTimer`/`traceActions` (EXP-011), pin-aware `playableArrows()` search (EXP-013) |
 | [src/run-state.ts](src/run-state.ts) | EXP-010 `RunState`: HP across chained encounters, restart-step/restart-run |
 | [src/analyze.ts](src/analyze.ts) | seed analyzer; `hitTiming` (EXP-010) for timed-encounter shortlisting |
 | [tools/cp-shortlist.ts](tools/cp-shortlist.ts) | seed shortlist for single-target timed encounters (EXP-010 E3; E4 is hand-authored multi-enemy content since EXP-010b) |
