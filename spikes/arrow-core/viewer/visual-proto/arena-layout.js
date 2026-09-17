@@ -20,8 +20,8 @@ export const SIDE_CHAR = { w: 5.2, h: 5.2 }
 
 // Slot distance from the board edge (cells). The boss stands slightly further out so its
 // strike lunge never touches the board.
-export const BOSS_SLOT_DIST = 4.3
-export const SIDE_SLOT_DIST = 3.8
+export const BOSS_SLOT_DIST = 5.0
+export const SIDE_SLOT_DIST = 4.6
 
 export const HUD_GAP_PX = 6
 

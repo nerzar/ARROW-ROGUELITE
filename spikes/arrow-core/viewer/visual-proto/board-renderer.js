@@ -120,8 +120,10 @@ export function createBoardRenderer(canvas) {
         const plateH = entry.lines * fontPx * 1.15 + fontPx * 0.5
         const needCells = (dist + charH / 2 + HUD_GAP_PX * 2 + barH + plateH) / cell
         // needCells is measured from the BOARD edge (it already includes the slot
-        // distance); require it + 0.2 safety.
-        need = Math.max(need, needCells + 0.2)
+        // distance); require it + 0.5 safety (BUILD-020: was 0.2, too thin once
+        // BOSS_SLOT_DIST/SIDE_SLOT_DIST grew -- left the plate ~1px from the canvas edge,
+        // close enough that an in-flight appear/tween frame could push it negative).
+        need = Math.max(need, needCells + 0.5)
       }
       margin = Math.max(DEFAULT_MARGIN, need)
     }
