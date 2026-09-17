@@ -1,0 +1,136 @@
+{
+  "species": "small-spider",
+  "task": "ASSET-004",
+  "based_on": "BESTIARY-001 READY grading + _candidates draft maps",
+  "runtime_dir": "spikes/arrow-core/viewer/visual-proto/assets/enemies/small-spider/",
+  "pose_vocabulary": [
+    "idle",
+    "attackReady",
+    "attack",
+    "hit",
+    "defeat"
+  ],
+  "file_naming": "kebab-case ${pose}.png (attackReady -> attack-ready.png), dire-wolf / boss-pack precedent",
+  "contract": {
+    "required_present": [
+      "idle",
+      "attack-ready",
+      "attack",
+      "hit",
+      "defeat"
+    ],
+    "missing_required": [],
+    "optional_present": [
+      "attack-ready-alt",
+      "back"
+    ]
+  },
+  "poses": {
+    "idle": {
+      "file": "idle.png",
+      "source": "magicarrowassets/creatures/small-spider/ChatGPT Image Sep 17, 2026, 01_53_24 PM (6).png",
+      "source_md5_12": "b4cef40c73fd",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.73,
+      "content_bottom_inset_fraction": 0.193,
+      "suggested_dy_fraction": 0.0
+    },
+    "attack-ready": {
+      "file": "attack-ready.png",
+      "source": "magicarrowassets/creatures/small-spider/ChatGPT Image Sep 17, 2026, 01_53_24 PM (7).png",
+      "source_md5_12": "1cded780d698",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.726,
+      "content_bottom_inset_fraction": 0.1515,
+      "suggested_dy_fraction": -0.0415
+    },
+    "attack": {
+      "file": "attack.png",
+      "source": "magicarrowassets/creatures/small-spider/ChatGPT Image Sep 17, 2026, 01_53_23 PM (5).png",
+      "source_md5_12": "cc4b7b7009e0",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.756,
+      "content_bottom_inset_fraction": 0.197,
+      "suggested_dy_fraction": 0.004
+    },
+    "hit": {
+      "file": "hit.png",
+      "source": "magicarrowassets/creatures/small-spider/ChatGPT Image Sep 17, 2026, 01_53_24 PM (8).png",
+      "source_md5_12": "341167a8875b",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.787,
+      "content_bottom_inset_fraction": 0.24,
+      "suggested_dy_fraction": 0.047
+    },
+    "defeat": {
+      "file": "defeat.png",
+      "source": "magicarrowassets/creatures/small-spider/ChatGPT Image Sep 17, 2026, 01_53_21 PM (2).png",
+      "source_md5_12": "325a82ab25b1",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.792,
+      "content_bottom_inset_fraction": 0.2432,
+      "suggested_dy_fraction": 0.0502
+    }
+  },
+  "optional": {
+    "attack-ready-alt": {
+      "file": "attack-ready-alt.png",
+        "source": "magicarrowassets/creatures/small-spider/ChatGPT Image Sep 17, 2026, 01_53_23 PM (4).png",
+      "source_md5_12": "9ffa8a6b97c1",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.725,
+      "content_bottom_inset_fraction": 0.1659,
+      "suggested_dy_fraction": -0.0271
+    },
+    "back": {
+      "file": "back.png",
+      "source": "magicarrowassets/creatures/small-spider/ChatGPT Image Sep 17, 2026, 01_53_21 PM (3).png",
+      "source_md5_12": "9c9af933c35b",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.729,
+      "content_bottom_inset_fraction": 0.2105,
+      "suggested_dy_fraction": 0.0175
+    }
+  },
+  "reference_only_excluded": [
+    "ChatGPT Image Sep 17, 2026, 01_53_21 PM (1).png"
+  ],
+  "anchor": {
+    "model": "shared bottom-center ground anchor (ENEMY_ANCHOR precedent)",
+    "anchorX": 0.5,
+    "anchorY": 1.0,
+    "note": "suggested_dy_fraction per pose aligns content ground contact to idle; renderer defaults stay dx=0/dy=0 until wiring task applies."
+  },
+  "scale": {
+    "suggested": 1.0,
+    "reference": "dire-wolf enemy footprint, contain-fit",
+    "note": "contain-fit normalizes frame fill; no gameplay sizing implied."
+  },
+  "processing": {
+    "defringe": "automatic nearest-opaque RGB bleed (scipy distance transform); alpha channel preserved exactly; no repaint",
+    "source_modified": false
+  },
+  "gameplay_roles": "none assigned (asset prep only)",
+  "wired_into_loader": false
+}

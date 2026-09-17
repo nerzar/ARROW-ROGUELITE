@@ -1,0 +1,136 @@
+{
+  "species": "green-slime",
+  "task": "ASSET-004",
+  "based_on": "BESTIARY-001 READY grading + _candidates draft maps",
+  "runtime_dir": "spikes/arrow-core/viewer/visual-proto/assets/enemies/green-slime/",
+  "pose_vocabulary": [
+    "idle",
+    "attackReady",
+    "attack",
+    "hit",
+    "defeat"
+  ],
+  "file_naming": "kebab-case ${pose}.png (attackReady -> attack-ready.png), dire-wolf / boss-pack precedent",
+  "contract": {
+    "required_present": [
+      "idle",
+      "attack-ready",
+      "attack",
+      "hit",
+      "defeat"
+    ],
+    "missing_required": [],
+    "optional_present": [
+      "back",
+      "taunt"
+    ]
+  },
+  "poses": {
+    "idle": {
+      "file": "idle.png",
+      "source": "magicarrowassets/creatures/green-slime/idle.png",
+      "source_md5_12": "68ff5960d968",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.48,
+      "content_bottom_inset_fraction": 0.0654,
+      "suggested_dy_fraction": 0.0
+    },
+    "attack-ready": {
+      "file": "attack-ready.png",
+      "source": "magicarrowassets/creatures/green-slime/angry.png",
+      "source_md5_12": "5cc340aa4e3e",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.397,
+      "content_bottom_inset_fraction": 0.0367,
+      "suggested_dy_fraction": -0.0287
+    },
+    "attack": {
+      "file": "attack.png",
+      "source": "magicarrowassets/creatures/green-slime/cast  shot.png",
+      "source_md5_12": "0184d5451cc4",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.639,
+      "content_bottom_inset_fraction": 0.1627,
+      "suggested_dy_fraction": 0.0973
+    },
+    "hit": {
+      "file": "hit.png",
+      "source": "magicarrowassets/creatures/green-slime/stun-hit.png",
+      "source_md5_12": "62818f7fc3ac",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.605,
+      "content_bottom_inset_fraction": 0.0949,
+      "suggested_dy_fraction": 0.0295
+    },
+    "defeat": {
+      "file": "defeat.png",
+      "source": "magicarrowassets/creatures/green-slime/death.png",
+      "source_md5_12": "7e4d90d8c900",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.775,
+      "content_bottom_inset_fraction": 0.2679,
+      "suggested_dy_fraction": 0.2025
+    }
+  },
+  "optional": {
+    "taunt": {
+      "file": "taunt.png",
+      "source": "magicarrowassets/creatures/green-slime/taunt.png",
+      "source_md5_12": "6c24580adaeb",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.465,
+      "content_bottom_inset_fraction": 0.0662,
+      "suggested_dy_fraction": 0.0008
+    },
+    "back": {
+      "file": "back.png",
+      "source": "magicarrowassets/creatures/green-slime/back.png",
+      "source_md5_12": "dba103f27062",
+      "size": [
+        1254,
+        1254
+      ],
+      "transparent_fraction": 0.57,
+      "content_bottom_inset_fraction": 0.0893,
+      "suggested_dy_fraction": 0.0239
+    }
+  },
+  "reference_only_excluded": [
+    "concept.png"
+  ],
+  "anchor": {
+    "model": "shared bottom-center ground anchor (ENEMY_ANCHOR precedent)",
+    "anchorX": 0.5,
+    "anchorY": 1.0,
+    "note": "suggested_dy_fraction per pose aligns content ground contact to idle; renderer defaults stay dx=0/dy=0 until wiring task applies."
+  },
+  "scale": {
+    "suggested": 1.0,
+    "reference": "dire-wolf enemy footprint, contain-fit",
+    "note": "contain-fit normalizes frame fill; no gameplay sizing implied."
+  },
+  "processing": {
+    "defringe": "automatic nearest-opaque RGB bleed (scipy distance transform); alpha channel preserved exactly; no repaint",
+    "source_modified": false
+  },
+  "gameplay_roles": "none assigned (asset prep only)",
+  "wired_into_loader": false
+}
