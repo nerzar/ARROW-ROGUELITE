@@ -25,6 +25,10 @@ const ui = {
   arenaPick: $('arenaPick'), gridSizePick: $('gridSizePick'),
   toggleGrid: $('toggleGrid'), toggleArrows: $('toggleArrows'), toggleSprites: $('toggleSprites'), toggleEffect: $('toggleEffect'),
   resetBtn: $('resetBtn'), copyBtn: $('copyBtn'), downloadBtn: $('downloadBtn'),
+  scaleTop: $('scaleTop'), scaleTopNum: $('scaleTopNum'),
+  scaleLeft: $('scaleLeft'), scaleLeftNum: $('scaleLeftNum'),
+  scaleRight: $('scaleRight'), scaleRightNum: $('scaleRightNum'),
+  linkSideScale: $('linkSideScale'),
   stage: $('stage'), bgLayer: $('bgLayer'), canvas: $('arena'), handlesLayer: $('handlesLayer'),
   selectedInfo: $('selectedInfo'), valuesTable: $('valuesTable'), exportText: $('exportText'), copyStatus: $('copyStatus'),
 }
@@ -136,15 +140,81 @@ function rebuildEncounter() {
   renderer.resize(level, draft)
 }
 
+function syncScaleInputs() {
+  const s = draft.actorScale
+  ui.scaleTop.value = String(s.top)
+  ui.scaleTopNum.value = s.top.toFixed(2)
+  ui.scaleLeft.value = String(s.left)
+  ui.scaleLeftNum.value = s.left.toFixed(2)
+  ui.scaleRight.value = String(s.right)
+  ui.scaleRightNum.value = s.right.toFixed(2)
+}
+
+function wireScaleEvents() {
+  function onScaleChange(side, val) {
+    val = Math.max(0.5, Math.min(2.0, Math.round(val * 100) / 100))
+    draft.actorScale[side] = val
+    if (side === 'top') {
+      ui.scaleTop.value = String(val)
+      ui.scaleTopNum.value = val.toFixed(2)
+    } else if (side === 'left') {
+      ui.scaleLeft.value = String(val)
+      ui.scaleLeftNum.value = val.toFixed(2)
+      if (ui.linkSideScale.checked) {
+        draft.actorScale.right = val
+        ui.scaleRight.value = String(val)
+        ui.scaleRightNum.value = val.toFixed(2)
+      }
+    } else if (side === 'right') {
+      ui.scaleRight.value = String(val)
+      ui.scaleRightNum.value = val.toFixed(2)
+      if (ui.linkSideScale.checked) {
+        draft.actorScale.left = val
+        ui.scaleLeft.value = String(val)
+        ui.scaleLeftNum.value = val.toFixed(2)
+      }
+    }
+    renderer.resize(level, draft)
+    refreshPanels()
+  }
+
+  ui.scaleTop.addEventListener('input', () => onScaleChange('top', Number(ui.scaleTop.value)))
+  ui.scaleTopNum.addEventListener('input', () => {
+    const v = Number(ui.scaleTopNum.value)
+    if (Number.isFinite(v)) onScaleChange('top', v)
+  })
+
+  ui.scaleLeft.addEventListener('input', () => onScaleChange('left', Number(ui.scaleLeft.value)))
+  ui.scaleLeftNum.addEventListener('input', () => {
+    const v = Number(ui.scaleLeftNum.value)
+    if (Number.isFinite(v)) onScaleChange('left', v)
+  })
+
+  ui.scaleRight.addEventListener('input', () => onScaleChange('right', Number(ui.scaleRight.value)))
+  ui.scaleRightNum.addEventListener('input', () => {
+    const v = Number(ui.scaleRightNum.value)
+    if (Number.isFinite(v)) onScaleChange('right', v)
+  })
+}
+
 function loadArena(id) {
   const calib = getArenaCalibration(id)
   if (!calib) return
   original = deepClone(calib)
   if (!original.effectAnchors) original.effectAnchors = deepClone(original.anchors) // defensive, see arena-calibration.d.ts
+  if (!original.actorScale) original.actorScale = { top: 1.0, left: 1.0, right: 1.0 }
+  else {
+    original.actorScale = {
+      top: original.actorScale.top ?? 1.0,
+      left: original.actorScale.left ?? 1.0,
+      right: original.actorScale.right ?? 1.0,
+    }
+  }
   draft = deepClone(original)
   ui.gridSizePick.value = String(draft.boardSizeLocked)
   ui.bgLayer.style.setProperty('--bg-image', `url(${draft.background})`)
   ui.bgLayer.classList.add('has-image')
+  syncScaleInputs()
   selected = null
   rebuildEncounter()
   positionHandles()
@@ -261,7 +331,13 @@ function updateValuesTable() {
       `<td>${(xy.x * rect.width).toFixed(1)}, ${(xy.y * rect.height).toFixed(1)}</td>` +
       `<td>${xy.x.toFixed(4)}, ${xy.y.toFixed(4)}</td></tr>`
   }).join('')
-  ui.valuesTable.innerHTML = `<tr><th>handle</th><th>px (x, y)</th><th>frac (x, y)</th></tr>${rows}`
+  const s = draft?.actorScale ?? { top: 1.0, left: 1.0, right: 1.0 }
+  const scaleRows = [
+    `<tr><td><span class="swatch" style="background:var(--actor)"></span>TOP actor scale</td><td>—</td><td>${s.top.toFixed(2)}x</td></tr>`,
+    `<tr><td><span class="swatch" style="background:var(--actor)"></span>LEFT actor scale</td><td>—</td><td>${s.left.toFixed(2)}x</td></tr>`,
+    `<tr><td><span class="swatch" style="background:var(--actor)"></span>RIGHT actor scale</td><td>—</td><td>${s.right.toFixed(2)}x</td></tr>`,
+  ].join('')
+  ui.valuesTable.innerHTML = `<tr><th>handle</th><th>px (x, y)</th><th>frac / scale</th></tr>${rows}${scaleRows}`
 }
 
 const round4 = (n) => Math.round(n * 10000) / 10000
@@ -270,6 +346,7 @@ function buildExportObject() {
   const c = draft.boardPlaneFrac
   const a = draft.anchors
   const e = draft.effectAnchors
+  const s = draft.actorScale
   return {
     id: draft.id,
     background: draft.background,
@@ -288,13 +365,18 @@ function buildExportObject() {
       left: { x: round4(e.left.x), y: round4(e.left.y) },
       right: { x: round4(e.right.x), y: round4(e.right.y) },
     },
+    actorScale: {
+      top: round4(s.top),
+      left: round4(s.left),
+      right: round4(s.right),
+    },
   }
 }
 
 /** Formats as a ready-to-paste ARENA_CALIBRATIONS entry -- same quoting/shape arena-calibration.js
  * itself uses, so the output can be pasted straight in as a `'<id>': { ... },` entry. */
 function formatCalibrationEntry(o) {
-  const c = o.boardPlaneFrac, a = o.anchors, e = o.effectAnchors
+  const c = o.boardPlaneFrac, a = o.anchors, e = o.effectAnchors, s = o.actorScale
   return `'${o.id}': {
   id: '${o.id}',
   background: '${o.background}',
@@ -311,6 +393,11 @@ function formatCalibrationEntry(o) {
     top: { x: ${e.top.x}, y: ${e.top.y} },
     left: { x: ${e.left.x}, y: ${e.left.y} },
     right: { x: ${e.right.x}, y: ${e.right.y} },
+  },
+  actorScale: {
+    top: ${s.top},
+    left: ${s.left},
+    right: ${s.right},
   },
 },`
 }
@@ -340,6 +427,7 @@ ui.toggleEffect.onchange = () => positionHandles()
 ui.resetBtn.onclick = () => {
   draft = deepClone(original)
   ui.gridSizePick.value = String(draft.boardSizeLocked)
+  syncScaleInputs()
   selected = null
   for (const el of handleEls.values()) el.classList.remove('selected')
   rebuildEncounter()
@@ -401,6 +489,7 @@ if (typeof ResizeObserver !== 'undefined') {
 }
 
 createHandles()
+wireScaleEvents()
 const initialId = new URLSearchParams(location.hash.slice(1)).get('arena') ?? 'prologue-5x5-good'
 ui.arenaPick.value = ARENA_CALIBRATIONS[initialId] ? initialId : ui.arenaPick.options[0]?.value
 loadArena(ui.arenaPick.value)
@@ -411,4 +500,13 @@ window.calibrationEditorDebug = {
   original: () => original,
   exportObject: () => buildExportObject(),
   loadArena,
+  setActorScale: (top, left, right) => {
+    if (top !== undefined) draft.actorScale.top = top
+    if (left !== undefined) draft.actorScale.left = left
+    if (right !== undefined) draft.actorScale.right = right
+    syncScaleInputs()
+    renderer.resize(level, draft)
+    refreshPanels()
+  },
+  getLayout: () => renderer.debugLayout(),
 }

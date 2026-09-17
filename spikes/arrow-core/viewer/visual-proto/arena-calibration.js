@@ -24,11 +24,11 @@
 // CAL-001: `effectAnchors` is the same TOP/LEFT/RIGHT shape but for the VFX/telegraph ground
 // point (arena-layout.js's EFFECT_GROUND contract) -- independent of `anchors` so a cast-glow/
 // telegraph anchor can sit on a podium's flat top while the actor's own feet stay at the lip,
-// without one move dragging the other. Every entry below sets it equal to `anchors` (byte-for-
-// byte the same points `groundOverrideFor` used for both before this field existed) so no
-// existing calibration's rendered geometry changes just by this field's addition -- a future
-// edit made through the calibration-editor tool (calibration-editor.html) is what actually lets
-// the two diverge.
+// without one move dragging the other.
+//
+// CAL-002: `actorScale` is presentation-only scale for TOP/LEFT/RIGHT actors (1.0 = base size).
+// Decouples actor pixel size from board grid dimensions (level.width/height, cell size, grid
+// selector), keeping mobs stable across 5x5, 6x6, 8x8, 10x10.
 export const ARENA_CALIBRATIONS = {
   // FIX-023: user-approved 5x5 prologue candidate (magicarrowassets/arenas/5x5-good.png,
   // explicitly named "good" by the architect -- superseded the unnamed ARENA-002
@@ -63,6 +63,11 @@ export const ARENA_CALIBRATIONS = {
       left: { x: 0.17, y: 0.62 },
       right: { x: 0.83, y: 0.62 },
     },
+    actorScale: {
+      top: 1.0,
+      left: 1.0,
+      right: 1.0,
+    },
   },
   'boss-shadow-moon': {
     id: 'boss-shadow-moon',
@@ -91,10 +96,24 @@ export const ARENA_CALIBRATIONS = {
       left: { x: 0.17, y: 0.6 },
       right: { x: 0.83, y: 0.6 },
     },
+    actorScale: {
+      top: 1.0,
+      left: 1.0,
+      right: 1.0,
+    },
   },
 }
 
 /** Look up a calibration entry by id; returns null for unknown ids (never throws). */
 export function getArenaCalibration(id) {
-  return ARENA_CALIBRATIONS[id] ?? null
+  const c = ARENA_CALIBRATIONS[id]
+  if (!c) return null
+  return {
+    ...c,
+    actorScale: {
+      top: c.actorScale?.top ?? 1.0,
+      left: c.actorScale?.left ?? 1.0,
+      right: c.actorScale?.right ?? 1.0,
+    },
+  }
 }

@@ -8,6 +8,7 @@ import { resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets
 import { BOSS_ANCHOR } from './boss-visual-state.js'
 import { ENEMY_ANCHOR } from './enemy-visual-state.js'
 import {
+  ACTOR_BASE_CELL_FRAC,
   charSize, effectGround, faceRect,
   hudBoxes, podiumSlot, spriteMirror,
 } from './arena-layout.js'
@@ -35,6 +36,18 @@ function groundOverridesFor(calibration) {
   return {
     actor: anchorMapFor(calibration.anchors),
     effect: anchorMapFor(calibration.effectAnchors ?? calibration.anchors),
+  }
+}
+
+// CAL-002: presentation-only actor scale per side (0=N/top, 1=E/right, 3=W/left; side 2/S stays
+// at default 1.0). Missing keys default to 1.0 so uncalibrated or partial entries remain safe.
+function actorScalesFor(calibration) {
+  const s = calibration?.actorScale
+  return {
+    0: s?.top ?? 1.0,
+    1: s?.right ?? 1.0,
+    3: s?.left ?? 1.0,
+    2: 1.0,
   }
 }
 
@@ -108,7 +121,7 @@ export function createBoardRenderer(canvas, stageEl) {
     const stageRect = stageEl.getBoundingClientRect()
     const stageW = Math.max(1, stageRect.width)
     const stageH = Math.max(1, stageRect.height)
-    const dpr = window.devicePixelRatio || 1
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
     canvas.width = Math.round(stageW * dpr)
     canvas.height = Math.round(stageH * dpr)
     canvas.style.width = `${stageW}px`
@@ -132,7 +145,18 @@ export function createBoardRenderer(canvas, stageEl) {
     const span = Math.max(w, h)
     const cell = Math.max(6, ((topW + botW) / 2 / span + (leftH + rightH) / 2 / span) / 2)
     const { actor: groundOverride, effect: effectGroundOverride } = groundOverridesFor(calibration)
-    geo = { w, h, plane, fit, cell, stageW, stageH, calibration, groundOverride, effectGroundOverride }
+    // CAL-002: calibrated actor size is decoupled from logical grid width/height (span).
+    // Uses a stable stage-relative base cell magnitude (responsive across 1080p, 768p, 540p),
+    // so 5x5, 6x6, 8x8, 10x10 show the exact same actor pixel footprint unless actorScale is tuned.
+    const actorBaseCell = calibration
+      ? stageH * (calibration.actorBaseCellFrac ?? ACTOR_BASE_CELL_FRAC)
+      : cell
+    const actorScaleOverride = actorScalesFor(calibration)
+    geo = {
+      w, h, plane, fit, cell, stageW, stageH, calibration,
+      groundOverride, effectGroundOverride,
+      actorBaseCell, actorScaleOverride,
+    }
     return geo
   }
 
@@ -279,11 +303,11 @@ export function createBoardRenderer(canvas, stageEl) {
       if (now - fx.pinT < 500 || now - fx.unpinT < 550 || now - fx.deniedT < 320) animating = true
     }
 
-    const dark = matchMedia('(prefers-color-scheme: dark)').matches
+    const dark = typeof matchMedia !== 'undefined' ? matchMedia('(prefers-color-scheme: dark)').matches : true
     const col = palette(dark)
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    const dpr = window.devicePixelRatio || 1
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
     const targets = collectTargets(s, def)
@@ -332,12 +356,15 @@ export function createBoardRenderer(canvas, stageEl) {
       // VIS-007: character footprint from the arena layout (cells -> px). No panel box, no
       // clip: the sprite stands directly on the arena, bottom-center grounded at the slot.
       const size = charSize(t.isBoss)
-      const charW = size.w * cell
-      const charH = size.h * cell
-      const slot = podiumSlot(t.side, t.isBoss, g.stageW, g.stageH, cell, g.groundOverride)
+      // CAL-002: actor scale is presentation-only and independent of grid dimensions.
+      const scale = g.actorScaleOverride?.[t.side] ?? 1.0
+      const charCell = (g.actorBaseCell ?? cell) * scale
+      const charW = size.w * charCell
+      const charH = size.h * charCell
+      const slot = podiumSlot(t.side, t.isBoss, g.stageW, g.stageH, charCell, g.groundOverride)
       const idle = Math.sin(now / 900 + t.side * 1.7) * 1.6
       const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
-      const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * g.cell : 0
+      const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * charCell : 0
       const deathT = now - fx.deathT
       const dying = t.dead && deathT >= 0 && deathT < 550
       const deathP = dying ? clamp01(deathT / 550) : t.dead ? 1 : 0
@@ -377,7 +404,7 @@ export function createBoardRenderer(canvas, stageEl) {
           ctx.strokeStyle = isCast ? col.cast : urgency >= 1 ? col.danger : col.aim
           ctx.lineWidth = 2.5
           ctx.beginPath()
-          ctx.ellipse(effLocalX, effLocalY, charW * (0.55 + cyc * 0.25), Math.max(5, cell * 0.14) * (1 + cyc * 0.4), 0, 0, Math.PI * 2)
+          ctx.ellipse(effLocalX, effLocalY, charW * (0.55 + cyc * 0.25), Math.max(5, charCell * 0.14) * (1 + cyc * 0.4), 0, 0, Math.PI * 2)
           ctx.stroke()
         }
         ctx.restore()
@@ -390,7 +417,7 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.globalAlpha = (1 - deathP * 0.5) * 1
       ctx.fillStyle = col.groundShadow
       ctx.beginPath()
-      ctx.ellipse(0, charH / 2, charW * 0.42, Math.max(4, cell * 0.11), 0, 0, Math.PI * 2)
+      ctx.ellipse(0, charH / 2, charW * 0.42, Math.max(4, charCell * 0.11), 0, 0, Math.PI * 2)
       ctx.fill()
       ctx.restore()
 
@@ -455,7 +482,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // feet), always away from the board. It never sizes or clips the character, and two
       // simultaneous targets (e.g. cp-e4's two enemies) can never draw over each other.
       // Layout, not z-index: nothing belonging to the HUD may overlap the board footprint.
-      const fontPx = Math.max(10, Math.floor(g.cell * (t.isBoss ? 0.3 : 0.25)))
+      const fontPx = Math.max(10, Math.floor(charCell * (t.isBoss ? 0.3 : 0.25)))
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       const lines = [
@@ -487,11 +514,11 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
         maxW = Math.max(maxW, ctx.measureText(ln.text).width)
       }
-      const barH = Math.max(5, g.cell * 0.16)
+      const barH = Math.max(5, charCell * 0.16)
       const hud = hudBoxes({
         slot: { x: 0, y: 0 },
         char: { x: -charW / 2, y: -charH / 2, w: charW, h: charH },
-        side: t.side, fontPx, lineH, lineCount: lines.length, barH, maxTextW: maxW, cell,
+        side: t.side, fontPx, lineH, lineCount: lines.length, barH, maxTextW: maxW, cell: charCell,
         slotAbsX: slot.x, boardCx: boardBBox.x + boardBBox.w / 2, boardHalfPx: boardBBox.w / 2,
       })
       if (!t.dead || t.isBoss) {
@@ -559,7 +586,7 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.save()
         ctx.globalAlpha = 1 - p
         ctx.fillStyle = col.good
-        ctx.font = `700 ${Math.max(10, Math.floor(g.cell * 0.24))}px system-ui`
+        ctx.font = `700 ${Math.max(10, Math.floor(charCell * 0.24))}px system-ui`
         ctx.textAlign = 'center'
         ctx.fillText('CAST INTERRUPTED', 0, -charH / 2 - 10 - p * 12)
         ctx.restore()
@@ -692,16 +719,19 @@ export function createBoardRenderer(canvas, stageEl) {
       const g = geo
       const alive = s.aliveByArenaDir()
       const free = s.aliveByArenaDir(true)
-      ctx.font = `600 ${Math.max(10, Math.floor(g.cell * 0.24))}px system-ui`
+      const readoutCell = g.actorBaseCell ?? g.cell
+      ctx.font = `600 ${Math.max(10, Math.floor(readoutCell * 0.24))}px system-ui`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       for (let d = 0; d < 4; d++) {
         const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead) : d === s.bossSide
         if (isLive) continue // the target panel itself already shows this side clearly
-        // FIX-021: same arena-relative podium anchor an actor on this side would use (not a
+        // FIX-021/CAL-002: same arena-relative podium anchor an actor on this side would use (not a
         // board-relative radius) -- an empty side still reads its readout from a stable, real
         // point on the arena instead of one that moves with the board's own size.
-        const slot = podiumSlot(d, d === 0, g.stageW, g.stageH, g.cell, g.groundOverride)
+        const sideScale = g.actorScaleOverride?.[d] ?? 1.0
+        const sideCell = (g.actorBaseCell ?? g.cell) * sideScale
+        const slot = podiumSlot(d, d === 0, g.stageW, g.stageH, sideCell, g.groundOverride)
         ctx.fillStyle = col.muted
         ctx.save()
         ctx.translate(slot.x, slot.y)

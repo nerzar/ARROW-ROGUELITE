@@ -3,6 +3,8 @@
 export interface FracPt { x: number; y: number }
 export interface FracCorners { tl: [number, number]; tr: [number, number]; br: [number, number]; bl: [number, number] }
 
+export interface ActorScale { top: number; left: number; right: number }
+
 export interface ArenaCalibration {
   id: string
   background: string
@@ -11,6 +13,10 @@ export interface ArenaCalibration {
   anchors: { top: FracPt; left: FracPt; right: FracPt }
   /** CAL-001: independent VFX/telegraph ground anchor, same shape as `anchors`. */
   effectAnchors: { top: FracPt; left: FracPt; right: FracPt }
+  /** CAL-002: presentation-only scale per actor, independent from board size and grid size. */
+  actorScale?: ActorScale
+  /** Optional override for stage-relative base cell fraction (defaults to 47.2 / 540). */
+  actorBaseCellFrac?: number
 }
 
 export declare const ARENA_CALIBRATIONS: Record<string, ArenaCalibration>

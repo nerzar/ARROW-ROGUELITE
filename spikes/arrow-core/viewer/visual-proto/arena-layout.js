@@ -23,6 +23,13 @@
 export const BOSS_CHAR = { w: 6.9, h: 6.9 }
 export const SIDE_CHAR = { w: 6.0, h: 6.0 }
 
+// CAL-002: calibrated actor base cell magnitude as a fixed stage-height fraction.
+// Proportional to stage height (responsive across 1080p, 768p, 540p), but independent
+// from logical board grid size (cols x rows, span, cell px) so character footprint
+// does not change when grid switches 5x5 -> 6x6 -> 8x8 -> 10x10.
+// 47.2px on the baseline 960x540 stage (prologue-5x5-good approved base calibration).
+export const ACTOR_BASE_CELL_FRAC = 47.2 / 540
+
 // Slot distance from the board edge (cells). The boss stands slightly further out so its
 // strike lunge never touches the board.
 export const BOSS_SLOT_DIST = 5.0

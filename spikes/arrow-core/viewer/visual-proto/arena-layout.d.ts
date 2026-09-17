@@ -3,6 +3,7 @@
 export interface CharSize { w: number; h: number }
 export declare const BOSS_CHAR: CharSize
 export declare const SIDE_CHAR: CharSize
+export declare const ACTOR_BASE_CELL_FRAC: number
 export declare const BOSS_SLOT_DIST: number
 export declare const SIDE_SLOT_DIST: number
 export declare const HUD_GAP_PX: number
