@@ -1,6 +1,6 @@
 # TASK: MKT-001 — демография официальных сообществ shortlist
 
-STATUS: READY
+STATUS: DONE
 TYPE: MKT
 SIZE: M
 AGENT: Muse Spark 1.3
@@ -183,17 +183,17 @@ Shortlist сообществ из EXP-003:
 
 ## Готово, если
 
-- [ ] mapping 12 групп проверен и documented;
-- [ ] доступные memberships обработаны агрегированно;
-- [ ] нет committed user-level данных;
-- [ ] sex/age/city coverage посчитан;
-- [ ] small cells suppressed;
-- [ ] community table готова;
-- [ ] mechanic table готова или честно объяснено, почему aggregation слабая;
-- [ ] community proxy явно не назван player demographics;
-- [ ] rate / TLS / secrets / diff checks PASS;
-- [ ] RESULT / VERIFY / FOUND заполнены;
-- [ ] STATUS: DONE или BLOCKED;
+- [x] mapping 12 групп проверен и documented;
+- [x] доступные memberships обработаны агрегированно;
+- [x] нет committed user-level данных;
+- [x] sex/age/city coverage посчитан;
+- [x] small cells suppressed;
+- [x] community table готова;
+- [x] mechanic table готова или честно объяснено, почему aggregation слабая;
+- [x] community proxy явно не назван player demographics;
+- [x] rate / TLS / secrets / diff checks PASS;
+- [x] RESULT / VERIFY / FOUND заполнены;
+- [x] STATUS: DONE или BLOCKED;
 - [ ] RESULT_SHA записан;
 - [ ] commit + push этой же ветки;
 - [ ] без merge в main;
@@ -207,3 +207,53 @@ Shortlist сообществ из EXP-003:
 - выполнение требует сохранять/коммитить user-level персональные данные;
 - API ведёт себя так, что нельзя честно оценить coverage;
 - задача начинает менять продуктовые решения Magic Arrow.
+
+## RESULT
+
+Работа велась в отдельном git worktree (общий каталог был занят другой веткой);
+START_SHA `1e0df22` подтверждён как родитель коммита ветки `e0e78ea`.
+
+Подтверждено 12/12 групп (все открытые, официальная связь доказана через
+`apps.get author_owner_id == -group_id` для каждой). Memberships обработано: 2739
+records в 9 группах со статусом complete; 3 мельчайшие группы (6/9/3 участника)
+API-недоступны (`groups.getMembers` → VK error 15, детерминировано при повторе).
+Потоковая агрегация: страница → счётчики → discard; user-level данные не писались
+на диск и не коммитились.
+
+Агрегаты (community demographic proxy, НЕ player demographics):
+- sex coverage 1.0 везде; пулы: sort 80.6% F (1169/1450), merge 82.3% F (386/469),
+  match3 55.2% F (403/730, в основном Гранд Тур), arrow 70.0% F (63/90, одна группа).
+- age-year coverage 0.27–0.62 (пулы 0.44–0.62); ядро с годом — 25–44 (sort/match3),
+  25–55+ (merge); arrow-точка 55+ 66% при n=56.
+- city coverage 0.60–0.87; города n≥20 только в двух крупнейших группах
+  (Moscow/SPb первые); country не встречено ни разу.
+- Сообщества = 0.01–1% app-аудиторий (`group/app` описательное, не conversion).
+
+Пригодность proxy: грубый ориентир по sex-составу активных сообществ с оговорками;
+по возрасту слабый (coverage <50%); по географии почти неинформативен; arrow-lane
+держится на одной группе (n=90). Для выбора аудитории/темы — вспомогательный фон,
+не основание.
+
+Outputs: `research/vk-market/demography/community-demography.csv`,
+`mechanic-demography.csv`, `method.json`, `MKT-001-REPORT.md`;
+код: `tools/vk_demography/collect.py`, `verify.py`.
+
+## VERIFY
+
+`python tools/vk_demography/verify.py` — ALL PASS (10/10): coverage-12-groups,
+sums-sex-age-reconcile (12 строк), suppression-small-cells (нет ячеек 1–19),
+mechanic-pool-sums (4 lane), rate-min-interval (26 запросов, min gap 1.05 s ≥ 1.0 s),
+no-user-level-keys, no-player-demographics-wording, secret-scan (токен/фрагменты
+отсутствуют), diff-scope (только разрешённые пути), mapping-official (12/12).
+TLS verification включён (truststore), user-level rows в Git нет.
+
+## FOUND
+
+- F1: `groups.getMembers` → VK error 15 (access denied) для 240373000 / 215368653 /
+  240707160 — все без кастомного screen_name, все мельчайшие (6/9/3).
+- F2: поле `country` отсутствует полностью (n=2739) — smoke-гипотеза подтвердилась.
+- F3: поле `sex` заполнено у 100% обработанных записей.
+- F4: 233439912 («Фабрика игр») и 215368653 («Игры GidKap») — dev-группы, состав шире
+  одной игры; учтено в отчёте, пулы не чистились.
+- F5: «Сказка 2026» принадлежит группе 233460848 (вне shortlist) — зафиксировано
+  в `method.json`, не покрыта.
