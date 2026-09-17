@@ -1,0 +1,41 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square6",
+    "seed": 78,
+    "levelHash": "7ec1bdaf"
+  },
+  "encounter": {
+    "id": "act1_e4_square_a",
+    "title": "Act I Encounter 4 — Square Candidate A (6x6 seed 78)",
+    "enemies": [
+      {
+        "id": "thrower_w",
+        "side": "W",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 4,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate A for Act I #4. 6x6 seed 78 (10 arrows: N1 E1 S5 W3). Introduces Stone Throw in isolation. Pattern: BOTTLENECK. Initial free West is 0. Key bottleneck: South arrow #7 must be removed on turn 1 to unlock West arrows #6 and #8. On turn 3, Stone Throw pins North #0 safely, leaving #8(W) free to hit. Clean sequence: #7(S) -> #6(W) -> #8(W) -> #9(W) (4 taps, 0 damage). Blundering by tapping wrong arrows delays West access and causes Thrower to attack for 2 damage."
+  }
+}

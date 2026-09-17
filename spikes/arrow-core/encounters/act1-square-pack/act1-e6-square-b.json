@@ -1,0 +1,58 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square8",
+    "seed": 21,
+    "levelHash": "a572577e"
+  },
+  "encounter": {
+    "id": "act1_e6_square_b",
+    "title": "Act I Encounter 6 — Square Candidate B (8x8 seed 21)",
+    "enemies": [
+      {
+        "id": "caster_n",
+        "side": "N",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 4,
+          "kind": "cast",
+          "interruptible": true,
+          "interruptedAttack": {
+            "interval": 3,
+            "damage": 2,
+            "kind": "normal"
+          }
+        },
+        "label": "caster"
+      },
+      {
+        "id": "thrower_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate B for Act I #6. 8x8 seed 21 (14 arrows: N9 E1 S0 W4). Pattern: DELAYED PAYOFF. North interrupt is buried behind preliminary West peel. Sequence: #0(W) -> #1(W) -> #2(N) interrupts Caster right on turn 3 before the 4-damage blast. North arrows #3 and #4 clean up the fight. 5 taps clean, 0 damage."
+  }
+}

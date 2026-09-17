@@ -1,0 +1,41 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square7",
+    "seed": 11,
+    "levelHash": "69602024"
+  },
+  "encounter": {
+    "id": "act1_e4_square_b",
+    "title": "Act I Encounter 4 — Square Candidate B (7x7 seed 11)",
+    "enemies": [
+      {
+        "id": "thrower_w",
+        "side": "W",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 4,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate B for Act I #4. 7x7 seed 11 (12 arrows: N4 E5 S0 W3). Pattern: BOTTLENECK on a spacious 7x7 dais. Arrow #0(W) hits on turn 1, then #1(N) unblocks #4(W) and #6(W). On turn 3, Stone Throw pins East arrow #3 safely, allowing #4(W) and #6(W) to cleanly eliminate the Thrower. Clean sequence: #0(W) -> #1(N) -> #4(W) -> #6(W) (4 taps, 0 damage). Tapping non-essential arrows results in taking 2 damage on turn 4."
+  }
+}

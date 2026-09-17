@@ -1,0 +1,71 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square9",
+    "seed": 40,
+    "levelHash": "f1ba84d3"
+  },
+  "encounter": {
+    "id": "act1_e8_square_b",
+    "title": "Act I Encounter 8 — Square Candidate B (9x9 seed 40)",
+    "enemies": [
+      {
+        "id": "chieftain_n",
+        "side": "N",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "mandatory": true,
+        "label": "anchor"
+      },
+      {
+        "id": "caster_e",
+        "side": "E",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 4,
+          "kind": "cast",
+          "interruptible": true,
+          "interruptedAttack": {
+            "interval": 4,
+            "damage": 2,
+            "kind": "normal"
+          }
+        },
+        "mandatory": true,
+        "label": "caster"
+      },
+      {
+        "id": "thrower_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 6,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "mandatory": false,
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate B for Act I #8 (Pre-Boss Crucible). 9x9 seed 40 (18 arrows: N5 E4 S2 W7). Pattern: LAYERED GATES. Strict timing and high drama: #0(N) -> #3(N) -> #17(E) interrupts Caster CAST IN 3 on turn 3 second-to-second. Then #4(N) eliminates Chieftain on turn 4 before attack, followed by #2(E) -> #16(E) to eliminate Caster on turn 6. Immediate victory, 6 taps clean, 0 damage."
+  }
+}

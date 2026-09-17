@@ -1,0 +1,51 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square7",
+    "seed": 20,
+    "levelHash": "a8292a5e"
+  },
+  "encounter": {
+    "id": "act1_e5_square_a",
+    "title": "Act I Encounter 5 — Square Candidate A (7x7 seed 20)",
+    "enemies": [
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "thrower_n",
+        "side": "N",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate A for Act I #5. 7x7 seed 20 (10 arrows: N3 E3 S0 W4). Combines melee flank pressure with artillery disruption. Pattern: CHOICE OF OPENING. 5 arrows free across 3 directions on start (N1, E1, W3). Starting with West or North allows Grunt E to hit on turn 3 for 2 damage. Intended sequence: #2(N) -> #3(E) -> #9(E) (kills Grunt E on turn 3 right on deadline) -> #4(W) -> #7(N) (kills Thrower N on turn 5). 5 taps clean, 0 damage."
+  }
+}

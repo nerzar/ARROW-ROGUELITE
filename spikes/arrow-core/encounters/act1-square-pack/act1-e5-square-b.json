@@ -1,0 +1,51 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square8",
+    "seed": 86,
+    "levelHash": "fd25c093"
+  },
+  "encounter": {
+    "id": "act1_e5_square_b",
+    "title": "Act I Encounter 5 — Square Candidate B (8x8 seed 86)",
+    "enemies": [
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "thrower_n",
+        "side": "N",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate B for Act I #5. 8x8 seed 86 (12 arrows: N3 E3 S2 W4). Pattern: CHOICE OF OPENING. Outstanding agency: all 4 directions free on start (N1, E1, S1, W2). Tapping West or South first permits Grunt E to attack on turn 3. Clean sequence: #2(N) -> #1(E) -> #5(E) (kills Grunt E on turn 3) -> #4(N) (kills Thrower N on turn 4). 4 taps clean, 0 damage."
+  }
+}

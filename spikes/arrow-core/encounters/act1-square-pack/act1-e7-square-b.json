@@ -1,0 +1,61 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square9",
+    "seed": 28,
+    "levelHash": "fe829cab"
+  },
+  "encounter": {
+    "id": "act1_e7_square_b",
+    "title": "Act I Encounter 7 — Square Candidate B (9x9 seed 28)",
+    "enemies": [
+      {
+        "id": "fast_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "heavy_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "label": "heavy"
+      },
+      {
+        "id": "thrower_s",
+        "side": "S",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 7,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate B for Act I #7. 9x9 seed 28 (12 arrows: N0 E5 S4 W3). Pattern: DIRECTION SCARCITY. No North arrows, exactly 3 West arrows. On turn 1, West is locked. Player must start with #9(S), which unlocks #7(W) and #10(W) just in time to neutralize Fast W on turn 3. Then #8(E) -> #1(E) -> #3(E) wipes Heavy E before turn 5, and #6(S) finishes the encounter on turn 7. 7 taps clean, 0 damage."
+  }
+}

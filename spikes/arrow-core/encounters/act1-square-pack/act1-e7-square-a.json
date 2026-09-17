@@ -1,0 +1,61 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square8",
+    "seed": 12,
+    "levelHash": "46cb6a1c"
+  },
+  "encounter": {
+    "id": "act1_e7_square_a",
+    "title": "Act I Encounter 7 — Square Candidate A (8x8 seed 12)",
+    "enemies": [
+      {
+        "id": "fast_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "heavy_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "label": "heavy"
+      },
+      {
+        "id": "thrower_s",
+        "side": "S",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 7,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate A for Act I #7. 8x8 seed 12 (13 arrows: N1 E5 S4 W3). Escalates to a 3-front crossfire. Pattern: DIRECTION SCARCITY. West ammo is strictly scarce: exactly 3 West arrows exist on board, only 1 free on start (#0). Urgent triage required: #0(W) -> #1(W) kills Fast W before its turn 3 attack. Then #2(N) -> #12(E) -> #11(E) eliminates Heavy E before turn 5 attack. Finally #6(S) -> #7(S) eliminates Thrower S. 7 taps clean, 0 damage."
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square9",
+    "seed": 12,
+    "levelHash": "96b11480"
+  },
+  "encounter": {
+    "id": "act1_e8_square_a",
+    "title": "Act I Encounter 8 — Square Candidate A (9x9 seed 12)",
+    "enemies": [
+      {
+        "id": "chieftain_n",
+        "side": "N",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "mandatory": true,
+        "label": "anchor"
+      },
+      {
+        "id": "caster_e",
+        "side": "E",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 4,
+          "kind": "cast",
+          "interruptible": true,
+          "interruptedAttack": {
+            "interval": 4,
+            "damage": 2,
+            "kind": "normal"
+          }
+        },
+        "mandatory": true,
+        "label": "caster"
+      },
+      {
+        "id": "thrower_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 6,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "mandatory": false,
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate A for Act I #8 (Pre-Boss Crucible). 9x9 seed 12 (20 arrows: N5 E5 S6 W4). Pattern: LAYERED GATES (5 concentric layers, 95% branch points). Chieftain and Caster are mandatory targets; Thrower W provides continuous artillery disruption. Intended sequence: #0(N) -> #4(E) interrupts lethal CAST IN 3 on turn 2 -> #3(E) -> #6(N) -> #7(N) eliminates Chieftain on turn 5 right before attack -> #2(E) eliminates Caster on turn 6. Immediate victory upon primary targets killed, 6 taps clean, 0 damage."
+  }
+}

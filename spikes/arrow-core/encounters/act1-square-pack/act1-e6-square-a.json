@@ -1,0 +1,58 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square8",
+    "seed": 1,
+    "levelHash": "90254593"
+  },
+  "encounter": {
+    "id": "act1_e6_square_a",
+    "title": "Act I Encounter 6 — Square Candidate A (8x8 seed 1)",
+    "enemies": [
+      {
+        "id": "caster_n",
+        "side": "N",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 4,
+          "kind": "cast",
+          "interruptible": true,
+          "interruptedAttack": {
+            "interval": 3,
+            "damage": 2,
+            "kind": "normal"
+          }
+        },
+        "label": "caster"
+      },
+      {
+        "id": "thrower_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "ability": {
+          "id": "stone-throw",
+          "interval": 3,
+          "pinDuration": 2,
+          "targetPolicy": "free-arrow"
+        },
+        "label": "thrower"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-004 candidate A for Act I #6. 8x8 seed 1 (15 arrows: N6 E6 S0 W3). Pressures deadline execution under board disruption. Pattern: DELAYED PAYOFF. Caster CAST IN 3 is lethal (4 damage). Initial free West is 1 (#0). Tapping #0(W) hits Thrower, unlocking #1(W). Tapping #1(W) kills Thrower on turn 2, unlocking #2(N). Tapping #2(N) on turn 3 interrupts Caster's cast second-to-second right before it fires. Then #3(N) and #4(N) finish Caster. Clean sequence: #0(W) -> #1(W) -> #2(N) -> #3(N) -> #4(N) (5 taps, 0 damage). Missing the interrupt costs 4 HP."
+  }
+}
