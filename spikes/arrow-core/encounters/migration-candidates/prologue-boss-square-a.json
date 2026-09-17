@@ -1,0 +1,54 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square8",
+    "seed": 388,
+    "levelHash": "1b221569"
+  },
+  "encounter": {
+    "id": "prologue_boss_square_a",
+    "title": "Prologue Boss — Square Candidate A (8x8 seed 388)",
+    "boss": {
+      "id": "goblin-shaman",
+      "phases": [
+        {
+          "side": "E",
+          "hpUnits": 4,
+          "attackTimer": {
+            "interval": 6,
+            "damage": 1
+          },
+          "label": "familiar side (→)"
+        },
+        {
+          "side": "N",
+          "hpUnits": 5,
+          "grantRotate": 1,
+          "attackTimer": {
+            "interval": 3,
+            "damage": 1,
+            "kind": "cast",
+            "interruptible": true,
+            "interruptedAttack": {
+              "interval": 4,
+              "damage": 1,
+              "kind": "normal"
+            }
+          },
+          "label": "moved to North (↑): Rotate granted, interrupt cast!"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false
+    },
+    "blockedTapDamage": 1,
+    "winRotateReward": 2,
+    "notes": "LD-003 square shortlist candidate A. 8x8 seed 388 (16 arrows: N1 E5 S2 W8). Phase 1 boss on E (4 hp, int 6 dmg 1). Phase 2 boss on N (5 hp, CAST IN 3 dmg 1, interruptible -> normal int 4 dmg 1). Teaches directional scarcity and wrong Rotate: board has only 1 N arrow. Phase 1 consumes 4 of 5 E arrows. Rotate CW converts 8 W arrows into N arrows for a clean 0-damage kill. Rotate CCW converts the depleted E arrows into N (insufficient ammo), taking 2 unavoidable damage."
+  }
+}

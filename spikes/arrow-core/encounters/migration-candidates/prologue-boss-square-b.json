@@ -1,0 +1,54 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square7",
+    "seed": 98,
+    "levelHash": "4b33394f"
+  },
+  "encounter": {
+    "id": "prologue_boss_square_b",
+    "title": "Prologue Boss — Square Candidate B (7x7 seed 98)",
+    "boss": {
+      "id": "goblin-shaman",
+      "phases": [
+        {
+          "side": "E",
+          "hpUnits": 4,
+          "attackTimer": {
+            "interval": 6,
+            "damage": 1
+          },
+          "label": "familiar side (→)"
+        },
+        {
+          "side": "N",
+          "hpUnits": 5,
+          "grantRotate": 1,
+          "attackTimer": {
+            "interval": 3,
+            "damage": 1,
+            "kind": "cast",
+            "interruptible": true,
+            "interruptedAttack": {
+              "interval": 4,
+              "damage": 1,
+              "kind": "normal"
+            }
+          },
+          "label": "moved to North (↑): Rotate granted, interrupt cast!"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false
+    },
+    "blockedTapDamage": 1,
+    "winRotateReward": 2,
+    "notes": "LD-003 square shortlist candidate B. 7x7 seed 98 (11 arrows: N2 E4 S3 W2). Compact tutorial scale. Phase 1 consumes all 4 E arrows. Phase 2 needs 5 N hits (only 2 exist on board). Rotate CW converts W arrows into N arrows for a clean 0-damage kill. Rotate CCW converts the empty E side to N, leaving player stranded and taking 2 damage."
+  }
+}

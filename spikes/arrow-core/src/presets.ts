@@ -47,6 +47,32 @@ export const PRESETS = {
     targetFill: 0.95, minFill: 0.9, maxInitialFreeRatio: 0.15, minArrows: 18,
     blockSeeking: 1, attempts: 40,
   },
+  /** Square-first policy presets (EXP-015 / LD-003): 6x6 through 10x10. */
+  square6: {
+    width: 6, height: 6, minLength: 2, maxLength: 5, turnChance: 0.15,
+    targetFill: 0.8, minFill: 0.65, maxInitialFreeRatio: 0.55, minArrows: 6,
+    blockSeeking: 0.7, attempts: 40,
+  },
+  square7: {
+    width: 7, height: 7, minLength: 2, maxLength: 6, turnChance: 0.18,
+    targetFill: 0.82, minFill: 0.68, maxInitialFreeRatio: 0.50, minArrows: 8,
+    blockSeeking: 0.75, attempts: 40,
+  },
+  square8: {
+    width: 8, height: 8, minLength: 2, maxLength: 7, turnChance: 0.22,
+    targetFill: 0.85, minFill: 0.70, maxInitialFreeRatio: 0.45, minArrows: 10,
+    blockSeeking: 0.8, attempts: 40,
+  },
+  square9: {
+    width: 9, height: 9, minLength: 2, maxLength: 8, turnChance: 0.25,
+    targetFill: 0.87, minFill: 0.72, maxInitialFreeRatio: 0.42, minArrows: 12,
+    blockSeeking: 0.82, attempts: 40,
+  },
+  square10: {
+    width: 10, height: 10, minLength: 2, maxLength: 9, turnChance: 0.28,
+    targetFill: 0.88, minFill: 0.74, maxInitialFreeRatio: 0.40, minArrows: 14,
+    blockSeeking: 0.85, attempts: 40,
+  },
 } satisfies Record<string, GeneratorParams>
 
 export type PresetName = keyof typeof PRESETS

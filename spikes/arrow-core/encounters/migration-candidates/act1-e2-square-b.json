@@ -1,0 +1,45 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square7",
+    "seed": 66,
+    "levelHash": "85860a1b"
+  },
+  "encounter": {
+    "id": "act1_e2_square_b",
+    "title": "Act I Encounter 2 — Square Candidate B (7x7 seed 66)",
+    "enemies": [
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "grunt_n",
+        "side": "N",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 4,
+          "damage": 2
+        },
+        "label": "slow"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-003 square shortlist candidate B for Act I #2. 7x7 seed 66 (12 arrows: N3 E5 S1 W3). Cross-Lock on 7x7 board. East has 0 free arrows on start despite having 5 arrows on board. Player must lead with #1(N) to unlock #0(E) and #4(E), which in turn unlocks the final #5(N). Proven clean path without Rotate: 0 damage in 4 taps (#1 -> #0 -> #4 -> #5)."
+  }
+}

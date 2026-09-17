@@ -1,0 +1,45 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square7",
+    "seed": 112,
+    "levelHash": "e4b2889f"
+  },
+  "encounter": {
+    "id": "act1_e1_square_a",
+    "title": "Act I Encounter 1 — Square Candidate A (7x7 seed 112)",
+    "enemies": [
+      {
+        "id": "grunt_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "label": "slow"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-003 square shortlist candidate A for Act I #1. 7x7 seed 112 (10 arrows: N1 E5 S1 W3). Multi-enemy prioritization. Grunt W (hp 2, ATTACK IN 3, dmg 2); Grunt E (hp 3, ATTACK IN 5, dmg 2). Initial free W is only 1 arrow (#7), which unlocks the second W arrow (#8). Proven clean path without Rotate: 0 damage in 5 taps (#1 -> #7 -> #8 -> #0 -> #6). Mistake path: shooting East first lets Grunt W attack at turn 3 dealing 2 damage."
+  }
+}

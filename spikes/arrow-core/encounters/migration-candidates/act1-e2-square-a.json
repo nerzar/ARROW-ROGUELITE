@@ -1,0 +1,45 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square6",
+    "seed": 41,
+    "levelHash": "f95a5470"
+  },
+  "encounter": {
+    "id": "act1_e2_square_a",
+    "title": "Act I Encounter 2 — Square Candidate A (6x6 seed 41)",
+    "enemies": [
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "grunt_n",
+        "side": "N",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 4,
+          "damage": 2
+        },
+        "label": "slow"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-003 square shortlist candidate A for Act I #2. 6x6 seed 41 (10 arrows: N3 E3 S2 W2). Pure Cross-Lock pattern. Urgent Grunt E (hp 2, ATTACK IN 3) has NO free arrows on start! Player cannot shoot East directly. Player must tap #1(N) first, which unlocks #0(E), which unlocks #3(E), which unlocks #4(N). Proven clean path without Rotate: 0 damage in 4 taps (#1 -> #0 -> #3 -> #4)."
+  }
+}

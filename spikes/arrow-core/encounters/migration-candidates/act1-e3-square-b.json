@@ -1,0 +1,52 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square7",
+    "seed": 25,
+    "levelHash": "f0d0113a"
+  },
+  "encounter": {
+    "id": "act1_e3_square_b",
+    "title": "Act I Encounter 3 — Square Candidate B (7x7 seed 25)",
+    "enemies": [
+      {
+        "id": "caster_n",
+        "side": "N",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 4,
+          "kind": "cast",
+          "interruptible": true,
+          "interruptedAttack": {
+            "interval": 3,
+            "damage": 2,
+            "kind": "normal"
+          }
+        },
+        "label": "caster"
+      },
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 4,
+          "damage": 2
+        },
+        "label": "grunt"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-003 square shortlist candidate B for Act I #3. 7x7 seed 25 (12 arrows: N3 E3 S2 W4). Retains the iconic seed number 25. Caster N (hp 3, CAST IN 3 dmg 4, interruptible); Grunt E (hp 2, ATTACK IN 4 dmg 2). Tapping #0(W) unlocks #11(E), which in turn unlocks #1(N) to interrupt the Caster exactly on step 3 before the cast fires. Then #10(E), #3(N), #4(N) complete the fight with 0 damage in 6 taps. Missing the interrupt punishes with damage."
+  }
+}

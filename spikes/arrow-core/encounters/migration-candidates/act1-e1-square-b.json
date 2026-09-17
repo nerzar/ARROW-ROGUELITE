@@ -1,0 +1,45 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square6",
+    "seed": 57,
+    "levelHash": "724d0850"
+  },
+  "encounter": {
+    "id": "act1_e1_square_b",
+    "title": "Act I Encounter 1 — Square Candidate B (6x6 seed 57)",
+    "enemies": [
+      {
+        "id": "grunt_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "label": "slow"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-003 square shortlist candidate B for Act I #1. 6x6 seed 57 (11 arrows: N1 E5 S3 W2). Exact 6x6 arena tile size. 3 free East arrows create False Temptation. Free W is only 1 arrow (#5), which unlocks #6. Proven clean path without Rotate: 0 damage in 5 taps (#1 -> #5 -> #6 -> #0 -> #4). Greedily targeting East first allows Grunt W to attack at turn 3 for 2 damage."
+  }
+}

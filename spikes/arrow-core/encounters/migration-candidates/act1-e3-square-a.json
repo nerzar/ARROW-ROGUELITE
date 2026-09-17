@@ -1,0 +1,52 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "square8",
+    "seed": 231,
+    "levelHash": "733a9511"
+  },
+  "encounter": {
+    "id": "act1_e3_square_a",
+    "title": "Act I Encounter 3 — Square Candidate A (8x8 seed 231)",
+    "enemies": [
+      {
+        "id": "caster_n",
+        "side": "N",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 4,
+          "kind": "cast",
+          "interruptible": true,
+          "interruptedAttack": {
+            "interval": 3,
+            "damage": 2,
+            "kind": "normal"
+          }
+        },
+        "label": "caster"
+      },
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 4,
+          "damage": 2
+        },
+        "label": "grunt"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "LD-003 square shortlist candidate A for Act I #3. 8x8 seed 231 (13 arrows: N4 E4 S1 W4). Caster + escort dynamic. Caster N (hp 3, CAST IN 3 dmg 4, interruptible -> normal IN 3 dmg 2); Grunt E (hp 2, ATTACK IN 4 dmg 2). Perfect 5-tap sequence: tapping #1(E) and #0(E) kills the escort Grunt and unlocks #3(N) to interrupt the Caster exactly on turn 3 before the cast fires. Then #4(N) and #6(N) finish Caster with 0 damage. Failing to interrupt takes 4 massive damage."
+  }
+}
