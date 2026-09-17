@@ -1,5 +1,11 @@
-// VIS-005: Goblin Taunter presentation state machine. Pure module (no DOM, no engine
-// imports) so vitest can cover it and the canvas renderer can consume it directly.
+// VIS-005: boss (sequential single-target, `def.boss`) presentation state machine. Pure module
+// (no DOM, no engine imports) so vitest can cover it and the canvas renderer can consume it
+// directly. Deliberately has NO species/asset knowledge -- it only maps an engine snapshot to a
+// pose NAME. Which PNG pack backs that pose name is a separate, swappable concern (assets.js's
+// `bossSpeciesFor(bossId)` + `BOSS_MANIFESTS`): VIS-005 first used it for Goblin Taunter/King,
+// VIS-008 repointed the prologue boss scene (cp-e5) to Goblin Shaman without touching a line of
+// this file -- proof the machine really is pack-agnostic. Taunter/King is now the reserved Act I
+// boss and keeps using this exact same state machine when its scene exists.
 //
 // This is PRESENTATION state -- gameplay (EncounterState/RunState) stays the source of
 // truth. The engine snapshot goes in, a pose name comes out. Animation timing here never

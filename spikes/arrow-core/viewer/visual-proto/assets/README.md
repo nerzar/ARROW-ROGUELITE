@@ -15,11 +15,39 @@ empty during development.
 
 Recommended size: roughly square, at least 512x512, transparent background for portraits.
 
-## VIS-005: Goblin Taunter pose pack
+## VIS-005/VIS-008: boss pose packs (species-swappable)
 
-`assets/bosses/goblin-taunter/` holds one PNG per presentation pose, all drawn
-contain-fitted into the same boss panel footprint with a shared bottom-center
-ground anchor (see `../boss-visual-state.js`):
+The boss presentation state machine (`../boss-visual-state.js`) has no species
+knowledge -- it only maps engine snapshot -> pose NAME. Which PNG pack backs
+that pose name is decided per scene by `bossSpeciesFor(bossId)` in
+`../assets.js`. Two packs currently exist, both full 7-pose sets, both always
+loaded (`BOSS_MANIFESTS` in `assets.js`):
+
+- **`goblin-shaman`** -- the **prologue boss** (cp-e5's `miniboss_placeholder`),
+  reassigned from Goblin Taunter/King by user decision (VIS-008).
+- **`goblin-taunter`** -- Goblin Taunter/King, **reserved for the Act I boss**.
+  Not deleted, not the default -- still loadable and reachable from the debug
+  console (`window.visualDebug.showBossPack('goblin-taunter')`) even though no
+  current scene uses it.
+
+### Goblin Shaman (`assets/bosses/goblin-shaman/`) -- prologue boss
+
+| Pose | File | Shown when |
+|---|---|---|
+| `idle` | `idle.png` | phase 1 baseline |
+| `taunt` | `taunt.png` | encounter appearance, briefly, then baseline |
+| `cast` | `cast.png` | armed interruptible CAST telegraph |
+| `stunned` | `stunned-hit.png` | hit / interrupted, briefly (runtime rename of source `stunned - hit.png`) |
+| `angry` | `angry.png` | phase 2 baseline |
+| `defeat` | `defeat.png` | boss defeated, terminal |
+| `back` | `back.png` | auxiliary pose, debug/manual only |
+
+Source: `magicarrowassets/creatures/goblin-shaman/`. Every other source file
+name matches its pose 1:1 (`idle.png` -> `idle.png`, etc); only the
+`stunned - hit.png` -> `stunned-hit.png` rename normalizes spaces/dashes for a
+runtime path, per the pose-name convention `${pose}.png` the Taunter pack uses.
+
+### Goblin Taunter/King (`assets/bosses/goblin-taunter/`) -- reserved Act I boss
 
 | Pose | File | Shown when |
 |---|---|---|
@@ -31,8 +59,10 @@ ground anchor (see `../boss-visual-state.js`):
 | `defeat` | `defeat.png` | boss defeated, terminal |
 | `back` | `back.png` | auxiliary pose, debug/manual only |
 
-A missing pose falls back to `idle`, then to the legacy gradient placeholder.
-No absolute paths are stored anywhere in runtime.
+Both packs: all drawn contain-fitted into the same boss panel footprint with a
+shared bottom-center ground anchor. A missing pose falls back to that pack's
+own `idle` (never another species' pack), then to the legacy gradient
+placeholder. No absolute paths are stored anywhere in runtime.
 
 ## VIS-006: Dire Wolf pose pack
 

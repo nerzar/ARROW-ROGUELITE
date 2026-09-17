@@ -6,7 +6,7 @@
 import {
   encounterFromJson, findWin, formatAction, formatEncounterReport, RunState, validateEncounter,
 } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
+import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { createBoardRenderer } from './board-renderer.js'
 import {
   appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
@@ -45,9 +45,17 @@ async function fetchJson(url) {
 
 const renderer = createBoardRenderer(ui.canvas)
 const assets = await loadAssets(ASSET_MANIFEST)
-// VIS-005: per-pose boss pack (missing files -> null -> idle -> placeholder fallback).
-const bossPack = await loadBossPack()
-const bossPosesLoaded = BOSS_POSES.filter((p) => bossPack[p]).length
+// VIS-005/VIS-008: per-pose boss packs, one per species (missing files -> null -> idle ->
+// placeholder fallback, same contract for both). `bossPack` (used for rendering/debug buttons)
+// is picked per scene in loadScene() via bossSpeciesFor(def.boss.id) -- boss-visual-state.js
+// itself never knows which species is active. Both packs stay loaded so Goblin Taunter/King
+// (the reserved Act I boss) is still reachable, e.g. via window.visualDebug.showBossPack(...).
+const bossPacks = {
+  'goblin-shaman': await loadBossPack(BOSS_MANIFESTS['goblin-shaman']),
+  'goblin-taunter': await loadBossPack(BOSS_MANIFESTS['goblin-taunter']),
+}
+let bossPack = bossPacks['goblin-shaman']
+let bossSpecies = 'goblin-shaman'
 // VIS-006: Dire Wolf pack for ordinary enemies (same null-on-missing contract).
 const wolfPack = await loadWolfPack()
 const wolfPosesLoaded = ENEMY_POSES.filter((p) => wolfPack[p]).length
@@ -128,6 +136,9 @@ async function loadScene(key) {
   renderer.resize(level, topReserve)
   renderer.resetFx()
   hint = null
+  // VIS-008: which species pack this scene's boss uses (null in enemies-mode scenes).
+  bossSpecies = def.boss ? bossSpeciesFor(def.boss.id) : bossSpecies
+  bossPack = bossPacks[bossSpecies]
   // VIS-005: encounter appearance -- brief taunt, then the baseline (never a permanent taunt).
   bossVisual = def.boss ? appearBossVisual(performance.now()) : null
   // VIS-006: ordinary enemies appear straight in idle, one independent visual per actor.
@@ -396,9 +407,10 @@ function renderPanel() {
     const pinned = s.pinnedArrows
     statusLines.push(`pinned arrows: ${pinned.length ? pinned.map((p) => `#${p.id} (${p.turnsLeft}t)`).join(', ') : '—'}`)
   }
-  // VIS-005: boss presentation state (debug-panel only -- gameplay state is the engine's).
+  // VIS-005/VIS-008: boss presentation state (debug-panel only -- gameplay state is the engine's).
   if (def.boss) {
-    statusLines.push(`boss art: ${bossPosesLoaded}/${BOSS_POSES.length} poses loaded`)
+    const loaded = BOSS_POSES.filter((p) => bossPack[p]).length
+    statusLines.push(`boss art: ${bossSpecies} ${loaded}/${BOSS_POSES.length} poses loaded`)
     if (bossVisual) statusLines.push(`boss pose: ${bossVisual.pose}${bossVisual.manual ? ' (manual)' : ''}`)
   }
   // VIS-006: per-actor wolf presentation state (same debug-panel-only contract).
@@ -513,6 +525,7 @@ window.visualDebug = {
   rotate,
   loadScene,
   boss: () => bossVisual, // VIS-005: current presentation pose state (null in enemies mode)
+  bossSpecies: () => (bossVisual ? bossSpecies : null), // VIS-008: which pack is currently active
   setBossPose: (pose) => { // VIS-005: manual debug override, same as the debug-panel buttons
     if (bossVisual) {
       bossVisual = manualBossPose(bossVisual, pose, performance.now())
@@ -520,6 +533,18 @@ window.visualDebug = {
       kick()
     }
     return bossVisual
+  },
+  // VIS-008: debug-only species swap so Goblin Taunter/King (reserved Act I boss) stays
+  // reachable without a UI control -- does not touch which pack a scene loads by default.
+  showBossPack: (species) => {
+    if (bossVisual && bossPacks[species]) {
+      bossSpecies = species
+      bossPack = bossPacks[species]
+      buildBossPoseButtons()
+      renderPanel()
+      kick()
+    }
+    return bossSpecies
   },
   wolf: () => wolfVisuals ? Object.fromEntries([...wolfVisuals].map(([id, w]) => [id, w.pose])) : null, // VIS-006: per-actor poses (null in boss mode)
   setWolfPose: (id, pose) => { // VIS-006: manual debug override per actor
