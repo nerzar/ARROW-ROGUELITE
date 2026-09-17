@@ -1,0 +1,5 @@
+mechanic,n_groups,total_group_members,records_processed,sex_female_n,sex_male_n,sex_unspecified_n,sex_coverage,age_year_coverage,age_lt18,age_18_24,age_25_34,age_35_44,age_45_54,age_55plus,age_unknown_no_year_n,city_coverage
+arrow,3,99,90,63,27,0,1.0,0.6222,0,suppressed,suppressed,suppressed,suppressed,37,34,0.6667
+sort,3,1450,1450,1169,281,0,1.0,0.4372,22,60,154,202,123,73,816,0.6662
+merge,3,469,469,386,83,0,1.0,0.4456,suppressed,suppressed,43,53,44,49,260,0.6887
+match3,3,739,730,403,327,0,1.0,0.4849,suppressed,37,122,120,46,suppressed,376,0.6589

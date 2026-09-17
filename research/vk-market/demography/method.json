@@ -1,0 +1,135 @@
+{
+  "stamp_utc": "20260917T050819Z",
+  "capture_date": "2026-09-17",
+  "api_version": "5.199",
+  "tls_source": "truststore",
+  "min_interval_s": 1.05,
+  "page_size": 1000,
+  "suppress_under_n": 20,
+  "rate_log": "artifacts/vk-demography/20260917T050819Z/requests.jsonl",
+  "requests_made": 26,
+  "mapping": [
+    {
+      "group_id": "236576213",
+      "app_id": 54380425,
+      "mechanic": "sort",
+      "label": "Yaga: Zelya sudby",
+      "app_title": "Яга: Зелья судьбы",
+      "author_owner_id": -236576213,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "233302675",
+      "app_id": 53448227,
+      "mechanic": "match3",
+      "label": "Grand Tour",
+      "app_title": "Гранд Тур: Гонки Матч 2",
+      "author_owner_id": -233302675,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "240373000",
+      "app_id": 54579291,
+      "mechanic": "arrow",
+      "label": "Strelki: Ochisti pole",
+      "app_title": "Стрелки: Очисти поле",
+      "author_owner_id": -240373000,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "225055876",
+      "app_id": 51871737,
+      "mechanic": "arrow",
+      "label": "Razberi Kubik",
+      "app_title": "Разбери Кубик",
+      "author_owner_id": -225055876,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "233439912",
+      "app_id": 54255702,
+      "mechanic": "sort",
+      "label": "Bolty i gaiki (Fabrika igr dev group)",
+      "app_title": "Болты и гайки: сортировка",
+      "author_owner_id": -233439912,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "234333127",
+      "app_id": 54102802,
+      "mechanic": "merge",
+      "label": "Tropikvil",
+      "app_title": "Тропиквиль",
+      "author_owner_id": -234333127,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "232830008",
+      "app_id": 54164742,
+      "mechanic": "merge",
+      "label": "Mir Sliyaniya",
+      "app_title": "Мир Слияния",
+      "author_owner_id": -232830008,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "236123415",
+      "app_id": 54458245,
+      "mechanic": "match3",
+      "label": "Tap Gallery",
+      "app_title": "Tap Gallery",
+      "author_owner_id": -236123415,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "237611414",
+      "app_id": 54539273,
+      "mechanic": "sort",
+      "label": "Razberi Strelochki",
+      "app_title": "Разбери Стрелочки",
+      "author_owner_id": -237611414,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "235802722",
+      "app_id": 54419995,
+      "mechanic": "merge",
+      "label": "Moy Zamok",
+      "app_title": "Мой Замок: Слияние и История",
+      "author_owner_id": -235802722,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "215368653",
+      "app_id": 54613094,
+      "mechanic": "match3",
+      "label": "GidKap dev group (Sadovody)",
+      "app_title": "Садоводы",
+      "author_owner_id": -215368653,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    },
+    {
+      "group_id": "240707160",
+      "app_id": 54698383,
+      "mechanic": "arrow",
+      "label": "Tuda-Syuda",
+      "app_title": "Туда-Сюда: Распутай Рисунок",
+      "author_owner_id": -240707160,
+      "official_link": true,
+      "evidence": "apps.get author_owner_id == -group_id, is_closed=0"
+    }
+  ],
+  "app_members_source": "research/vk-market/reference-audit/shortlist.csv (snapshot 2026-09-16, NOT MAU)",
+  "gidkap_note": "group 215368653 mapped via app 54613094 (Sadovody) author_owner_id; app 54263990 (Skazka 2026) belongs to group 233460848, same GidKap series"
+}
