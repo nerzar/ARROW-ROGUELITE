@@ -8,9 +8,12 @@ import { resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets
 import { BOSS_ANCHOR } from './boss-visual-state.js'
 import { ENEMY_ANCHOR } from './enemy-visual-state.js'
 import {
-  BOARD_FIT_HEIGHT, BOSS_SLOT_DIST, charSize, faceRect,
-  hudBoxes, podiumSlot, rotatedBoardBox, SLAB_CENTER, spriteMirror,
+  charSize, effectGround, faceRect,
+  hudBoxes, podiumSlot, spriteMirror,
 } from './arena-layout.js'
+import {
+  backdropCornersPx, cellToScreen, createBoardPlane, fitGrid, screenToCell,
+} from './board-plane.js'
 
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
@@ -54,22 +57,26 @@ export function createBoardRenderer(canvas, stageEl) {
   // -------------------------------------------------------------------------------------------
   // Geometry.
   //
-  // BUILD-020 layout pass v2: the canvas now spans the *whole stage* (like the background
-  // layer), not just a cropped square around the board -- a square canvas sized to the board's
-  // own margin could never reach the side podiums painted near the stage edges (arena-moonlit-
-  // fortress.png's aspect is close to 16:9, so a square inevitably falls far short of its
-  // width). The board itself is drawn as a smaller square sized/centered to sit inside the
-  // stone dais (SLAB_CENTER/BOARD_FIT_HEIGHT); characters anchor to the fixed stage-fraction
-  // podiums (PODIUM_GROUND, in arena-layout.js) instead of a radius from the board edge.
+  // FIX-021: the board is no longer an axis-aligned square rigidly rotated as one canvas
+  // transform. It's now a fixed, non-rotating projection plane (board-plane.js's homography,
+  // calibrated to the stone dais painted in the background art) that the logical cols x rows
+  // grid is fit into and projected through. Rotate only spins each logical point's normalized
+  // (u,v) around the plane's own center before projecting -- see board-plane.js's rotateUV --
+  // so the plane/backdrop footprint never changes shape or size, only the puzzle content
+  // (dots/arrows) visually turns within it. Click hit-testing goes through the exact inverse
+  // (screenToCell), so it can never drift from what's drawn.
+  //
+  // Characters still anchor to fixed stage-fraction podiums (PODIUM_GROUND/EFFECT_GROUND in
+  // arena-layout.js), independent of the board's own size/position, per FIX-021's "actor slots
+  // relative to the arena, not boardRect" requirement (already true since BUILD-020).
 
   // VIS-007: per-frame debug layout (canvas coords) for automated checks. Reset on every
   // frame; drawTarget appends one entry per live target (key/side/char/face/plate/badge/board).
   let layoutInfo = []
-  let boardBox = { x: 0, y: 0, w: 0, h: 0 }
+  let boardBBox = { x: 0, y: 0, w: 0, h: 0 }
 
   function resize(level) {
     const { width: w, height: h } = level
-    const span = Math.max(w, h)
     const stageRect = stageEl.getBoundingClientRect()
     const stageW = Math.max(1, stageRect.width)
     const stageH = Math.max(1, stageRect.height)
@@ -78,31 +85,37 @@ export function createBoardRenderer(canvas, stageEl) {
     canvas.height = Math.round(stageH * dpr)
     canvas.style.width = `${stageW}px`
     canvas.style.height = `${stageH}px`
-    const cell = Math.max(10, (BOARD_FIT_HEIGHT * stageH) / span)
-    const cx = SLAB_CENTER.x * stageW
-    const cy = SLAB_CENTER.y * stageH
-    geo = { w, h, cell, cx, cy, half: (span * cell) / 2, stageW, stageH }
+    const plane = createBoardPlane(stageW, stageH)
+    const fit = fitGrid(w, h)
+    // Approximate on-screen px per logical cell, for stroke widths/fonts that assume a roughly
+    // uniform local scale (the true scale varies across a projected trapezoid; this is a single
+    // representative value, sampled at the plane's own center -- exact per-pixel fidelity isn't
+    // needed for line thickness/font size, only "not microscopic, not oversized").
+    const backdrop = backdropCornersPx(plane, fit)
+    const topW = Math.hypot(backdrop.tr.x - backdrop.tl.x, backdrop.tr.y - backdrop.tl.y)
+    const botW = Math.hypot(backdrop.br.x - backdrop.bl.x, backdrop.br.y - backdrop.bl.y)
+    const leftH = Math.hypot(backdrop.bl.x - backdrop.tl.x, backdrop.bl.y - backdrop.tl.y)
+    const rightH = Math.hypot(backdrop.br.x - backdrop.tr.x, backdrop.br.y - backdrop.tr.y)
+    const span = Math.max(w, h)
+    const cell = Math.max(6, ((topW + botW) / 2 / span + (leftH + rightH) / 2 / span) / 2)
+    geo = { w, h, plane, fit, cell, stageW, stageH }
     return geo
   }
 
-  function boardMatrix(angleDeg) {
-    const g = geo
-    return new DOMMatrix().translate(g.cx, g.cy).rotate(angleDeg).translate((-g.w * g.cell) / 2, (-g.h * g.cell) / 2)
-  }
-
-  function cellCenter(c) {
+  function cellCenter(c, angleDeg) {
     const x = c % geo.w
-    return [(x + 0.5) * geo.cell, ((c - x) / geo.w + 0.5) * geo.cell]
+    const col = x
+    const row = (c - x) / geo.w
+    const p = cellToScreen(geo.plane, geo.fit, col, row, angleDeg)
+    return [p.x, p.y]
   }
 
   function hitTest(clientX, clientY, s, level) {
     if (!geo || rotAnim) return -1
     const r = canvas.getBoundingClientRect()
-    const p = boardMatrix(s.rotation * 90).inverse().transformPoint(new DOMPoint(clientX - r.left, clientY - r.top))
-    const x = Math.floor(p.x / geo.cell)
-    const y = Math.floor(p.y / geo.cell)
-    if (x < 0 || y < 0 || x >= level.width || y >= level.height) return -1
-    return s.board.ownerAt(y * level.width + x)
+    const { col, row } = screenToCell(geo.plane, geo.fit, clientX - r.left, clientY - r.top, s.rotation * 90)
+    if (col < 0 || row < 0 || col >= level.width || row >= level.height) return -1
+    return s.board.ownerAt(row * level.width + col)
   }
 
   function setHover(id) {
@@ -249,16 +262,19 @@ export function createBoardRenderer(canvas, stageEl) {
     // text -- a real bug the old 2-line layout happened not to trip.
     // VIS-007: characters and HUD live on arena slots away from the board, so the board can
     // never paint over them; the per-frame layout record below lets automated checks prove it.
-    drawBoardSurface(col)
+    const backdrop = backdropCornersPx(geo.plane, geo.fit)
+    boardBBox = {
+      x: Math.min(backdrop.tl.x, backdrop.bl.x),
+      y: Math.min(backdrop.tl.y, backdrop.tr.y),
+      w: Math.max(backdrop.tr.x, backdrop.br.x) - Math.min(backdrop.tl.x, backdrop.bl.x),
+      h: Math.max(backdrop.bl.y, backdrop.br.y) - Math.min(backdrop.tl.y, backdrop.tr.y),
+    }
+    drawBoardSurface(col, backdrop)
     drawSideReadouts(col, s, def)
     layoutInfo = []
-    boardBox = rotatedBoardBox(geo.cx, geo.cy, geo.w * geo.cell, geo.h * geo.cell, shownAngle)
     for (const t of targets) drawTarget(col, t, now)
-    ctx.save()
-    ctx.setTransform(new DOMMatrix().scale(dpr, dpr).multiply(boardMatrix(shownAngle)))
     for (const a of level.arrows) drawArrow(col, s, def, a, hint)
     for (const sh of shots) drawShot(col, sh, now)
-    ctx.restore()
 
     return animating
 
@@ -285,12 +301,22 @@ export function createBoardRenderer(canvas, stageEl) {
       const ox = towardBoard.x * lunge + (t.side === 0 || t.side === 2 ? shake : 0)
       const oy = towardBoard.y * lunge + (t.side === 1 || t.side === 3 ? shake : 0) + idle
 
+      // FIX-021: the VFX ground anchor is independent of the character's own foot-contact point
+      // (and of its idle bob/shake/lunge offsets) -- see arena-layout.js's EFFECT_GROUND. Computed
+      // in the same absolute stage space as `slot`, then converted below to the coordinates local
+      // to the character's translated origin (slot.x+ox, slot.y+oy).
+      const eff = effectGround(t.side, g.stageW, g.stageH)
+      const effLocalX = eff.x - (slot.x + ox)
+      const effLocalY = eff.y - (slot.y + oy)
+
       ctx.save()
       ctx.globalAlpha = 1 - deathP
       ctx.translate(slot.x + ox, slot.y + oy)
 
-      // Telegraph: a pulsing ground ellipse at the feet (urgency color), not a box ring --
-      // the character itself is never framed. CAST and ATTACK stay visually distinct.
+      // Telegraph: a pulsing ground ellipse on the podium surface (urgency color), not a box
+      // ring -- the character itself is never framed. CAST and ATTACK stay visually distinct.
+      // FIX-021: anchored at effLocalX/Y (the podium's flat top), not the character's own feet,
+      // so a wide cast-glow never spills past the podium's front lip into the wall/stairs below.
       if (Number.isFinite(t.countdown) && !t.dead) {
         const isCast = t.attackKind === 'cast'
         const urgency = t.countdown <= 1 ? 1 : t.countdown === 2 ? 0.55 : 0.3
@@ -299,19 +325,21 @@ export function createBoardRenderer(canvas, stageEl) {
         if (isCast && assets.castGlow) {
           const s2 = charW * 1.1 * (1 + cyc * 0.3)
           ctx.globalAlpha = (1 - cyc) * 0.85 * urgency
-          ctx.drawImage(assets.castGlow, -s2 / 2, charH / 2 - s2 / 2, s2, s2)
+          ctx.drawImage(assets.castGlow, effLocalX - s2 / 2, effLocalY - s2 / 2, s2, s2)
         } else {
           ctx.globalAlpha = (1 - cyc) * 0.6 * urgency + 0.08 * urgency
           ctx.strokeStyle = isCast ? col.cast : urgency >= 1 ? col.danger : col.aim
           ctx.lineWidth = 2.5
           ctx.beginPath()
-          ctx.ellipse(0, charH / 2, charW * (0.55 + cyc * 0.25), Math.max(5, cell * 0.14) * (1 + cyc * 0.4), 0, 0, Math.PI * 2)
+          ctx.ellipse(effLocalX, effLocalY, charW * (0.55 + cyc * 0.25), Math.max(5, cell * 0.14) * (1 + cyc * 0.4), 0, 0, Math.PI * 2)
           ctx.stroke()
         }
         ctx.restore()
       }
 
-      // Ground shadow: soft ellipse at the feet, keeps the actor planted on the arena.
+      // Ground shadow: soft ellipse at the feet, keeps the actor planted on the arena. Stays on
+      // the character's own foot point (not the effect anchor) -- this is "where I stand", not a
+      // telegraph.
       ctx.save()
       ctx.globalAlpha = (1 - deathP * 0.5) * 1
       ctx.fillStyle = col.groundShadow
@@ -418,7 +446,7 @@ export function createBoardRenderer(canvas, stageEl) {
         slot: { x: 0, y: 0 },
         char: { x: -charW / 2, y: -charH / 2, w: charW, h: charH },
         side: t.side, fontPx, lineH, lineCount: lines.length, barH, maxTextW: maxW, cell,
-        slotAbsX: slot.x, boardCx: g.cx, boardHalfPx: g.half,
+        slotAbsX: slot.x, boardCx: boardBBox.x + boardBBox.w / 2, boardHalfPx: boardBBox.w / 2,
       })
       if (!t.dead || t.isBoss) {
         const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
@@ -502,7 +530,8 @@ export function createBoardRenderer(canvas, stageEl) {
         face: faceRect(charR),
         plate: { x: ax + hud.plate.x, y: ay + hud.plate.y, w: hud.plate.w, h: hud.plate.h },
         badge: { x: ax + hud.badge.x, y: ay + hud.badge.y },
-        board: boardBox,
+        effectAnchor: eff,
+        board: boardBBox,
       })
 
       ctx.restore()
@@ -623,39 +652,56 @@ export function createBoardRenderer(canvas, stageEl) {
       for (let d = 0; d < 4; d++) {
         const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead) : d === s.bossSide
         if (isLive) continue // the target panel itself already shows this side clearly
-        const r = g.half + BOSS_SLOT_DIST * g.cell + 1.05 * g.cell
-        const x = g.cx + DX[d] * r
-        const y = g.cy + DY[d] * r
+        // FIX-021: same arena-relative podium anchor an actor on this side would use (not a
+        // board-relative radius) -- an empty side still reads its readout from a stable, real
+        // point on the arena instead of one that moves with the board's own size.
+        const slot = podiumSlot(d, d === 0, g.stageW, g.stageH, g.cell)
         ctx.fillStyle = col.muted
         ctx.save()
-        ctx.translate(x, y)
+        ctx.translate(slot.x, slot.y)
         if (d === 1 || d === 3) ctx.rotate(d === 1 ? Math.PI / 2 : -Math.PI / 2)
         ctx.fillText(`${alive[d]} (своб. ${free[d]})`, 0, 0)
         ctx.restore()
       }
     }
 
-    function drawBoardSurface(col) {
+    function drawBoardSurface(col, backdrop) {
       const g = geo
-      ctx.save()
-      ctx.setTransform(new DOMMatrix().scale(dpr, dpr).multiply(boardMatrix(shownAngle)))
-      const pad = g.cell * 0.22
+      // FIX-021: the backdrop is the plane's own fixed footprint (see board-plane.js's
+      // fitGrid/backdropCornersPx) -- a quadrilateral that follows the stone dais's trapezoid,
+      // never rotates, and never changes shape/size across Rotate or board aspect ratio. A
+      // translucent inset panel, not an opaque card, so the masonry underneath keeps showing
+      // through (task: "не создавать ощущение floating card").
       ctx.save()
       ctx.shadowColor = col.boardGlow
-      ctx.shadowBlur = 22
-      const grad = ctx.createLinearGradient(0, -pad, 0, g.h * g.cell + pad)
+      ctx.shadowBlur = 18
+      quadPath(backdrop)
+      const grad = ctx.createLinearGradient(backdrop.tl.x, backdrop.tl.y, backdrop.bl.x, backdrop.bl.y)
       grad.addColorStop(0, col.boardTop)
       grad.addColorStop(1, col.boardBottom)
       ctx.fillStyle = grad
-      roundRect(-pad, -pad, g.w * g.cell + pad * 2, g.h * g.cell + pad * 2, g.cell * 0.4)
       ctx.fill()
       ctx.restore()
+      ctx.save()
       ctx.strokeStyle = col.boardBorder
       ctx.lineWidth = 2
-      roundRect(-pad, -pad, g.w * g.cell + pad * 2, g.h * g.cell + pad * 2, g.cell * 0.4)
+      quadPath(backdrop)
       ctx.stroke()
+      ctx.restore()
+
+      // Grid dots: part of the puzzle layer, so they rotate/refit with it (unlike the backdrop
+      // above). Clipped to the backdrop quad as a safety net against any rounding overflow at
+      // the plane's edges.
+      ctx.save()
+      quadPath(backdrop)
+      ctx.clip()
       ctx.fillStyle = col.dot
-      for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) ctx.fillRect((x + 0.5) * g.cell - 1, (y + 0.5) * g.cell - 1, 2, 2)
+      for (let row = 0; row < g.h; row++) {
+        for (let x = 0; x < g.w; x++) {
+          const p = cellToScreen(g.plane, g.fit, x, row, shownAngle)
+          ctx.fillRect(p.x - 1, p.y - 1, 2, 2)
+        }
+      }
       ctx.restore()
     }
 
@@ -669,7 +715,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // draws from, kept visually consistent here (rock-brown, dashed) so the two viewers agree.
       const pinned = s.isPinned(a.id)
       const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead) : arena === s.bossSide
-      const pts = a.cells.map(cellCenter)
+      const pts = a.cells.map((c) => cellCenter(c, shownAngle))
       const lw = Math.max(3, geo.cell * 0.27)
       const isHint = hint && hint.kind === 'tap' && hint.id === a.id
       const isHover = a.id === hoverId
@@ -721,6 +767,8 @@ export function createBoardRenderer(canvas, stageEl) {
       // Arrowhead: a filled kite with a small highlight edge.
       const [hx, hy] = pts[pts.length - 1]
       const d = a.dir
+      const rot = shownAngle
+      const [dxr, dyr] = rotateDirPx(d, rot)
       const sz = geo.cell * 0.42
       ctx.save()
       ctx.shadowBlur = pinned ? 6 : free ? 10 : 0
@@ -728,14 +776,24 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.fillStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
       ctx.globalAlpha = pinned ? 0.85 : free ? 1 : 0.6
       ctx.beginPath()
-      ctx.moveTo(hx + DX[d] * sz, hy + DY[d] * sz)
-      ctx.lineTo(hx - DY[d] * sz * 0.82, hy + DX[d] * sz * 0.82)
-      ctx.lineTo(hx + DY[d] * sz * 0.82, hy - DX[d] * sz * 0.82)
+      ctx.moveTo(hx + dxr * sz, hy + dyr * sz)
+      ctx.lineTo(hx + dyr * sz * 0.82, hy - dxr * sz * 0.82)
+      ctx.lineTo(hx - dyr * sz * 0.82, hy + dxr * sz * 0.82)
       ctx.closePath()
       ctx.fill()
       ctx.restore()
 
-      drawPinFx(col, a, hx, hy, sz, pinned, s)
+      drawPinFx(col, a, hx, hy, dxr, dyr, sz, pinned, s)
+    }
+
+    /** Direction unit vector d (board-local, DX/DY) turned by the puzzle layer's current visual
+     * angle -- the arrowhead/pin marker must point along the *drawn* (rotated) segment, not the
+     * logical one, since FIX-021 draws arrows via projected points rather than a canvas-level
+     * rotation transform. */
+    function rotateDirPx(d, angleDeg) {
+      const rad = (angleDeg * Math.PI) / 180
+      const cos = Math.cos(rad), sin = Math.sin(rad)
+      return [DX[d] * cos - DY[d] * sin, DX[d] * sin + DY[d] * cos]
     }
 
     /** EXP-013/VS-001: rock marker + remaining-turns badge for the whole pin duration, plus the
@@ -743,10 +801,10 @@ export function createBoardRenderer(canvas, stageEl) {
      * green "UNPINNED" pulse when it expires, and a denied-tap "PINNED" popup (no HP shown lost --
      * there is none). Deliberately simple (an icon + text popup): no puppet/FX pipeline, per the
      * VS-001 brief. */
-    function drawPinFx(col, a, hx, hy, sz, pinned, s) {
+    function drawPinFx(col, a, hx, hy, dxr, dyr, sz, pinned, s) {
       const fx = arrowFxFor(a.id)
-      const markerX = hx + DX[a.dir] * sz * 2.2
-      const markerY = hy + DY[a.dir] * sz * 2.2
+      const markerX = hx + dxr * sz * 2.2
+      const markerY = hy + dyr * sz * 2.2
 
       if (pinned) {
         const turnsLeft = s.pinnedArrows.find((p) => p.id === a.id)?.turnsLeft ?? 0
@@ -803,10 +861,11 @@ export function createBoardRenderer(canvas, stageEl) {
 
     function drawShot(col, sh, now) {
       const t = clamp01((now - sh.t0) / 300)
-      const [hx, hy] = cellCenter(sh.cells[sh.cells.length - 1])
+      const [hx, hy] = cellCenter(sh.cells[sh.cells.length - 1], shownAngle)
+      const [dxr, dyr] = rotateDirPx(sh.dir, shownAngle)
       const dist = (Math.max(geo.w, geo.h) + 3.5) * geo.cell * t
-      const x = hx + DX[sh.dir] * dist
-      const y = hy + DY[sh.dir] * dist
+      const x = hx + dxr * dist
+      const y = hy + dyr * dist
       ctx.save()
       ctx.shadowBlur = 10
       ctx.shadowColor = sh.hit ? col.aimGlow : col.mutedGlow
@@ -815,7 +874,7 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.lineCap = 'round'
       ctx.globalAlpha = 1 - t * 0.5
       ctx.beginPath()
-      ctx.moveTo(x - DX[sh.dir] * geo.cell * 1.1, y - DY[sh.dir] * geo.cell * 1.1)
+      ctx.moveTo(x - dxr * geo.cell * 1.1, y - dyr * geo.cell * 1.1)
       ctx.lineTo(x, y)
       ctx.stroke()
       ctx.restore()
@@ -827,6 +886,15 @@ export function createBoardRenderer(canvas, stageEl) {
     ctx.moveTo(pts[0][0], pts[0][1])
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1])
     ctx.stroke()
+  }
+
+  function quadPath(q) {
+    ctx.beginPath()
+    ctx.moveTo(q.tl.x, q.tl.y)
+    ctx.lineTo(q.tr.x, q.tr.y)
+    ctx.lineTo(q.br.x, q.br.y)
+    ctx.lineTo(q.bl.x, q.bl.y)
+    ctx.closePath()
   }
 
   function roundRect(x, y, w, h, r) {
@@ -842,8 +910,11 @@ export function createBoardRenderer(canvas, stageEl) {
   function palette(dark) {
     return {
       board: dark ? '#26262a' : '#ffffff',
-      boardTop: dark ? '#2c2c31' : '#ffffff', boardBottom: dark ? '#1d1d20' : '#ece9e2',
-      boardBorder: dark ? '#4a4a52' : '#c9c2b0', boardGlow: dark ? 'rgba(120,140,255,0.25)' : 'rgba(140,110,40,0.18)',
+      // FIX-021: translucent, not opaque -- the backdrop is an inset readability panel inside
+      // the stone plane, not an opaque card sitting on top of it.
+      boardTop: dark ? 'rgba(30,28,34,0.62)' : 'rgba(255,255,255,0.55)',
+      boardBottom: dark ? 'rgba(16,15,19,0.70)' : 'rgba(220,214,198,0.62)',
+      boardBorder: dark ? 'rgba(200,195,210,0.35)' : 'rgba(120,105,70,0.45)', boardGlow: dark ? 'rgba(120,140,255,0.22)' : 'rgba(140,110,40,0.16)',
       dot: dark ? '#4a4a4f' : '#c9c9c6',
       arrow: dark ? '#a9a9b0' : '#8d8a80', arrowDim: dark ? '#55555a' : '#c4c4c0', aim: dark ? '#ffd76a' : '#b8791a',
       aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',
@@ -873,5 +944,25 @@ export function createBoardRenderer(canvas, stageEl) {
     collectTargets,
     /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */
     debugLayout() { return layoutInfo },
+    /** FIX-021: board-plane debug API (corners/logical size/fit + point projection). */
+    boardPlane() {
+      if (!geo) return null
+      return {
+        corners: geo.plane.corners,
+        backdrop: backdropCornersPx(geo.plane, geo.fit),
+        fit: geo.fit,
+        cols: geo.w, rows: geo.h,
+        angleDeg: shownAngle,
+        cellPx: geo.cell,
+      }
+    },
+    projectBoardPoint(col, row, angleDeg = shownAngle) {
+      if (!geo) return null
+      return cellToScreen(geo.plane, geo.fit, col, row, angleDeg)
+    },
+    unprojectBoardPoint(x, y, angleDeg = shownAngle) {
+      if (!geo) return null
+      return screenToCell(geo.plane, geo.fit, x, y, angleDeg)
+    },
   }
 }

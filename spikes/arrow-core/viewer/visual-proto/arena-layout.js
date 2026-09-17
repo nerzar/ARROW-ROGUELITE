@@ -19,7 +19,8 @@
 // тоже немного увеличить"). The boss's ceiling is set by real headroom, not taste: its feet are
 // pinned to PODIUM_GROUND[0] (y 0.40 of the stage), so its height + the HUD stack above it must
 // fit above that line without reaching the topbar -- see board-renderer.js's resize().
-export const BOSS_CHAR = { w: 6.4, h: 6.4 }
+// FIX-021: boss bumped moderately again per the approved review ("Shaman чуть увеличить").
+export const BOSS_CHAR = { w: 6.9, h: 6.9 }
 export const SIDE_CHAR = { w: 6.0, h: 6.0 }
 
 // Slot distance from the board edge (cells). The boss stands slightly further out so its
@@ -59,13 +60,24 @@ export function podiumSlot(side, isBoss, stageW, stageH, cell) {
   return { x: g.x * stageW, y: g.y * stageH - h / 2 }
 }
 
-// The board's own footprint: the blank stone dais in the art sits in this stage-fraction band
-// (measured the same way as PODIUM_GROUND above). BOARD_FIT_HEIGHT is the fraction of the
-// stage's height the square board's side should occupy -- sized to sit inside the dais at every
-// board size (6x7 or 8x10) with a visible stone margin, never wider than the dais's narrowest
-// (top) edge.
-export const SLAB_CENTER = { x: 0.469, y: 0.6615 }
-export const BOARD_FIT_HEIGHT = 0.36
+// FIX-021: the VFX ground anchor is deliberately NOT the character's own foot-contact point.
+// PODIUM_GROUND plants the character's feet right at each podium's front lip (correct for a
+// standing character); a telegraph/glow drawn at that same point has enough vertical spread
+// (see drawTarget's castGlow/ellipse sizing) to spill past the lip into the vertical stair
+// drop below it. EFFECT_GROUND pulls the anchor back onto the flat top of each podium instead,
+// calibrated by eye against arena-moonlit-fortress.png the same way PODIUM_GROUND was.
+export const EFFECT_GROUND = {
+  0: { x: 0.469, y: 0.400 }, // N: center of the round back platform's flat top, clear of the front lip
+  1: { x: 0.825, y: 0.560 }, // E: center of the right platform, clear of the staircase edge
+  2: { x: 0.469, y: 0.900 }, // S: not used by any current encounter -- symmetric fallback
+  3: { x: 0.155, y: 0.560 }, // W: center of the left platform
+}
+
+/** VFX ground anchor in canvas px -- see EFFECT_GROUND. Independent of character size/pose. */
+export function effectGround(side, stageW, stageH) {
+  const g = EFFECT_GROUND[side]
+  return { x: g.x * stageW, y: g.y * stageH }
+}
 
 /** Slot center (the character's ground-center x, body-center y) in canvas px. */
 export function slotCenter(boardCx, boardCy, boardHalfPx, side, isBoss, cell, DX, DY) {

@@ -4,7 +4,7 @@
 // 16:9 desktop shell: board-renderer.js draws the board/targets, this file owns scene loading,
 // input, HUD DOM, and the win/loss overlay. No combat rule is duplicated here.
 import {
-  encounterFromJson, findWin, formatAction, formatEncounterReport, RunState, validateEncounter,
+  encounterFromJson, findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { createBoardRenderer } from './board-renderer.js'
@@ -141,6 +141,26 @@ async function loadScene(key) {
     run = new RunState(runConfig, [step])
   }
   loadActiveStep()
+}
+
+// FIX-021 debug-only: render a freshly generated SQUARE board (not a saved encounter) purely to
+// visually check the board-plane fit at the square-first policy's target sizes (6x6..10x10). No
+// new encounter content is added -- the level is generated in memory with the same deterministic
+// generator every other scene uses, and reuses rock-spike's minimal single-enemy def (same
+// structural requirements: level + def, independent of board size) just so a full, valid
+// EncounterState/RunState exists to drive the renderer. Never wired to any UI control.
+async function loadSquareDebug(n, seed = 1) {
+  const base = await getStep(STANDALONE_SCENES.find((s) => s.key === 'rock-spike'))
+  const gen = generateLevel({ ...PRESETS.medium, width: n, height: n, minArrows: Math.max(4, Math.round(n * n * 0.12)) }, seed)
+  if (!gen.ok || !gen.level) return { ok: false, attempts: gen.attempts, rejects: gen.rejects }
+  const step = {
+    id: `debug-square-${n}`, title: `FIX-021 debug -- square ${n}x${n} (seed ${seed})`,
+    level: gen.level, def: base.def, board: { preset: `square-${n}`, seed },
+  }
+  stepCache.set(step.id, step)
+  run = new RunState(runConfig, [step])
+  loadActiveStep()
+  return { ok: true, width: gen.level.width, height: gen.level.height, arrows: gen.level.arrows.length }
 }
 
 function loadActiveStep() {
@@ -619,4 +639,11 @@ window.visualDebug = {
     return wolfVisuals?.get(id) ?? null
   },
   layout: () => renderer.debugLayout(), // VIS-007: per-frame arena layout (canvas coords)
+  // FIX-021: board-plane projection debug API -- corners/logical fit + point projection, so
+  // browser checks can verify click mapping and plane geometry without eyeballing pixels.
+  boardPlane: () => renderer.boardPlane(),
+  projectBoardPoint: (col, row, angleDeg) => renderer.projectBoardPoint(col, row, angleDeg),
+  unprojectBoardPoint: (x, y, angleDeg) => renderer.unprojectBoardPoint(x, y, angleDeg),
+  // FIX-021: square-first policy visual QA -- see loadSquareDebug's own comment.
+  loadSquareDebug,
 }
