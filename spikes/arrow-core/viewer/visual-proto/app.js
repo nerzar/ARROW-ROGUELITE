@@ -19,20 +19,42 @@ const ui = {
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'),
 }
 
-// Three required scenes (VS-001): cp-e4's two simultaneous regular enemies (EXP-010b), cp-e5's
-// mini-boss with an interruptible cast in phase 2 (EXP-011), and rock-spike's ATTACK IN N + THROW
-// IN N + PINNED arrow (EXP-013). All three are already-accepted encounter content -- this file
-// does not add/alter seeds or numbers.
-const SCENES = [
-  { key: 'cp-e4', title: 'Пролог · два врага одновременно (seed 10)', file: '../../encounters/cp-e4.json' },
-  { key: 'cp-e5', title: 'Mini-boss · CAST/interrupt (seed 1571)', file: '../../encounters/cp-e5.json' },
-  { key: 'rock-spike', title: 'Rock-spike · THROW/PIN (seed 15)', file: '../../encounters/rock-spike.json' },
+// ACT-I-001 prototype sequence: Prologue complete (reward +2 Rotate) -> Act I #1 -> Act I #2 -> Act I #3.
+// HP and shared Rotate pool persist across all sequence encounters.
+const SEQUENCE_STEPS = [
+  { key: 'cp-e5', title: 'Пролог · Mini-boss (seed 1571)', file: '../../encounters/cp-e5.json' },
+  { key: 'act1-e1', title: 'Act I #1 · Двуручный рубеж (seed 22)', file: '../../encounters/act1-e1.json' },
+  { key: 'act1-e2', title: 'Act I #2 · Взаимный замок (seed 112)', file: '../../encounters/act1-e2.json' },
+  { key: 'act1-e3', title: 'Act I #3 · Кастер и свита (seed 25)', file: '../../encounters/act1-e3.json' },
 ]
+
+const STANDALONE_SCENES = [
+  { key: 'cp-e4', title: 'Debug · два врага одновременно (seed 10)', file: '../../encounters/cp-e4.json' },
+  { key: 'rock-spike', title: 'Debug · Rock-spike THROW/PIN (seed 15)', file: '../../encounters/rock-spike.json' },
+]
+
+const ALL_SCENES = [...SEQUENCE_STEPS, ...STANDALONE_SCENES]
 
 async function fetchJson(url) {
   const r = await fetch(url, { cache: 'no-store' })
   if (!r.ok) throw new Error(`${url}: ${r.status}`)
   return r.json()
+}
+
+const stepCache = new Map()
+async function getStep(scene) {
+  if (stepCache.has(scene.key)) return stepCache.get(scene.key)
+  const raw = await fetchJson(scene.file)
+  const parsed = encounterFromJson(raw)
+  const step = {
+    id: scene.key,
+    title: scene.title,
+    level: parsed.level,
+    def: parsed.file.encounter,
+    board: parsed.file.board,
+  }
+  stepCache.set(scene.key, step)
+  return step
 }
 
 const renderer = createBoardRenderer(ui.canvas)
@@ -71,14 +93,32 @@ function topStatusReserve(d) {
 async function loadScene(key) {
   hideOverlay()
   ui.stage.classList.remove('hit-flash')
-  const scene = SCENES.find((s) => s.key === key) ?? SCENES[0]
-  ui.sceneTitle.textContent = scene.title
-  const raw = await fetchJson(scene.file)
-  const parsed = encounterFromJson(raw)
-  level = parsed.level
-  def = parsed.file.encounter
-  board = parsed.file.board
-  run = new RunState(runConfig, [{ id: scene.key, title: scene.title, level, def }])
+  const seqIdx = SEQUENCE_STEPS.findIndex((s) => s.key === key)
+  if (seqIdx >= 0) {
+    const steps = await Promise.all(SEQUENCE_STEPS.map(getStep))
+    if (seqIdx === 0) {
+      run = new RunState({ ...runConfig, initialRotateCharges: 0 }, steps)
+    } else {
+      run = new RunState({ ...runConfig, initialRotateCharges: 2 }, steps)
+      run.debugJumpTo(seqIdx, 2)
+    }
+  } else {
+    const standalone = STANDALONE_SCENES.find((s) => s.key === key) ?? STANDALONE_SCENES[0]
+    const step = await getStep(standalone)
+    run = new RunState(runConfig, [step])
+  }
+  loadActiveStep()
+}
+
+function loadActiveStep() {
+  hideOverlay()
+  ui.stage.classList.remove('hit-flash')
+  const step = run.currentStep
+  level = step.level
+  def = step.def
+  board = step.board ?? { preset: 'unknown', seed: 0 }
+  ui.scenePick.value = step.id
+  ui.sceneTitle.textContent = step.title ?? step.id
   topReserve = topStatusReserve(def)
   renderer.resize(level, topReserve)
   renderer.resetFx()
@@ -88,7 +128,7 @@ async function loadScene(key) {
   ui.msgLine.textContent = def.enemies
     ? `Враги одновременно: ${run.encounter.enemies.map((e) => e.label ?? e.id).join(', ')}.` +
       (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '')
-    : `Цель: ${def.boss.id}.`
+    : `Цель: ${def.boss?.id ?? 'boss'}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
   ui.report.textContent = formatEncounterReport(rep)
   renderPanel()
@@ -250,16 +290,39 @@ function showOverlay(kind) {
   if (kind === 'dead') {
     ui.overlayTitle.textContent = 'Поражение'
     ui.overlayBody.textContent = 'HP игрока закончилось.'
+    ui.overlayNext.textContent = 'Заново'
+    ui.overlayNext.onclick = () => {
+      hideOverlay()
+      run.restartStep()
+      loadActiveStep()
+    }
   } else {
-    ui.overlayTitle.textContent = 'Цель выполнена'
-    // RUN-001: prototype boss-reward notification (no production reward screen): the encounter
-    // def declares the run-pool grant, RunState.advance() claims it exactly once.
+    const isSeq = run.steps.length > 1
+    const isLast = !isSeq || run.isLastStep
+    ui.overlayTitle.textContent = isLast ? 'Победа!' : 'Цель выполнена'
     const reward = def.winRotateReward ?? 0
-    ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}.` +
-      (reward > 0 ? ` Награда: +${reward} ROTATE (общий ресурс забега: ${run.rotateCharges + reward}).` : '')
+    let body = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}.`
+    if (reward > 0) {
+      body += ` Награда: +${reward} ROTATE (общий ресурс забега: ${run.rotateCharges + reward}).`
+    } else if (isSeq) {
+      body += ` Rotate осталось: ${run.rotateCharges}.`
+    }
+    ui.overlayBody.textContent = body
+    if (isSeq && !run.isLastStep) {
+      ui.overlayNext.textContent = 'Далее →'
+      ui.overlayNext.onclick = () => {
+        hideOverlay()
+        run.advance()
+        loadActiveStep()
+      }
+    } else {
+      ui.overlayNext.textContent = 'Заново'
+      ui.overlayNext.onclick = () => {
+        hideOverlay()
+        loadScene(ui.scenePick.value)
+      }
+    }
   }
-  ui.overlayNext.textContent = 'restart'
-  ui.overlayNext.onclick = () => { hideOverlay(); loadScene(ui.scenePick.value) }
 }
 function hideOverlay() {
   if (overlayTimer) clearTimeout(overlayTimer)
@@ -331,7 +394,14 @@ ui.canvas.addEventListener('click', (ev) => {
 })
 ui.rotCw.onclick = () => rotate(1)
 ui.rotCcw.onclick = () => rotate(-1)
-ui.restartBtn.onclick = () => loadScene(ui.scenePick.value)
+ui.restartBtn.onclick = () => {
+  if (run && run.steps.length > 1) {
+    run.restartStep()
+    loadActiveStep()
+  } else {
+    loadScene(ui.scenePick.value)
+  }
+}
 ui.hintBtn.onclick = showHint
 ui.debugToggle.onclick = () => ui.debugPanel.classList.toggle('hidden')
 ui.scenePick.onchange = () => loadScene(ui.scenePick.value)
@@ -341,15 +411,22 @@ window.addEventListener('keydown', (ev) => {
   const k = ev.key.toLowerCase()
   if (k === 'q') rotate(-1)
   else if (k === 'e') rotate(1)
-  else if (k === 'r') loadScene(ui.scenePick.value)
+  else if (k === 'r') {
+    if (run && run.steps.length > 1) {
+      run.restartStep()
+      loadActiveStep()
+    } else {
+      loadScene(ui.scenePick.value)
+    }
+  }
   else if (k === 'h') showHint()
   else if (k === 'd') ui.debugPanel.classList.toggle('hidden')
   else return
   ev.preventDefault()
 })
 
-for (const scene of SCENES) ui.scenePick.append(new Option(scene.title, scene.key))
-const initialKey = new URLSearchParams(location.hash.slice(1)).get('scene') ?? SCENES[0].key
+for (const scene of ALL_SCENES) ui.scenePick.append(new Option(scene.title, scene.key))
+const initialKey = new URLSearchParams(location.hash.slice(1)).get('scene') ?? 'act1-e1'
 ui.scenePick.value = initialKey
 await loadScene(initialKey)
 
@@ -357,5 +434,7 @@ await loadScene(initialKey)
 window.visualDebug = {
   run: () => run,
   state: () => run.encounter,
+  tap,
+  rotate,
   loadScene,
 }

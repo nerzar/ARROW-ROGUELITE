@@ -1,0 +1,45 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 22,
+    "levelHash": "6e96e567"
+  },
+  "encounter": {
+    "id": "act1_e1",
+    "title": "Act I Encounter 1 — Two-Front Stand (seed 22)",
+    "enemies": [
+      {
+        "id": "grunt_w",
+        "side": "W",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 5,
+          "damage": 2
+        },
+        "label": "slow"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "ACT-I-001 playtest content (docs/ACT-I-FIRST-3-SHORTLIST.md §2). easy 6x7 seed 22 (11 arrows: N1 E4 S2 W4). Multi-enemy reinforcement. Grunt W (hp 2, ATTACK IN 3, dmg 2) on left flank; Grunt E (hp 3, ATTACK IN 5, dmg 2) on right flank. Shared RunState Rotate pool (2 charges available post-prologue). Proven clean path without Rotate: 0 damage in 5 taps (tap #0 -> tap #5 -> tap #6 -> tap #10 -> tap #9)."
+  }
+}

@@ -28,6 +28,8 @@ export interface RunStep {
 export interface RunConfig {
   /** Data-driven, provisional (see docs/GAME-CONCEPT.md / COMBAT-RULES.md: exact numbers are OPEN). */
   playerMaxHp: number
+  /** RUN-001 / ACT-I-001: starting shared Rotate charges (default 0). For runs starting post-prologue directly. */
+  initialRotateCharges?: number
 }
 
 export class RunState {
@@ -47,6 +49,8 @@ export class RunState {
     this.config = config
     this.steps = steps
     this.entryHp = config.playerMaxHp
+    this.entryRotate = config.initialRotateCharges ?? 0
+    this.rotatePool.charges = this.entryRotate
     this.encounterState = this.buildEncounterState()
   }
 
@@ -118,20 +122,23 @@ export class RunState {
     this.encounterState = this.buildEncounterState()
   }
 
-  /** Restarts the whole run: back to step 0 with full max HP and an empty Rotate pool. */
+  /** Restarts the whole run: back to step 0 with full max HP and starting Rotate pool. */
   restartRun(): void {
     this.idx = 0
     this.entryHp = this.config.playerMaxHp
-    this.entryRotate = 0
-    this.rotatePool.charges = 0
+    this.entryRotate = this.config.initialRotateCharges ?? 0
+    this.rotatePool.charges = this.entryRotate
     this.encounterState = this.buildEncounterState()
   }
 
   /** Jumps to an arbitrary step for debugging, HP reset to max. Not part of a normal playthrough. */
-  debugJumpTo(stepIndex: number): void {
+  debugJumpTo(stepIndex: number, rotateCharges?: number): void {
     if (stepIndex < 0 || stepIndex >= this.steps.length) throw new Error(`bad step index ${stepIndex}`)
     this.idx = stepIndex
     this.entryHp = this.config.playerMaxHp
+    if (rotateCharges !== undefined) {
+      this.rotatePool.charges = rotateCharges
+    }
     this.entryRotate = this.rotatePool.charges
     this.encounterState = this.buildEncounterState()
   }
