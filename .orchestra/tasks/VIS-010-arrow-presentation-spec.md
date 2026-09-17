@@ -1,6 +1,6 @@
 # TASK: VIS-010 — Arrow Presentation Spec
 
-STATUS: READY
+STATUS: DONE
 TYPE: DESIGN
 SIZE: S
 AGENT: Muse / visual design
@@ -114,8 +114,10 @@ RESULT / VERIFY / FOUND -> commit -> push -> remote SHA verify -> STATUS DONE.
 
 ## RESULT_SHA
 
-`PENDING_PUSH`
+`f39a3a52103737da6b86c3dee0f49b2ca983ecc5` (контент: docs ce4546b + карточка
+RESULT/VERIFY/FOUND; запушен, `origin/design/VIS-010-arrow-presentation-spec`
+сверен — равенство подтверждено).
 
 ## STATUS
 
-`DONE` ставится только после push + remote verify (см. Delivery).
+DONE (исполнитель закончил; работа не принята до решения пользователя).
