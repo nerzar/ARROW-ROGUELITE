@@ -104,6 +104,144 @@ export const ARENA_CALIBRATIONS = {
       right: { dx: 0, dy: 0 },
     },
   },
+  // CAL-004: stages 2-5 of the canon Prologue (cp-e2..cp-e5) previously carried no `presentation`
+  // block at all, so they fell back to the flexible-arena default every time (arena-moonlit-
+  // fortress.png via board-plane.js's PLANE_CORNERS_FRAC + arena-layout.js's PODIUM_GROUND/
+  // EFFECT_GROUND + board-renderer.js's DEFAULT_BOSS_SIDE_SCALE/DEFAULT_ENEMY_SIDE_SCALE side
+  // reduction) and could never be calibrated independently of each other or of that shared default.
+  // These four entries give each stage its OWN calibration id (so a browser override or a future
+  // hand-tune of one never touches another) and, as a *working starting point* only, reproduce the
+  // exact same background/anchors/scale numbers the flexible default already used for that stage's
+  // boss-vs-enemy/side combination -- not a visual decision, just "visible and not falling apart"
+  // until the user picks/tunes a real arena per stage in the calibration editor. `margin: 0` here
+  // (unlike the flexible path's MARGIN_U/MARGIN_V) is compensated by using the flexible quad
+  // as-is, which already has its own by-eye margin baked into the corner positions.
+  'prologue-2': {
+    id: 'prologue-2',
+    background: 'assets/arena-moonlit-fortress.png',
+    boardSizeLocked: 5, // cp-e2 is a 4x5 rectangular board (tiny preset) -- see FIX-021 rectangular-compat note
+    boardPlaneFrac: {
+      tl: [0.412, 0.460], tr: [0.585, 0.460], br: [0.745, 0.885], bl: [0.250, 0.885],
+    },
+    anchors: {
+      top: { x: 0.469, y: 0.445 },
+      left: { x: 0.14, y: 0.60 },
+      right: { x: 0.86, y: 0.60 },
+    },
+    effectAnchors: {
+      top: { x: 0.469, y: 0.400 },
+      left: { x: 0.155, y: 0.560 },
+      right: { x: 0.825, y: 0.560 },
+    },
+    actorScale: {
+      // cp-e2's only mob (grunt_passive, ordinary enemy) stands on East (right) -- matches
+      // board-renderer.js's DEFAULT_ENEMY_SIDE_SCALE (right 1.0). top/left are unused by this
+      // stage's content today but keep the same enemy-kind default (top 0.6) in case that ever
+      // changes -- an ordinary enemy on the N podium clips its own HUD plate at 1.0, same as
+      // prologue-4's grunt_n below.
+      top: 0.6,
+      left: 1.0,
+      right: 1.0,
+    },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
+    },
+  },
+  'prologue-3': {
+    id: 'prologue-3',
+    background: 'assets/arena-moonlit-fortress.png',
+    boardSizeLocked: 7, // cp-e3 is a 6x7 rectangular board (easy preset)
+    boardPlaneFrac: {
+      tl: [0.412, 0.460], tr: [0.585, 0.460], br: [0.745, 0.885], bl: [0.250, 0.885],
+    },
+    anchors: {
+      top: { x: 0.469, y: 0.445 },
+      left: { x: 0.14, y: 0.60 },
+      right: { x: 0.86, y: 0.60 },
+    },
+    effectAnchors: {
+      top: { x: 0.469, y: 0.400 },
+      left: { x: 0.155, y: 0.560 },
+      right: { x: 0.825, y: 0.560 },
+    },
+    actorScale: {
+      // cp-e3's only mob (grunt_timed, ordinary enemy) stands on East (right), same reasoning as
+      // prologue-2 above.
+      top: 0.6,
+      left: 1.0,
+      right: 1.0,
+    },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
+    },
+  },
+  'prologue-4': {
+    id: 'prologue-4',
+    background: 'assets/arena-moonlit-fortress.png',
+    boardSizeLocked: 7, // cp-e4 is a 6x7 rectangular board (easy preset)
+    boardPlaneFrac: {
+      tl: [0.412, 0.460], tr: [0.585, 0.460], br: [0.745, 0.885], bl: [0.250, 0.885],
+    },
+    anchors: {
+      top: { x: 0.469, y: 0.445 },
+      left: { x: 0.14, y: 0.60 },
+      right: { x: 0.86, y: 0.60 },
+    },
+    effectAnchors: {
+      top: { x: 0.469, y: 0.400 },
+      left: { x: 0.155, y: 0.560 },
+      right: { x: 0.825, y: 0.560 },
+    },
+    actorScale: {
+      // cp-e4 puts two ordinary enemies on stage at once: grunt_n (North/top) and grunt_e
+      // (East/right) -- matches DEFAULT_ENEMY_SIDE_SCALE (top 0.6, an enemy on the N podium
+      // clips its own HUD plate at full scale; right 1.0).
+      top: 0.6,
+      left: 1.0,
+      right: 1.0,
+    },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
+    },
+  },
+  'prologue-5': {
+    id: 'prologue-5',
+    background: 'assets/arena-moonlit-fortress.png',
+    boardSizeLocked: 10, // cp-e5 is an 8x10 rectangular board (medium preset)
+    boardPlaneFrac: {
+      tl: [0.412, 0.460], tr: [0.585, 0.460], br: [0.745, 0.885], bl: [0.250, 0.885],
+    },
+    anchors: {
+      top: { x: 0.469, y: 0.445 },
+      left: { x: 0.14, y: 0.60 },
+      right: { x: 0.86, y: 0.60 },
+    },
+    effectAnchors: {
+      top: { x: 0.469, y: 0.400 },
+      left: { x: 0.155, y: 0.560 },
+      right: { x: 0.825, y: 0.560 },
+    },
+    actorScale: {
+      // cp-e5's Goblin Shaman boss opens Phase 1 on East (right) then moves to North (top) in
+      // Phase 2 -- matches DEFAULT_BOSS_SIDE_SCALE (top 1.0, right 0.6: a full-size boss on the
+      // E/W podiums clips the stage edge at this arena's own anchor height, same as the flexible
+      // default already worked around before this stage had its own calibration).
+      top: 1.0,
+      left: 0.6,
+      right: 0.6,
+    },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
+    },
+  },
   'boss-shadow-moon': {
     id: 'boss-shadow-moon',
     background: 'assets/arenas/prologue-act1/6x6-5.png',

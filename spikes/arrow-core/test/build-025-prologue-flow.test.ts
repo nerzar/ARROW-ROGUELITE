@@ -282,17 +282,35 @@ describe('BUILD-025: Unified Prologue Playtest Flow', () => {
   })
 
   describe('5. Presentation & calibration resolution', () => {
-    it('resolves calibrated arena for prologue-5x5 and null for uncalibrated encounters', () => {
+    // CAL-004: every canon Prologue step now carries its own independent presentation/calibration
+    // (previously only Step 1 did; Steps 2-5 resolved to null and fell back to the shared flexible
+    // default -- see arena-calibration.js's CAL-004 comment on the new entries).
+    it('resolves an independent calibration for every Prologue step', () => {
       const pres1 = resolveArenaPresentation(parsed1.file.presentation)
       expect(pres1).not.toBeNull()
       expect(pres1?.id).toBe('prologue-5x5-good')
       expect(pres1?.boardSizeLocked).toBe(5)
 
       const pres2 = resolveArenaPresentation(parsed2.file.presentation)
-      expect(pres2).toBeNull()
+      expect(pres2).not.toBeNull()
+      expect(pres2?.id).toBe('prologue-2')
+
+      const pres3 = resolveArenaPresentation(parsed3.file.presentation)
+      expect(pres3).not.toBeNull()
+      expect(pres3?.id).toBe('prologue-3')
+
+      const pres4 = resolveArenaPresentation(parsed4.file.presentation)
+      expect(pres4).not.toBeNull()
+      expect(pres4?.id).toBe('prologue-4')
 
       const pres5 = resolveArenaPresentation(parsed5.file.presentation)
-      expect(pres5).toBeNull()
+      expect(pres5).not.toBeNull()
+      expect(pres5?.id).toBe('prologue-5')
+
+      // Every step's calibration id is distinct -- a browser override or hand-tune of one must
+      // never bleed into another (this task's core requirement).
+      const ids = [pres1, pres2, pres3, pres4, pres5].map((p) => p!.id)
+      expect(new Set(ids).size).toBe(ids.length)
     })
 
     it('localStorage calibration override helper functions properly', () => {

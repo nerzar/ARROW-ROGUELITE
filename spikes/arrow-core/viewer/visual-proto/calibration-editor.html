@@ -3,14 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CAL-001 arena calibration editor</title>
+<title>CAL-004 arena calibration editor</title>
 <link rel="stylesheet" href="./calibration-editor.css">
 </head>
 <body>
 <div class="editor-shell">
   <header class="topbar">
-    <strong>CAL-001</strong> arena calibration editor
-    <label>arena <select id="arenaPick"></select></label>
+    <strong>CAL-004</strong> arena calibration editor
+    <label>Prologue stage <select id="stagePick"></select></label>
+    <label>arena/background <select id="bgPick"></select></label>
+    <label title="Legacy CAL-001/FIX-023 synthetic-preview arenas, not part of the canon Prologue sequence">debug arena <select id="arenaPick"><option value="">— none —</option></select></label>
     <label>grid <select id="gridSizePick"></select></label>
     <label class="chk"><input type="checkbox" id="toggleGrid" checked> grid mesh</label>
     <label class="chk"><input type="checkbox" id="toggleArrows" checked> arrows</label>
@@ -126,11 +128,14 @@
         <p class="muted small">
           Sprite/arrow preview uses the real production render path
           (<code>board-renderer.js</code> → <code>board-plane.js</code>'s
-          project/unproject + <code>arena-layout.js</code>'s podium/effect-ground math) driven by
-          a real generated board and a throwaway 3-side preview encounter (TOP/LEFT/RIGHT), not a
-          separate approximation. TOP is previewed with the Dire Wolf sprite (SIDE_CHAR footprint)
-          even on arenas whose real content puts a boss there — the anchor point itself is exact,
-          only the stand-in sprite's own footprint size differs from a boss's.
+          project/unproject + <code>arena-layout.js</code>'s podium/effect-ground math).
+          <strong>Prologue stage</strong> loads that step's own real board/seed and def, exactly as
+          the playable game (<code>prologue-steps.js</code>) — the same mob/boss appears here as
+          in a real playthrough, on whichever sides it actually uses; an unused side's handle is
+          still draggable but shows no sprite. <strong>Debug arena</strong> instead loads a
+          throwaway 3-side preview encounter (TOP/LEFT/RIGHT, Dire Wolf sprite) on a freshly
+          generated board of the chosen grid size, for calibrating a non-Prologue arena that has no
+          real encounter of its own yet.
         </p>
       </section>
     </aside>
