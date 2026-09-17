@@ -7,7 +7,7 @@ AGENT: Muse Spark 1.3
 BASE_BRANCH: main
 BRANCH: mkt/MKT-001-community-demography
 START_SHA: 1e0df22e5304132ecf7b4ec9151ee63cbe13b8dd
-RESULT_SHA:
+RESULT_SHA: 70c69aadd8d4ec94dd7b879ac828a72891b24cf1
 
 ## Зачем
 
@@ -194,10 +194,10 @@ Shortlist сообществ из EXP-003:
 - [x] rate / TLS / secrets / diff checks PASS;
 - [x] RESULT / VERIFY / FOUND заполнены;
 - [x] STATUS: DONE или BLOCKED;
-- [ ] RESULT_SHA записан;
-- [ ] commit + push этой же ветки;
-- [ ] без merge в main;
-- [ ] остановиться.
+- [x] RESULT_SHA записан;
+- [x] commit + push этой же ветки;
+- [x] без merge в main;
+- [x] остановиться.
 
 ## Когда остановиться
 
