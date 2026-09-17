@@ -104,7 +104,9 @@ describe('EncounterState', () => {
     expect(s.canRotate(1)).toBe(false)
 
     const blocked = s.tap(0)
-    expect(blocked).toEqual({ ok: false, reason: 'blocked', blocker: 2 })
+    // EXP-010: a blocked tap always reports damage/playerHp/playerDead now; this def has no
+    // blockedTapDamage, so it stays a pure no-op (see the dedicated combat-pressure tests).
+    expect(blocked).toMatchObject({ ok: false, reason: 'blocked', blocker: 2, damage: 0 })
 
     const r1 = s.tap(1)
     expect(r1).toMatchObject({ ok: true, hit: true, arenaDir: E, phaseBefore: 0, phaseAfter: 1, granted: 1, won: false })
@@ -145,9 +147,27 @@ describe('EncounterState', () => {
     expect(s.undo()).toBe(false)
   })
 
-  it('loses when the board is empty and the boss survives', () => {
+  it('EXP-010: clearing the board with the boss still alive is a WIN as long as the player is alive', () => {
+    // docs/COMBAT-RULES.md 7/8: running out of arrows that can reach a live target is not an
+    // automatic loss — the player finishes the rest of the puzzle and wins by surviving to a clear
+    // board. This replaces EXP-008's "board empty, boss alive -> loss" rule.
     const s = EncounterState.fromLevel(level, def2(W, 1, S, 1))
     for (const id of [1, 2, 0]) expect(s.tap(id).ok).toBe(true)
+    expect(s.won).toBe(true)
+    expect(s.lost).toBe(false)
+    expect(s.over).toBe(true)
+  })
+
+  it('the only loss condition is player HP reaching 0', () => {
+    const def: EncounterDef = {
+      id: 't', boss: { id: 'b', phases: [{ side: W, hpUnits: 1, attackTimer: { interval: 1, damage: 5 } }] },
+      rotate: { allow: [] },
+    }
+    // Boss is on W; both free arrows (0, 1) point E, so every tap misses and ticks the attack timer.
+    const s = EncounterState.fromLevel(level, def, 5)
+    const r1 = s.tap(1) // E miss -> countdown 1 -> 0 -> enemy attacks for 5
+    expect(r1).toMatchObject({ ok: true, hit: false, enemyAttacked: true, enemyDamage: 5, playerHp: 0, playerDead: true, lost: true })
+    expect(s.won).toBe(false)
     expect(s.lost).toBe(true)
     expect(s.over).toBe(true)
   })
@@ -253,13 +273,18 @@ describe('seed analyzer', () => {
 })
 
 describe('encounter files', () => {
-  it('provisional prologue mini-boss: winnable with one Rotate, provably not without', () => {
+  it('provisional prologue mini-boss: killing the boss needs the granted Rotate', () => {
     const raw = JSON.parse(readFileSync(new URL('../encounters/prologue-miniboss.json', import.meta.url), 'utf8'))
     const { file, level } = encounterFromJson(raw)
     const r = validateEncounter(level, file.encounter)
     expect(r.win.win).toBe(true)
-    expect(r.winWithoutRotate).toMatchObject({ win: false, proven: true })
-    expect(r.minRotates).toBe(1)
+    // EXP-010: this file has no attackTimer/blockedTapDamage, so nothing can ever hurt the player --
+    // "board cleared, player alive" (docs/COMBAT-RULES.md 8) is trivially available even without
+    // Rotate, so `winWithoutRotate` (which now means *that*) is true. The original EXP-008 claim was
+    // narrower ("can't reach all 9 kill-hits without Rotate"); it still holds and is checked directly.
+    expect(r.winWithoutRotate.win).toBe(true)
+    expect(r.maxHitsWithoutRotate).toMatchObject({ hits: 5, proven: true })
+    expect(maxHits(EncounterState.fromLevel(level, file.encounter), { maxRotates: 1 }).hits).toBe(r.totalHp)
     expect(replayWins(level, file.encounter, r.win.sequence)).toBe(true)
     // Round trip through the human-readable form.
     expect(encounterFromJson(encounterToJson(file)).file.encounter).toEqual(file.encounter)
@@ -271,15 +296,17 @@ describe('encounter files', () => {
     expect(() => encounterFromJson(raw)).toThrow(/board drift/)
   })
 
-  it('shortlist candidates all satisfy the Rotate gate', () => {
+  it('shortlist candidates: killing the boss still needs the granted Rotate', () => {
     const sl = JSON.parse(readFileSync(new URL('../encounters/shortlist.json', import.meta.url), 'utf8'))
     expect(sl.candidates.length).toBeGreaterThanOrEqual(5)
     expect(sl.candidates.length).toBeLessThanOrEqual(10)
     for (const c of sl.candidates) {
       const { file, level } = encounterFromJson(c.file)
       const start = EncounterState.fromLevel(level, file.encounter)
-      expect(findWin(start, { maxRotates: 0 })).toMatchObject({ win: false, proven: true })
-      expect(findWin(start, { maxRotates: 1 }).win).toBe(true)
+      // EXP-010: no HP pressure on these files, so board-clear-alive always wins even at maxRotates 0.
+      expect(findWin(start, { maxRotates: 0 }).win).toBe(true)
+      expect(maxHits(start, { maxRotates: 0 }).hits).toBeLessThan(start.totalHp)
+      expect(maxHits(start, { maxRotates: 1 }).hits).toBe(start.totalHp)
     }
   })
 

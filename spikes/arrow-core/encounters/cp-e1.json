@@ -1,0 +1,22 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "tiny",
+    "seed": 3874,
+    "levelHash": "9d444107"
+  },
+  "encounter": {
+    "id": "cp_e1",
+    "title": "Combat pressure 1 — a real puzzle-shot",
+    "boss": {
+      "id": "grunt_passive",
+      "phases": [
+        { "side": "N", "hpUnits": 1, "label": "passive mob, does not attack" }
+      ]
+    },
+    "rotate": { "allow": [] },
+    "blockedTapDamage": 0,
+    "notes": "User-fixed board and placement, do not change (docs/COMBAT-RULES.md 10, encounter 1). tiny 4x5, 4 arrows: N=1 E=1 S=2 W=0. Only arrow #0 (E) is free at start; the single N arrow #2 is blocked by #0. Intended sequence: turn 1 taps #0 (E, misses the mob -- a pure puzzle move that frees #2), turn 2 taps #2 (N, kills). This is deliberate: the first encounter should already show the game stays a puzzle, not 'tap the one free arrow and the round ends'. No player-HP consequence yet: blockedTapDamage 0, no attackTimer."
+  }
+}

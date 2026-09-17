@@ -1,0 +1,4 @@
+{
+  "_notes": "EXP-010 provisional run config, not user-approved (docs/COMBAT-RULES.md 12: exact HP numbers are OPEN). Loaded by viewer/cp-prologue.js for the combat-pressure prologue (encounters/cp-e1..cp-e5.json).",
+  "playerMaxHp": 10
+}
