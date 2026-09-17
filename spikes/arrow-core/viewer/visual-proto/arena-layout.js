@@ -15,13 +15,13 @@
 
 // Visual footprints (cells). Boss is the dominant top element; side enemies are clearly
 // smaller yet full-size characters.
-export const BOSS_CHAR = { w: 2.8, h: 3.6 }
-export const SIDE_CHAR = { w: 2.6, h: 2.6 }
+export const BOSS_CHAR = { w: 5.6, h: 7.2 }
+export const SIDE_CHAR = { w: 5.2, h: 5.2 }
 
 // Slot distance from the board edge (cells). The boss stands slightly further out so its
 // strike lunge never touches the board.
-export const BOSS_SLOT_DIST = 2.15
-export const SIDE_SLOT_DIST = 1.9
+export const BOSS_SLOT_DIST = 4.3
+export const SIDE_SLOT_DIST = 3.8
 
 export const HUD_GAP_PX = 6
 

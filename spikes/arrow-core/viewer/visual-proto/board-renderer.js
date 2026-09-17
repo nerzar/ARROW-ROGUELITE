@@ -59,6 +59,14 @@ export function createBoardRenderer(canvas) {
   // (e.g. the per-frame fallback), so a phase change or a window resize never loses it.
   let slotReserve = null
 
+  // BUILD-020: E/W slots have no reserve entry (their HUD stacks vertically, mid-canvas -- see
+  // arena-layout.js), so the margin that keeps them on-canvas must cover the side character's
+  // own footprint directly: slot distance + half its width, plus the same fixed safety gap the
+  // margin always carried. This is also the floor marginForSlots falls back to below. Deriving
+  // it from SIDE_SLOT_DIST/SIDE_CHAR instead of a bare constant means a future character-size
+  // tweak can't silently clip the sprite off the canvas the way a hardcoded 4.4 just did here.
+  const DEFAULT_MARGIN = SIDE_SLOT_DIST + SIDE_CHAR.w / 2 + 1.2
+
   // VIS-007: per-frame debug layout (canvas coords) for automated checks. Reset on every
   // frame; drawTarget appends one entry per live target (key/side/char/face/plate/badge/board).
   let layoutInfo = []
@@ -73,8 +81,8 @@ export function createBoardRenderer(canvas) {
     // their HUD stack (HP bar + name/HP/ATTACK-CAST-ability plate) on the outward side,
     // away from the board. Grow the margin just enough to fit the tallest such stack
     // (computed from content + character footprints, not hardcoded per scene); boards
-    // without a top/bottom character keep the exact old geometry (margin 4.4).
-    let margin = 4.4
+    // without a top/bottom character keep the exact old geometry (margin DEFAULT_MARGIN).
+    let margin = DEFAULT_MARGIN
     const res = slotReserve
     if (res && (res.top || res.bottom)) {
       margin = marginForSlots(span, res, wrap)
@@ -98,10 +106,10 @@ export function createBoardRenderer(canvas) {
   // 6px gaps don't scale with the cell).
   function marginForSlots(span, res, wrap) {
     const avail = Math.max(240, Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16))
-    let margin = 4.4
+    let margin = DEFAULT_MARGIN
     for (let k = 0; k < 3; k++) {
       const cell = Math.max(10, Math.min(avail / (span + 2 * margin), 58))
-      let need = 4.4
+      let need = DEFAULT_MARGIN
       for (const entry of [res.top, res.bottom]) {
         if (!entry) continue
         const big = !!entry.big
@@ -115,7 +123,7 @@ export function createBoardRenderer(canvas) {
         // distance); require it + 0.2 safety.
         need = Math.max(need, needCells + 0.2)
       }
-      margin = Math.max(4.4, need)
+      margin = Math.max(DEFAULT_MARGIN, need)
     }
     return margin
   }
