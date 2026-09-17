@@ -262,11 +262,27 @@ Run:
    start of this task (uncommitted work lost to a concurrent branch switch) -- resolved the same
    way, by moving to an isolated `.worktrees/FIX-023`. Still recommend every task get its own
    worktree from the start rather than starting in the shared root.
+6. **`prologue-5x5-good` is now the user-confirmed BASE calibration.** Even the agent's own
+   screenshot-read-and-correct loop (FOUND #2) wasn't accurate enough by the user's own eye once
+   checked live -- the accepted `boardPlaneFrac` for `prologue-5x5-good` is the user's own
+   hand-tuned values, adjusted directly against the live debug grid-mesh overlay via the new
+   one-click topbar loader (added this task -- see below) until it visibly matched the baked tile
+   lines. Marked as the reference calibration in `arena-calibration.js`'s comments and
+   docs/FIX-023-GRID-CALIBRATED-BOARD.md; `boss-shadow-moon` remains agent-calibrated only and
+   should eventually be brought up to the same standard (or replaced -- see FOUND #3, no approved
+   6x6 exists yet either).
+7. Added a one-click debug UI (topbar "FIX-023 baked arena" dropdown + "load" button, `app.js`/
+   `index.html`) so calibration iteration doesn't need the browser console --
+   `loadBakedArenaDebug()` was the only way in before this. This is how the user did the FOUND #6
+   hand-calibration.
+8. Lesson for future arena calibration, reinforced twice in this task (FOUND #2 and #6): don't
+   trust an automated or agent-mediated measurement without the person who will judge "does this
+   look right" checking the live rendered result themselves. Prefer surfacing a fast, no-build-step
+   iteration loop (exactly what FOUND #7 adds) over more rounds of the agent guessing corners.
 
-RESULT_SHA (code): d78e587 (initial) + c04eef2 (boss-shadow-moon calibration fix, see FOUND #2) --
-c04eef2 is the final code state. The next DONE/bookkeeping commit follows it and is origin HEAD
-after push (verified
-below).
+RESULT_SHA (code): d78e587 (initial) -> c04eef2 (calibration fix) -> 63ac8d8 (one-click debug UI)
+-> abff4ce (user's hand-tuned prologue-5x5-good base, marked as such). abff4ce is the final code
+state. The DONE/bookkeeping commit follows it and is origin HEAD after push (verified below).
 
 ## Delivery
 
