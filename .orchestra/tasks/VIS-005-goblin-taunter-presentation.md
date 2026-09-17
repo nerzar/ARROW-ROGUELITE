@@ -1,13 +1,13 @@
 # TASK: VIS-005 — Goblin Taunter Runtime Presentation
 
-STATUS: IN_PROGRESS
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Muse Spark (implementation agent)
 BASE_BRANCH: origin/fix/PLAYTEST-001-stone-pin-and-hud
 BRANCH: feat/VIS-005-goblin-taunter-presentation
 START_SHA: 978edc4331b8e7278a08b249fd68697a47cd5e1b
-RESULT_SHA: TBD
+RESULT_SHA: a207e15ed37a4e44bc8c8d6a620fda2a3575aa28 (code commit; card commits сверх — b491a47 + DONE)
 
 ## Base
 
