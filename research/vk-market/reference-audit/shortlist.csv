@@ -1,0 +1,26 @@
+app_id,title,mechanic_lane,published_date,members_count,rank_growth,rank_today,rank_week,reason_for_inclusion
+54579291,Стрелки: Очисти поле,arrow,2026-05-25,91709,145,71,70,largest arrow by members_count; fresh; hints and attempts declared in description
+51871737,Разбери Кубик,arrow,2024-03-18,88702,3265,,747,MANDATORY per task; control find missed by keyword retrieval; no word strel in title or description; oldest arrow
+54579195,Стрелочки,arrow,2026-05-07,72211,761,438,398,top-3 arrow; fresh; lives hearts visible on screenshots
+54184211,Сортируй Плитки,arrow,2025-10-13,41102,4512,569,769,arrow-labeled tile game; picture reveal declared; XXX wrong-tap penalty observed on screenshots
+54184191,Лабиринт Стрелок Пазл,arrow,2026-02-24,37107,8,44,179,best growth rank in arrow batch; picture reveal plus hints declared
+54579601,Разбери Кубик 2026,arrow,2026-05-13,36042,4927,517,1023,fresh clone of 51871737; coin shop with cosmetic skins observed
+54531151,Arrow Escape Стрелки Лабиринт,arrow,2026-04-13,30553,1120,300,256,most hardcore arrow design on paper: lives plus move limits plus boosters declared
+54698383,Туда-Сюда: Распутай Рисунок,arrow,2026-08-14,21922,7,40,133,freshest arrow with top growth; rewarded-ads button and picture-select observed on screenshots
+53992911,Двигай Цветные Блоки,arrow,2025-08-05,67,4728,4109,4117,MANDATORY per task; only arrow with explicit external targets (color shredders) and direction-change button
+53131314,Разбери кубики 3D головоломка,arrow,2025-02-27,35635,2209,,912,rotation plus move budget plus level skip declared; hand-made levels claim
+54255702,Болты и гайки: сортировка,sort,2025-10-27,177003,80,307,108,largest fresh sort; nut-sort with screw overlap; video preview on card
+54380425,Яга: Зелья судьбы,sort,2026-06-24,129265,122,36,93,second largest fresh sort; richest declared meta (orders plus renovation plus idle farm plus 30-min lives)
+54174190,Сортировка Болтомания,sort,2025-10-13,96177,1397,230,430,top-3 fresh sort; minimal description suggests levels-only design
+54539273,Разбери Стрелочки,sort,2026-04-16,81470,78,78,95,arrow title but sort/picture-reveal description; 30+ story locations declared; strong ranks
+54184207,Волшебные Бутылки,sort,2026-02-24,57962,25,27,92,best ranks in sort batch; explicit water-sort rules and boosters declared; cheapest clone formula
+54277449,Открути и Подумай,screw,2025-11-06,38191,4615,1182,818,largest screw; pure screw-unblock without sort mix
+54662458,Болты Сортировка,screw,2026-07-07,5395,2054,2811,2806,freshest screw; indie author; title says sort but description is screw (mirror mismatch)
+54102802,Тропиквиль,merge,2025-12-16,184116,107,32,64,largest fresh merge; merge plus renovation plus story plus daily events declared; external TAPCLAP listing
+54164742,Мир Слияния,merge,2025-09-25,143777,264,29,68,second largest fresh merge; compact formula (1 cafe plus 18 renovation stages)
+54419995,Мой Замок: Слияние и История,merge,2026-01-22,78091,40,88,147,strong growth rank; seasons and tournaments declared; external RainbowGames listing
+54614420,Остров Слияний,merge,2026-06-15,41342,177,9,56,best today rank in merge batch; VK genre Economic; island-zone meta
+53448227,Гранд Тур: Гонки Матч 2,match3,2025-12-26,173954,29,178,221,largest fresh match3; Match-2 blast plus racing hybrid; 10 real locations; external RuStore listing
+54458245,Tap Gallery,match3,2026-03-03,141050,120,286,191,EXP-004 match3 label but actually tap-away picture reveal; hundreds of levels declared
+54263990,Сказка 2026,match3,2025-10-29,40429,1294,435,1698,seasonal skin formula from Gidkap series; minimal description
+54613094,Садоводы,match3,2026-06-15,37281,39,3590,3580,competitive match3 with weekly tournaments declared; same Gidkap developer
