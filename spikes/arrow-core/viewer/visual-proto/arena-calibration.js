@@ -20,6 +20,15 @@
 // as arena-layout.js's PODIUM_GROUND) -- TOP/LEFT/RIGHT stair platforms as painted in this
 // specific piece of art. They are NOT the old Moonlit Fortress PODIUM_GROUND numbers, which were
 // calibrated for a different background image and would float on this one.
+//
+// CAL-001: `effectAnchors` is the same TOP/LEFT/RIGHT shape but for the VFX/telegraph ground
+// point (arena-layout.js's EFFECT_GROUND contract) -- independent of `anchors` so a cast-glow/
+// telegraph anchor can sit on a podium's flat top while the actor's own feet stay at the lip,
+// without one move dragging the other. Every entry below sets it equal to `anchors` (byte-for-
+// byte the same points `groundOverrideFor` used for both before this field existed) so no
+// existing calibration's rendered geometry changes just by this field's addition -- a future
+// edit made through the calibration-editor tool (calibration-editor.html) is what actually lets
+// the two diverge.
 export const ARENA_CALIBRATIONS = {
   // FIX-023: user-approved 5x5 prologue candidate (magicarrowassets/arenas/5x5-good.png,
   // explicitly named "good" by the architect -- superseded the unnamed ARENA-002
@@ -49,6 +58,11 @@ export const ARENA_CALIBRATIONS = {
       left: { x: 0.17, y: 0.62 },
       right: { x: 0.83, y: 0.62 },
     },
+    effectAnchors: {
+      top: { x: 0.5, y: 0.155 },
+      left: { x: 0.17, y: 0.62 },
+      right: { x: 0.83, y: 0.62 },
+    },
   },
   'boss-shadow-moon': {
     id: 'boss-shadow-moon',
@@ -68,6 +82,11 @@ export const ARENA_CALIBRATIONS = {
     // off the right edge of a 960px-wide canvas (and symmetrically at 0.09 on the left). 0.17/0.83
     // keeps the full sprite on stage while still standing on the stair steps flanking the board.
     anchors: {
+      top: { x: 0.5, y: 0.155 },
+      left: { x: 0.17, y: 0.6 },
+      right: { x: 0.83, y: 0.6 },
+    },
+    effectAnchors: {
       top: { x: 0.5, y: 0.155 },
       left: { x: 0.17, y: 0.6 },
       right: { x: 0.83, y: 0.6 },

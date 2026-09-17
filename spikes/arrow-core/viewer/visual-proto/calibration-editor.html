@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CAL-001 arena calibration editor</title>
+<link rel="stylesheet" href="./calibration-editor.css">
+</head>
+<body>
+<div class="editor-shell">
+  <header class="topbar">
+    <strong>CAL-001</strong> arena calibration editor
+    <label>arena <select id="arenaPick"></select></label>
+    <label>grid <select id="gridSizePick"></select></label>
+    <label class="chk"><input type="checkbox" id="toggleGrid" checked> grid mesh</label>
+    <label class="chk"><input type="checkbox" id="toggleArrows" checked> arrows</label>
+    <label class="chk"><input type="checkbox" id="toggleSprites" checked> sprites</label>
+    <label class="chk"><input type="checkbox" id="toggleEffect" checked> effect anchors</label>
+    <span class="grow"></span>
+    <button id="resetBtn" title="Revert every field to this arena's last loaded/saved values">Reset</button>
+    <button id="copyBtn" title="Copy the exported calibration object to the clipboard">Copy calibration</button>
+    <button id="downloadBtn" title="Save the exported calibration object as a .json file">Download JSON</button>
+  </header>
+
+  <div class="body">
+    <div class="stage-col">
+      <div class="stage" id="stage">
+        <div class="bg-layer" id="bgLayer"></div>
+        <canvas id="arena"></canvas>
+        <div class="handles-layer" id="handlesLayer"></div>
+      </div>
+      <p class="hint">
+        Drag a handle with the mouse, or click/tab to it and use the arrow keys — 1px per press,
+        Shift+arrow = 10px. Cyan = board corners (TL/TR/BR/BL), amber = actor anchors (feet),
+        violet = effect anchors (VFX/telegraph ground point).
+      </p>
+    </div>
+
+    <aside class="side-panel">
+      <section>
+        <h3>Selected handle</h3>
+        <div id="selectedInfo" class="selected-info">— click or tab to a handle —</div>
+      </section>
+
+      <section>
+        <h3>All values</h3>
+        <table class="values-table" id="valuesTable"></table>
+      </section>
+
+      <section>
+        <h3>Export</h3>
+        <textarea id="exportText" readonly spellcheck="false"></textarea>
+        <div id="copyStatus" class="copy-status"></div>
+      </section>
+
+      <section>
+        <h3>Notes</h3>
+        <p class="muted small">
+          Sprite/arrow preview uses the real production render path
+          (<code>board-renderer.js</code> → <code>board-plane.js</code>'s
+          project/unproject + <code>arena-layout.js</code>'s podium/effect-ground math) driven by
+          a real generated board and a throwaway 3-side preview encounter (TOP/LEFT/RIGHT), not a
+          separate approximation. TOP is previewed with the Dire Wolf sprite (SIDE_CHAR footprint)
+          even on arenas whose real content puts a boss there — the anchor point itself is exact,
+          only the stand-in sprite's own footprint size differs from a boss's.
+        </p>
+      </section>
+    </aside>
+  </div>
+</div>
+<script type="module" src="./calibration-editor.js"></script>
+</body>
+</html>

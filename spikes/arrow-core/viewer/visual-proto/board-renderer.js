@@ -15,15 +15,27 @@ import {
   backdropCornersPx, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx, screenToCell,
 } from './board-plane.js'
 
-// FIX-023: an ARENA_CALIBRATIONS entry's {top,left,right} anchors, in arena-layout.js's
-// PODIUM_GROUND/EFFECT_GROUND side-number shape (0=N/top, 1=E/right, 3=W/left; side 2/S stays on
-// the shared unused fallback -- no current encounter puts a target there). Returns undefined
-// (podiumSlot/effectGround then fall back to their own PODIUM_GROUND/EFFECT_GROUND default) when
-// no calibration is active, so the flexible-arena/rectangular-regression path is untouched.
-function groundOverrideFor(calibration) {
-  if (!calibration) return undefined
-  const { top, left, right } = calibration.anchors
+// FIX-023: an ARENA_CALIBRATIONS entry's {top,left,right} anchor group (either `anchors` or
+// `effectAnchors`), converted into arena-layout.js's PODIUM_GROUND/EFFECT_GROUND side-number
+// shape (0=N/top, 1=E/right, 3=W/left; side 2/S stays on the shared unused fallback -- no current
+// encounter puts a target there). Returns undefined when there is no such group, so podiumSlot/
+// effectGround then fall back to their own PODIUM_GROUND/EFFECT_GROUND default.
+function anchorMapFor(anchorGroup) {
+  if (!anchorGroup) return undefined
+  const { top, left, right } = anchorGroup
   return { 0: top, 1: right, 3: left }
+}
+
+// CAL-001: actor foot anchor and VFX/telegraph anchor are independently calibrated (see
+// arena-calibration.js's `anchors` vs `effectAnchors`) -- a calibration missing `effectAnchors`
+// (shouldn't happen for a real ARENA_CALIBRATIONS entry now, but kept defensive for a hand-built
+// caller) falls back to `anchors`, reproducing the pre-CAL-001 "one anchor, two uses" behaviour.
+function groundOverridesFor(calibration) {
+  if (!calibration) return { actor: undefined, effect: undefined }
+  return {
+    actor: anchorMapFor(calibration.anchors),
+    effect: anchorMapFor(calibration.effectAnchors ?? calibration.anchors),
+  }
 }
 
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
@@ -119,8 +131,8 @@ export function createBoardRenderer(canvas, stageEl) {
     const rightH = Math.hypot(backdrop.br.x - backdrop.tr.x, backdrop.br.y - backdrop.tr.y)
     const span = Math.max(w, h)
     const cell = Math.max(6, ((topW + botW) / 2 / span + (leftH + rightH) / 2 / span) / 2)
-    const groundOverride = groundOverrideFor(calibration)
-    geo = { w, h, plane, fit, cell, stageW, stageH, calibration, groundOverride }
+    const { actor: groundOverride, effect: effectGroundOverride } = groundOverridesFor(calibration)
+    geo = { w, h, plane, fit, cell, stageW, stageH, calibration, groundOverride, effectGroundOverride }
     return geo
   }
 
@@ -339,7 +351,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // (and of its idle bob/shake/lunge offsets) -- see arena-layout.js's EFFECT_GROUND. Computed
       // in the same absolute stage space as `slot`, then converted below to the coordinates local
       // to the character's translated origin (slot.x+ox, slot.y+oy).
-      const eff = effectGround(t.side, g.stageW, g.stageH, g.groundOverride)
+      const eff = effectGround(t.side, g.stageW, g.stageH, g.effectGroundOverride)
       const effLocalX = eff.x - (slot.x + ox)
       const effLocalY = eff.y - (slot.y + oy)
 

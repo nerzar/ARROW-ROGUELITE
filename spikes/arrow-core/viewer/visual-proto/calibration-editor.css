@@ -1,0 +1,92 @@
+/* CAL-001: standalone tool page, deliberately not sharing style.css with the production HUD
+   (viewer/visual-proto/style.css / app.js / index.html) -- this never ships in a real playthrough. */
+:root {
+  color-scheme: light dark;
+  --ink: #efece4; --ink-dim: #b9b3a4; --panel: rgba(20, 18, 24, 0.82); --panel-border: rgba(255, 255, 255, 0.14);
+  --bg-a: #201a2b; --bg-b: #171018;
+  --corner: #4fd7ff; --actor: #ffc94f; --effect: #c9a6ff; --selected: #7be08a;
+}
+@media (prefers-color-scheme: light) {
+  :root { --ink: #211a12; --ink-dim: #5c5346; --panel: rgba(255, 255, 255, 0.88); --panel-border: rgba(0, 0, 0, 0.12); --bg-a: #d9cdb4; --bg-b: #b7a689; }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font: 13px/1.4 system-ui, sans-serif; color: var(--ink); background: #111; }
+
+.editor-shell { display: flex; flex-direction: column; height: 100%; }
+
+.topbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 10px; background: var(--panel); border-bottom: 1px solid var(--panel-border);
+  font-size: 12px; color: var(--ink-dim); z-index: 5;
+}
+.topbar select, .topbar button {
+  font: inherit; color: var(--ink); background: rgba(127,127,127,0.12); border: 1px solid var(--panel-border);
+  border-radius: 6px; padding: 4px 8px;
+}
+.topbar button { cursor: pointer; }
+.topbar button:hover { border-color: var(--selected); }
+.topbar .chk { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.topbar .grow { flex: 1; }
+
+.body { flex: 1; display: flex; min-height: 0; }
+
+.stage-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; padding: 10px; gap: 8px; }
+
+.stage {
+  position: relative; width: 100%; max-width: calc((100vh - 160px) * 16 / 9);
+  aspect-ratio: 16 / 9; margin: 0 auto; overflow: hidden; border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--panel-border);
+}
+.bg-layer {
+  position: absolute; inset: 0;
+  background: radial-gradient(120% 90% at 50% 20%, var(--bg-a), var(--bg-b));
+  background-size: cover; background-position: center;
+}
+.bg-layer.has-image { background-image: var(--bg-image); }
+canvas#arena { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.handles-layer { position: absolute; inset: 0; pointer-events: none; }
+
+.handle {
+  position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+  border-radius: 50%; border: 2px solid rgba(0,0,0,0.55); cursor: grab;
+  pointer-events: auto; touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+  font: 700 9px/1 system-ui; color: rgba(0,0,0,0.75);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.5);
+}
+.handle:active { cursor: grabbing; }
+.handle:focus-visible { outline: 2px solid var(--selected); outline-offset: 2px; }
+.handle.corner { background: var(--corner); border-radius: 4px; }
+.handle.actor { background: var(--actor); }
+.handle.effect { background: var(--effect); width: 16px; height: 16px; margin: -8px 0 0 -8px; }
+.handle.selected { box-shadow: 0 0 0 3px var(--selected), 0 0 10px 2px var(--selected); z-index: 2; }
+.handle.hidden-toggle { display: none; }
+
+.hint { max-width: 720px; text-align: center; color: var(--ink-dim); font-size: 11.5px; margin: 0; }
+.hint code, .side-panel code { font: 11px ui-monospace, monospace; background: rgba(127,127,127,0.18); padding: 1px 4px; border-radius: 4px; }
+
+.side-panel {
+  width: 340px; flex-shrink: 0; overflow-y: auto; padding: 10px 12px; background: var(--panel);
+  border-left: 1px solid var(--panel-border);
+}
+.side-panel section { margin-bottom: 16px; }
+.side-panel h3 { margin: 0 0 6px; font: 700 11px system-ui; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-dim); }
+.muted { color: var(--ink-dim); }
+.small { font-size: 11px; line-height: 1.45; }
+
+.selected-info { font: 12px/1.5 ui-monospace, monospace; background: rgba(127,127,127,0.1); border-radius: 6px; padding: 8px; min-height: 3.5em; }
+.selected-info .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+.values-table { width: 100%; border-collapse: collapse; font: 11px/1.4 ui-monospace, monospace; }
+.values-table th, .values-table td { text-align: left; padding: 2px 4px; border-bottom: 1px solid var(--panel-border); }
+.values-table th { color: var(--ink-dim); font-weight: 600; }
+.values-table tr.row-selected td { background: rgba(123, 224, 138, 0.14); }
+.values-table .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+#exportText {
+  width: 100%; height: 220px; resize: vertical; font: 11px/1.4 ui-monospace, monospace;
+  background: rgba(0,0,0,0.25); color: var(--ink); border: 1px solid var(--panel-border); border-radius: 6px; padding: 6px;
+}
+.copy-status { font-size: 11px; height: 1.3em; color: var(--selected); }

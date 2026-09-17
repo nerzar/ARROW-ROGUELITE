@@ -9,6 +9,8 @@ export interface ArenaCalibration {
   boardSizeLocked: number
   boardPlaneFrac: FracCorners
   anchors: { top: FracPt; left: FracPt; right: FracPt }
+  /** CAL-001: independent VFX/telegraph ground anchor, same shape as `anchors`. */
+  effectAnchors: { top: FracPt; left: FracPt; right: FracPt }
 }
 
 export declare const ARENA_CALIBRATIONS: Record<string, ArenaCalibration>
