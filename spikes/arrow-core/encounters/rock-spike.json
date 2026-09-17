@@ -1,0 +1,32 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 15,
+    "levelHash": "dea1bfde"
+  },
+  "encounter": {
+    "id": "rock_spike",
+    "title": "EXP-013 debug — Stone Throw (seed 15)",
+    "enemies": [
+      {
+        "id": "rockthrower",
+        "side": "N",
+        "hp": 6,
+        "attackTimer": { "interval": 5, "damage": 1 },
+        "ability": {
+          "id": "stone_throw",
+          "interval": 3,
+          "targetPolicy": "free-arrow",
+          "pinDuration": 2,
+          "label": "stone throw"
+        },
+        "label": "rockthrower"
+      }
+    ],
+    "rotate": { "allow": [] },
+    "blockedTapDamage": 1,
+    "notes": "EXP-013 spike/experiment, NOT accepted design, separate from prologue/Act I content. easy 6x7 seed 15 (11 arrows, N4 E1 S4 W2; initially free N2 E1 S1 W1: ids 0,1 N; 3 E; 8 S; 9 W). One enemy on N (rockthrower, 3 hp, ATTACK IN 5 dmg 1 -- gentle, damage is not the point of this spike) with Stone Throw: THROW IN 3, targetPolicy free-arrow, pin 2 world turns (both TUNING -- first minimal values tried, not a balance decision). Demonstrates: at world turn 3 the ability fires and pins the lowest-id currently free-and-unpinned arrow; a player who was about to tap that exact arrow next must re-read the board and pick a different move for 2 turns, then it opens back up. No Rotate in this debug encounter. See EXP-013-REPORT.md for the exact verified turn sequence, the no-softlock argument, and minDamageToWin results."
+  }
+}

@@ -44,6 +44,21 @@ import { BoardTopology } from './topology.js'
  * behaves exactly like a `normal` timer that merely displays as "CAST IN N" — hits do not touch it.
  * This is the general mechanism the brief asks for regular Caster enemies to reuse later; the
  * mini-boss's phase 2 (`encounters/cp-e5.json`) is simply the first `AttackTimer` to set it.
+ *
+ * EXP-013 (experiment, not an accepted design decision) adds a second, independent per-enemy clock —
+ * `EnemyDef.ability` — and lets it change the *puzzle board's availability*, not just deal damage.
+ * The one concrete ability implemented is Stone Throw: on its own `THROW IN N` countdown (ticks on
+ * every legal world turn, alongside but independent of `attackTimer`), it deterministically picks one
+ * currently free-and-unpinned arrow (`targetPolicy: 'free-arrow'`, lowest id, never the last playable
+ * arrow — see `selectAbilityTarget`) and pins it for `pinDuration` further world turns: a pinned arrow
+ * cannot be tapped (no HP cost, no turn spent, no timer movement — this is not a player mistake), its
+ * geometry and blocking behaviour are completely unchanged, and it becomes tappable again once its pin
+ * expires. `BoardState` (`src/state.ts`) is not touched by this at all and stays pure geometric truth
+ * (`canExit`/`freeArrows`); `EncounterState` adds pin state as a temporary availability overlay on top
+ * — `playableArrows()` is `board.freeArrows()` minus whatever is currently pinned, and is what the
+ * solver/`wouldHit` use instead of `board.freeArrows()` directly. See EXP-013-REPORT.md for the full
+ * turn-order rationale (existing pins tick/expire *before* a new one can be created the same turn) and
+ * the no-softlock argument.
  */
 
 /**
@@ -105,6 +120,33 @@ export interface BossPhase {
 }
 
 /**
+ * EXP-013: how `EnemyAbility` picks which arrow to affect. Only `'free-arrow'` is implemented —
+ * deterministically the lowest-id arrow that is currently free (`BoardState.canExit`) AND not
+ * already pinned, and only when pinning it would still leave at least one other such arrow (the
+ * no-softlock guarantee; see `EncounterState.selectAbilityTarget`). The type is a union of one so
+ * that adding a second policy later (telegraphed-specific / random-safe / longest-arrow /
+ * direction-specific, per the brief) is a new case in that switch, not a new field shape.
+ */
+export type AbilityTargetPolicy = 'free-arrow'
+
+/**
+ * EXP-013 (experiment): a board-affecting ability on its own countdown, independent of
+ * `attackTimer`. The only resolution implemented is Stone Throw: pin the selected arrow for
+ * `pinDuration` world turns. Deliberately minimal — not a generic ability/scripting system.
+ */
+export interface EnemyAbility {
+  /** Stable id, e.g. for viewer labels and logs. */
+  id: string
+  /** `THROW IN N`; ticks on every legal world turn (alongside `attackTimer`, not instead of it). */
+  interval: number
+  /** How the affected arrow is chosen. */
+  targetPolicy: AbilityTargetPolicy
+  /** World turns the pinned arrow stays illegal to tap before becoming playable again. */
+  pinDuration: number
+  label?: string
+}
+
+/**
  * EXP-010b: one of possibly several enemies alive at the same time (`def.enemies`), each with its
  * own side/HP/attackTimer, independent of every other enemy in the encounter. Unlike `BossPhase`
  * these do not sequence — all alive enemies exist and attack in parallel from encounter start.
@@ -120,6 +162,9 @@ export interface EnemyDef {
   mandatory?: boolean
   /** `ATTACK IN N` for this enemy. Absent = this enemy never attacks. */
   attackTimer?: AttackTimer
+  /** EXP-013: a board-affecting ability on its own independent countdown. Absent = none. Not
+   * modeled on `BossPhase` — this spike only needs it on simultaneous enemies. */
+  ability?: EnemyAbility
   label?: string
 }
 
@@ -144,6 +189,10 @@ export type EncounterAction = { kind: 'tap'; id: number } | { kind: 'rotate'; tu
 export type TapResult =
   | { ok: false; reason: 'over' | 'gone'; blocker: -1 }
   | { ok: false; reason: 'blocked'; blocker: number; damage: number; playerHp: number; playerDead: boolean }
+  /** EXP-013: `id` is geometrically free but currently pinned by an enemy ability (Stone Throw).
+   * Deliberately NOT the same as `'blocked'`: no HP cost, and (like `'blocked'`) not logged/undoable
+   * and not a world turn — see `tap()`. */
+  | { ok: false; reason: 'pinned'; pinTurnsLeft: number; playerHp: number; playerDead: boolean }
   | {
       ok: true
       /** Direction the projectile flies in the arena (board-local dir + rotation). */
@@ -167,6 +216,10 @@ export type TapResult =
       enemyDamage: number
       /** `enemies` mode only: which enemies attacked this turn and for how much (can be more than one). */
       enemyAttacks?: { id: string; damage: number }[]
+      /** EXP-013, `enemies` mode only: arrow ids whose pin expired this turn (playable again). */
+      pinExpired?: number[]
+      /** EXP-013, `enemies` mode only: new pins an ability created this turn. */
+      pinnedThisTurn?: { id: number; turnsLeft: number }[]
       playerHp: number
       won: boolean
       lost: boolean
@@ -186,6 +239,11 @@ interface TimerSnapshot {
   enemyHitsThisCycle?: number[]
   /** Enemies mode, EXP-011: one entry per `def.enemies[i]` — has that enemy's cast been interrupted? */
   enemyCastInterrupted?: boolean[]
+  /** EXP-013: pin state is board-level, not mode-specific, so both modes carry it (always all-zero
+   * in boss mode, which has no `ability`). One entry per board arrow id. */
+  pinTurnsLeft: number[]
+  /** EXP-013, enemies mode only: one entry per `def.enemies[i]` — that enemy's `THROW IN N`. */
+  enemyAbilityCountdown?: number[]
 }
 
 type Entry = ({ kind: 'tap'; id: number; hit: boolean } | { kind: 'rotate'; turn: Turn }) & { timerBefore: TimerSnapshot }
@@ -214,6 +272,11 @@ export class EncounterState {
   private enemyHitsThisCycle: number[] = []
   /** EXP-011, enemies mode only: per-enemy, has that enemy's `kind: 'cast'` attack been interrupted? */
   private enemyCastInterrupted: boolean[] = []
+  /** EXP-013: world turns left before arrow `id` becomes tappable again; 0 = not pinned. Indexed by
+   * board arrow id, board-level (not mode-specific) — see the module doc comment. */
+  private pinTurnsLeft: number[] = []
+  /** EXP-013, enemies mode only: `def.enemies[i]`'s `THROW IN N`; Infinity if that enemy has no ability. */
+  private enemyAbilityCountdown: number[] = []
   private playerHpValue: number
   /** The HP this encounter started with (constructor param), needed to replay it exactly in clone(). */
   readonly playerHpStart: number
@@ -227,12 +290,14 @@ export class EncounterState {
     this.playerHpStart = playerHp
     this.phaseEnd = []
     this.grantedUpTo = []
+    this.pinTurnsLeft = new Array(topo.arrowCount).fill(0)
     if (def.enemies) {
       this.totalHp = def.enemies.reduce((s, e) => s + e.hp, 0)
       this.enemyHp = def.enemies.map((e) => e.hp)
       this.enemyCountdown = def.enemies.map((e) => e.attackTimer?.interval ?? Infinity)
       this.enemyHitsThisCycle = def.enemies.map(() => 0)
       this.enemyCastInterrupted = def.enemies.map(() => false)
+      this.enemyAbilityCountdown = def.enemies.map((e) => e.ability?.interval ?? Infinity)
     } else {
       let hp = 0
       let granted = 0
@@ -349,6 +414,8 @@ export class EncounterState {
     label?: string
     /** EXP-011: this enemy's current attack type, or undefined if it has no attackTimer. */
     attackKind?: AttackKind
+    /** EXP-013: this enemy's `THROW IN N`, or undefined if it has no ability. */
+    abilityCountdown?: number
   }[] {
     if (!this.def.enemies) return []
     return this.def.enemies.map((e, i) => {
@@ -363,8 +430,19 @@ export class EncounterState {
         mandatory: e.mandatory ?? true,
         label: e.label,
         attackKind: at ? (at.kind ?? 'normal') : undefined,
+        abilityCountdown: e.ability ? this.enemyAbilityCountdown[i] : undefined,
       }
     })
+  }
+  /** EXP-013: every arrow currently pinned, ascending id. */
+  get pinnedArrows(): { id: number; turnsLeft: number }[] {
+    const out: { id: number; turnsLeft: number }[] = []
+    for (let id = 0; id < this.pinTurnsLeft.length; id++) if (this.pinTurnsLeft[id] > 0) out.push({ id, turnsLeft: this.pinTurnsLeft[id] })
+    return out
+  }
+  /** EXP-013: is `id` currently pinned (geometrically free but illegal to tap)? */
+  isPinned(id: number): boolean {
+    return (this.pinTurnsLeft[id] ?? 0) > 0
   }
 
   grantedUpToPhase(i: number): number {
@@ -386,17 +464,29 @@ export class EncounterState {
   }
 
   wouldHit(id: number): boolean {
-    if (this.over || !this.board.canExit(id)) return false
+    if (this.over || !this.board.canExit(id) || this.isPinned(id)) return false
     const dir = this.arenaDir(id)
     return this.def.enemies ? this.targetIndexAt(dir) >= 0 : dir === this.bossSide
   }
 
-  /** Alive arrows by arena direction [N, E, S, W]. */
+  /**
+   * EXP-013: `board.freeArrows()` (geometric truth) minus whatever is currently pinned (mechanical
+   * availability) — what a legal tap can actually target right now. The solver and `wouldHit` use
+   * this instead of `board.freeArrows()` directly; `BoardState` itself has no notion of pins.
+   */
+  playableArrows(): number[] {
+    const out: number[] = []
+    for (const id of this.board.freeArrows()) if (!this.isPinned(id)) out.push(id)
+    return out
+  }
+
+  /** Alive arrows by arena direction [N, E, S, W]. `freeOnly` means playable (free AND unpinned),
+   * matching `playableArrows()` — always identical to plain geometric free when no arrow is pinned. */
   aliveByArenaDir(freeOnly = false): [number, number, number, number] {
     const c: [number, number, number, number] = [0, 0, 0, 0]
     const b = this.board
     for (let id = 0; id < b.topo.arrowCount; id++) {
-      if (freeOnly ? b.canExit(id) : b.isAlive(id)) c[this.arenaDir(id)]++
+      if (freeOnly ? b.canExit(id) && !this.isPinned(id) : b.isAlive(id)) c[this.arenaDir(id)]++
     }
     return c
   }
@@ -406,6 +496,7 @@ export class EncounterState {
   }
 
   private timerSnapshot(): TimerSnapshot {
+    const pinTurnsLeft = [...this.pinTurnsLeft]
     if (this.def.enemies) {
       return {
         playerHp: this.playerHpValue,
@@ -413,6 +504,8 @@ export class EncounterState {
         enemyCountdown: [...this.enemyCountdown],
         enemyHitsThisCycle: [...this.enemyHitsThisCycle],
         enemyCastInterrupted: [...this.enemyCastInterrupted],
+        enemyAbilityCountdown: [...this.enemyAbilityCountdown],
+        pinTurnsLeft,
       }
     }
     return {
@@ -420,15 +513,18 @@ export class EncounterState {
       countdown: this.countdown,
       hitsThisCycle: this.hitsThisCycle,
       castInterrupted: this.castInterrupted,
+      pinTurnsLeft,
     }
   }
   private restoreTimer(t: TimerSnapshot): void {
     this.playerHpValue = t.playerHp
+    this.pinTurnsLeft = t.pinTurnsLeft
     if (this.def.enemies) {
       this.enemyHp = t.enemyHp!
       this.enemyCountdown = t.enemyCountdown!
       this.enemyHitsThisCycle = t.enemyHitsThisCycle!
       this.enemyCastInterrupted = t.enemyCastInterrupted!
+      this.enemyAbilityCountdown = t.enemyAbilityCountdown!
     } else {
       this.countdown = t.countdown!
       this.hitsThisCycle = t.hitsThisCycle!
@@ -461,6 +557,63 @@ export class EncounterState {
     const at = this.def.enemies![i].attackTimer
     if (!at) return undefined
     return this.enemyCastInterrupted[i] && at.interruptedAttack ? at.interruptedAttack : at
+  }
+
+  /**
+   * EXP-013, enemies mode only, called once per legal world turn (a legal tap, or a Rotate when
+   * `def.rotate.advancesTurn`), after `advanceEnemiesTurn`. Order within this one call matters:
+   * existing pins are ticked/expired FIRST, using the state as it stood before this turn's abilities
+   * can run — a pin an ability creates later in this same call is therefore never pre-decremented on
+   * its own creation turn. `pinDuration: N` then means exactly N subsequent world turns where the
+   * arrow is illegal to tap (see EXP-013-REPORT.md for the worked example and the rationale for
+   * placing this before ability resolution, not after, unlike the brief's initial sketch order).
+   */
+  private advancePinsAndAbilities(): { pinExpired: number[]; pinnedThisTurn: { id: number; turnsLeft: number }[] } {
+    const pinExpired: number[] = []
+    for (let id = 0; id < this.pinTurnsLeft.length; id++) {
+      if (this.pinTurnsLeft[id] <= 0) continue
+      this.pinTurnsLeft[id]--
+      if (this.pinTurnsLeft[id] <= 0) pinExpired.push(id)
+    }
+    const pinnedThisTurn: { id: number; turnsLeft: number }[] = []
+    const defs = this.def.enemies!
+    for (let i = 0; i < defs.length; i++) {
+      if (this.enemyHp[i] <= 0) continue
+      const ability = defs[i].ability
+      if (!ability) continue
+      this.enemyAbilityCountdown[i]--
+      if (this.enemyAbilityCountdown[i] > 0) continue
+      this.enemyAbilityCountdown[i] = ability.interval
+      const target = this.selectAbilityTarget(ability)
+      if (target >= 0) {
+        this.pinTurnsLeft[target] = ability.pinDuration
+        pinnedThisTurn.push({ id: target, turnsLeft: ability.pinDuration })
+      }
+      // target < 0: fizzle -- no safe arrow to pin this cycle. The countdown still reset above, so
+      // the ability simply tries again next cycle rather than retrying every turn.
+    }
+    return { pinExpired, pinnedThisTurn }
+  }
+
+  /**
+   * EXP-013: deterministic target selection for one ability resolution. `'free-arrow'`: the lowest
+   * board id among arrows that are both geometrically free (`board.freeArrows()`) and not already
+   * pinned — but ONLY if there is at least one other such arrow, so pinning this one can never remove
+   * the player's last legal tap (the brief's no-softlock requirement). `playableArrows()` already
+   * returns ascending-by-id, so `[0]` is exactly "lowest arrow id" tie-breaking. Returns -1 (fizzle)
+   * when no candidate is safe, including when there are 0 or 1 candidates at all. This is the one
+   * place a future `targetPolicy` (telegraphed-specific / random-safe / longest-arrow / direction-
+   * specific) would add a case, without touching anything else in this class.
+   */
+  private selectAbilityTarget(ability: EnemyAbility): number {
+    switch (ability.targetPolicy) {
+      case 'free-arrow': {
+        const candidates = this.playableArrows()
+        return candidates.length >= 2 ? candidates[0] : -1
+      }
+      default:
+        return -1
+    }
   }
 
   /**
@@ -559,6 +712,12 @@ export class EncounterState {
 
   tap(id: number): TapResult {
     if (this.over) return { ok: false, reason: 'over', blocker: -1 }
+    if (this.isPinned(id)) {
+      // EXP-013: a rock-pinned arrow. Deliberately checked BEFORE board.tryRemove and BEFORE any
+      // logging: no HP cost (this is not a puzzle mistake), no timer/ability movement, not a world
+      // turn, and (like a blocked tap) not undoable individually -- there is nothing to undo.
+      return { ok: false, reason: 'pinned', pinTurnsLeft: this.pinTurnsLeft[id], playerHp: this.playerHpValue, playerDead: this.playerDead }
+    }
     const r = this.board.tryRemove(id)
     if (!r.ok) {
       if (r.reason === 'gone') return r as { ok: false; reason: 'gone'; blocker: -1 }
@@ -582,6 +741,8 @@ export class EncounterState {
     let attacked = false
     let enemyDamage = 0
     let enemyAttacks: { id: string; damage: number }[] = []
+    let pinExpired: number[] = []
+    let pinnedThisTurn: { id: number; turnsLeft: number }[] = []
     if (!this.won) {
       // Not everyone required is dead yet (and the board isn't cleared alive): the world keeps
       // ticking for every enemy still standing, same rule as the boss's per-turn advance.
@@ -591,10 +752,14 @@ export class EncounterState {
       attacked = res.attacked
       enemyDamage = res.damage
       enemyAttacks = res.attacks
+      const pinRes = this.advancePinsAndAbilities()
+      pinExpired = pinRes.pinExpired
+      pinnedThisTurn = pinRes.pinnedThisTurn
     }
     return {
       ok: true, arenaDir, hit, phaseBefore: 0, phaseAfter: 0, granted: 0,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
+      pinExpired, pinnedThisTurn,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
   }
@@ -644,8 +809,12 @@ export class EncounterState {
     this.rotates++
     this.log.push({ kind: 'rotate', turn, timerBefore })
     if (this.def.rotate.advancesTurn) {
-      if (this.def.enemies) this.advanceEnemiesTurn(-1)
-      else this.advanceTurn(false)
+      if (this.def.enemies) {
+        this.advanceEnemiesTurn(-1)
+        this.advancePinsAndAbilities()
+      } else {
+        this.advanceTurn(false)
+      }
     }
     return true
   }
@@ -674,15 +843,21 @@ export class EncounterState {
 
   /** Search key: alive set + everything that affects the future. Includes `castInterrupted`/
    * `enemyCastInterrupted` (EXP-011): two states with the same hp/countdown but a different active
-   * attack config (e.g. cast vs. its post-interrupt normal attack) must not be treated as equal. */
+   * attack config (e.g. cast vs. its post-interrupt normal attack) must not be treated as equal.
+   * EXP-013: also includes `pinTurnsLeft`/`enemyAbilityCountdown` -- `board.key()` only encodes the
+   * alive set (geometric truth) and has no notion of pins, so two states with the same alive set but
+   * a different pinned arrow (different playable-arrow set) MUST NOT collide here, or the solver
+   * would treat a pinned and an unpinned board as the same search node. */
   key(): string {
+    const pin = this.pinTurnsLeft.join(',')
     if (this.def.enemies) {
       const cd = this.enemyCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
       const ci = this.enemyCastInterrupted.map((b) => (b ? 1 : 0)).join(',')
-      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${this.playerHpValue}`
+      const ac = this.enemyAbilityCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
+      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${pin}|${this.playerHpValue}`
     }
     const c = Number.isFinite(this.countdown) ? this.countdown : 'inf'
-    return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${this.playerHpValue}`
+    return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}`
   }
 }
 
@@ -708,6 +883,17 @@ function checkAttackTimer(at: AttackTimer, label: string): void {
   if (at.interruptedAttack) checkAttackTimer(at.interruptedAttack, `${label}.interruptedAttack`)
 }
 
+const ABILITY_TARGET_POLICIES: readonly AbilityTargetPolicy[] = ['free-arrow']
+
+function checkAbility(a: EnemyAbility, label: string): void {
+  if (typeof a.id !== 'string' || a.id.length === 0) throw new Error(`${label}: ability.id must be a non-empty string`)
+  if (!Number.isInteger(a.interval) || a.interval < 1) throw new Error(`${label}: ability.interval must be a positive integer`)
+  if (!Number.isInteger(a.pinDuration) || a.pinDuration < 1) throw new Error(`${label}: ability.pinDuration must be a positive integer`)
+  if (!ABILITY_TARGET_POLICIES.includes(a.targetPolicy)) {
+    throw new Error(`${label}: unknown ability.targetPolicy ${String(a.targetPolicy)}`)
+  }
+}
+
 export function checkEncounter(def: EncounterDef): void {
   const hasBoss = !!def.boss
   const hasEnemies = !!def.enemies && def.enemies.length > 0
@@ -728,6 +914,7 @@ export function checkEncounter(def: EncounterDef): void {
       if (![0, 1, 2, 3].includes(e.side)) throw new Error(`enemy ${i}: bad side`)
       if (!Number.isInteger(e.hp) || e.hp < 1) throw new Error(`enemy ${i}: hp must be a positive integer`)
       if (e.attackTimer) checkAttackTimer(e.attackTimer, `enemy ${i}`)
+      if (e.ability) checkAbility(e.ability, `enemy ${i}`)
     })
   }
   if (!Array.isArray(def.rotate?.allow) || def.rotate.allow.some((t) => t !== 1 && t !== -1)) {
