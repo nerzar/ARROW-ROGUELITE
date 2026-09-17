@@ -10,13 +10,11 @@
 // (~60-70px off in stage space) -- this art's frame border is itself densely decorated (corner
 // gem studs, skull medallions, inline diamonds along every edge), so a plain gradient/variance
 // scan repeatedly locked onto a decoration's edge instead of the true frame/tile boundary,
-// confidently and wrong. The reliable method that replaced it: render this module's quad as the
-// in-app debug grid-line overlay (board-renderer.js's `debug` mode) directly over the arena art,
-// screenshot, and read the pixel offset between the projected corners and the baked corners (the
-// unmistakable gem studs) *directly in that one composited image* -- no source-image measurement,
-// no cover-fit conversion, nothing to get out of sync with what's actually on screen. Apply the
-// correction, re-screenshot, repeat until the corners sit on the studs and the mesh lines track
-// the tile mortar cracks.
+// confidently and wrong. Screenshot-based correction (project the quad, screenshot it over the
+// art, read the pixel offset against the baked corners, adjust) got close but still visibly off
+// by a human eye's judgment. What actually nailed it: the user hand-tuned `prologue-5x5-good`'s
+// boardPlaneFrac directly against the live debug grid-mesh overlay in the browser and confirmed
+// it -- see that entry below, now the accepted base calibration for this pipeline.
 //
 // `anchors` are per-arena actor foot-baseline points (normalized stage fractions, same contract
 // as arena-layout.js's PODIUM_GROUND) -- TOP/LEFT/RIGHT stair platforms as painted in this
@@ -28,12 +26,19 @@ export const ARENA_CALIBRATIONS = {
   // prologue-violet-arch candidate this task started calibrating against). Same 1672x941
   // resolution and near-exact-16:9 aspect as that candidate (negligible background-size:cover
   // crop, unlike boss-shadow-moon below), so no cover-fit correction is needed here.
+  //
+  // BASE CALIBRATION (user-confirmed, 2026-09-17): boardPlaneFrac below was hand-tuned by the
+  // user directly in the browser (debug grid-mesh overlay vs. the baked art) after this task's
+  // own automated + screenshot-corrected passes were still visibly off. Confirmed accepted --
+  // treat `prologue-5x5-good` as the reference/base baked-grid calibration for this pipeline
+  // going forward; any future arena calibration should be checked against how close it reads to
+  // this one before being trusted.
   'prologue-5x5-good': {
     id: 'prologue-5x5-good',
     background: 'assets/arenas/prologue-act1/5x5-good.png',
     boardSizeLocked: 5,
     boardPlaneFrac: {
-      tl: [0.333, 0.367], tr: [0.665, 0.367], br: [0.717, 0.820], bl: [0.282, 0.820],
+      tl: [0.37, 0.45], tr: [0.63, 0.45], br: [0.655, 0.818], bl: [0.348, 0.820],
     },
     // FIX-023: left/right x kept inside +-(0.5 - SIDE_CHAR.w/2/stageCols) of center so the
     // (large, ~6-cell) side sprite never clips off the canvas edge -- 0.1/0.9 first tried here
@@ -56,7 +61,7 @@ export const ARENA_CALIBRATIONS = {
     // hand-converted through the cover-fit math -- that conversion is real but easy to get subtly
     // wrong, and stage-space calibration sidesteps it entirely by construction.
     boardPlaneFrac: {
-      tl: [0.2775, 0.329], tr: [0.621, 0.329], br: [0.6875, 0.711], bl: [0.2125, 0.711],
+      tl: [0.3, 0.329], tr: [0.621, 0.329], br: [0.6875, 0.711], bl: [0.2125, 0.711],
     },
     // FIX-023: x=0.09/0.91 first tried here -- measured via debugLayout(), the (~6-cell, 313px
     // at 960 stage width) side sprite's char rect spanned x 717..1030 at x=0.91, clipping ~70px

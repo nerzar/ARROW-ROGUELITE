@@ -45,9 +45,16 @@ not the source image:
    `boardPlaneFrac`.
 5. Re-render, re-screenshot, repeat until the corners sit on the studs and the mesh lines track the
    tile mortar cracks. `boss-shadow-moon` needed one large corrective pass (all four corners moved
-   substantially) after the source-image approach's error was caught; `prologue-5x5-good`'s
-   corners (inherited from a prior, differently-measured 5x5 candidate at the same resolution/
-   composition) were already close and needed no correction once checked this way.
+   substantially) after the source-image approach's error was caught.
+
+**What actually nailed it, in the end:** even this screenshot-read-and-correct loop, done by the
+agent, still wasn't quite right by the user's own eye once checked live. The final accepted
+`prologue-5x5-good` calibration is the user's own hand-tuned `boardPlaneFrac`, adjusted directly
+against the live debug grid-mesh overlay in the browser (via the one-click "FIX-023 baked arena"
+topbar picker -- see below) until it visibly sat on the baked tile lines. **This is now the base
+calibration for the pipeline** -- the reference to compare any future arena's calibration against,
+and the standard other arenas (including `boss-shadow-moon`, still agent-calibrated and not yet
+separately confirmed) should eventually be brought up to.
 
 **`background-size: cover` is still real and still matters** -- `.bg-layer` (style.css) fits each
 arena PNG to the forced-16:9 stage with `background-size: cover; background-position: center`,
@@ -92,9 +99,13 @@ back on stage) and a screenshot (feet visibly on a stair step, not floating or c
 
 ## Reproducing/updating this calibration
 
-`window.visualDebug.loadBakedArenaDebug(calibrationId, seed?, defSceneKey?)` (browser console, in
-the visual-proto viewer) loads a calibration entry's background + a freshly generated square board
-of its `boardSizeLocked`, using an existing scene's `def` for structure (`'rock-spike'` for a
-single N-side target, `'cp-e4'` for E+W side targets to check LEFT/RIGHT anchors). Toggle the
-debug panel (`d` key or the "debug" button) to overlay the projected grid mesh, or call
-`window.visualDebug.layout()` for exact per-actor screen rects.
+Topbar **"FIX-023 baked arena"** dropdown + **load** button (added this task): pick a calibration
+id and click load -- it loads that arena's background + a freshly generated board of its
+`boardSizeLocked` with `cp-e4`'s def (both TOP and E/W side targets, so all three actor anchors are
+checkable at once), and auto-opens the debug panel so the grid-mesh overlay is visible immediately.
+This is the fastest path to eyeball a `boardPlaneFrac`/`anchors` edit -- these viewer files are
+plain `.js`, so no build step is needed, just edit `arena-calibration.js` and reload the page.
+
+Equivalent via browser console: `window.visualDebug.loadBakedArenaDebug(calibrationId, seed?,
+defSceneKey?)`. `window.visualDebug.layout()` gives exact per-actor screen rects (used to catch the
+LEFT/RIGHT clipping bug below).
