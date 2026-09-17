@@ -93,3 +93,61 @@ Mockup желательно показать с двумя крайними squa
 5. STATUS: DONE.
 
 Не merge main.
+
+## RESULT
+
+Style source (no pixels copied): `magicarrowassets/gameplay-reference/board/
+ChatGPT Image Sep 17, 2026, 02_25_09 PM (1).png` — единственная пустая
+(Moonlit Fortress, без стрел) board-well reference; палитра сверена с approved
+`assets/arena-moonlit-fortress.png` (slate ~56,54,74; rune amber ~255,157,46).
+
+Delivered (square-first, один frame на все размеры):
+
+- `spikes/arrow-core/viewer/visual-proto/assets/board/board-frame-overlay.png`
+  (1024x1024 RGBA, 426 KB) — каменная рамка + руны + золотая окантовка,
+  прозрачный квадратный центр, без стрел/сетки/opaque-подложки.
+- `spikes/arrow-core/viewer/visual-proto/assets/board/board-inner-mask.png`
+  (1024 L, 2 KB) — маска внутреннего окна (255 = зона puzzle).
+- `docs/ART-003-BOARD-FRAME-OVERLAY.md` — размеры, safe inner rect
+  (normalized 0.1992..0.8008, окно 0.1875..0.8125), alpha info, рекомендации FIX-021.
+- `build/ART-003-board-frame-overlay/` — 2048-мастер, детерминированный
+  генератор (`make_frame.py`, seed 1571), mockups 6x6 + 10x10 в одной и той же
+  рамке на тёмной/светлой/checker и arena (`make_mockups.py`, proof only).
+
+Renderer/layout/gameplay/projection/Rotate не тронуты. Frame статичен по
+конструкции — Rotate вращает только puzzle-слой внутри safe rect (интеграция
+за FIX-021: предложить `boardFrameOverlay` как невращающийся foreground-слой;
+см. doc, п.3 рекомендаций).
+
+## VERIFY
+
+- PIL-метрики, 2048-мастер: safe rect 408..1640 — 0 ненулевых alpha;
+  верхняя band — 21000/21000 alpha 255; margin снаружи — 0 ненулевых.
+- PIL-метрики, 1024-runtime: safe rect — 0; band — 5425/5425 alpha 255;
+  внешняя кромка — чистый AA-спад 2-3px без ореола (dust ≤12 в пределах 3px).
+- Визуально: mock_dark_6x6 / mock_light_10x10 — кромки чистые на тёмном и
+  светлом; mock_arena_6x6 / mock_arena_10x10 — 6x6 и 10x10 сидят в одном окне,
+  руны/камень читаемы, центр прозрачный (арена просвечивает).
+- `git status`: в коммит идут только файлы задачи (build/ART-003-*,
+  docs/ART-003-*, assets/board/*, task-card); чужие untracked
+  (`donors.md`, `encounters/multi-shortlist.json`) не staged.
+
+## FOUND
+
+1. PIL `ImageDraw` полупрозрачной заливкой НЕ blend'ит, а штампует alpha на
+   RGBA-канвасе (первая сборка дала checkerboard-alpha). Правило: декор —
+   только на opaque RGB, alpha — только из геометрических масок. Записано в
+   шапку `make_frame.py`.
+2. Квадратный overlay поверх перспективной arena даёт «окно» поверх
+   podium-арта, а не продолжение 3D-подиума — осознанный trade-off square-first
+   политики; перспективный well остался бы привязан к одному размеру.
+   Если FIX-021 захочет перспективу — это отдельная задача, не FIX в этой.
+3. Ветка один раз была переключена на `exp/EXP-015-board-scale-readability`
+   (параллельный агент на той же машине); работа не пострадала (untracked
+   файлы на месте), вернулся `checkout build/ART-003-board-frame-overlay`
+   без флагов. На будущее: перед commit перепроверять `git branch --show-current`.
+4. `assets.js` сейчас знает только `boardFrame -> assets/board-frame.png`
+   (слой *под* canvas). Overlay спроектирован слоем *над* puzzle — wiring за
+   FIX-021 одной строкой манифеста (см. doc).
+
+STATUS: DONE
