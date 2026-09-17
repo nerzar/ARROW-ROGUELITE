@@ -18,6 +18,7 @@ export const ASSET_MANIFEST = {
   // magicarrowassets/arenas/ChatGPT Image Sep 17, 2026, 09_24_35 AM.png).
   background: 'assets/arena-moonlit-fortress.png',
   boardFrame: 'assets/board-frame.png',
+  bossGoblinShaman: 'assets/boss-goblin-shaman.png',
   bossGoblinTaunter: 'assets/boss-goblin-taunter.png',
   enemyGoblinShaman: 'assets/enemy-goblin-shaman.png',
   enemyDireWolf: 'assets/enemy-dire-wolf.png',
@@ -28,12 +29,37 @@ export const ASSET_MANIFEST = {
   hitFx: 'assets/hit-fx.png',
 }
 
-// VIS-005: Goblin Taunter runtime pack -- one PNG per presentation pose (canonical source:
+// VIS-005: Goblin Taunter/King runtime pack -- one PNG per presentation pose (canonical source:
 // magicarrowassets/creatures/goblin-king; runtime renames indle->idle, stuned->stunned).
 // `back` is an auxiliary pose, never a gameplay baseline. Missing files resolve to `null`
 // per pose and the renderer falls back to the idle pose, then to the legacy placeholder.
+// VIS-008: the user reassigned roles -- Goblin Taunter/King is now the reserved ACT I boss, not
+// the prologue boss. Its pack/state wiring stays intact (not deleted, still loadable/reachable
+// via window.visualDebug.showBossPack('goblin-taunter')) for when an Act I boss scene exists.
 export const BOSS_PACK_BASE = 'assets/bosses/goblin-taunter/'
 export const BOSS_MANIFEST = Object.fromEntries(BOSS_POSES.map((p) => [p, `${BOSS_PACK_BASE}${p}.png`]))
+
+// VIS-008: Goblin Shaman runtime pack -- the PROLOGUE boss (cp-e5's `miniboss_placeholder`), one
+// PNG per presentation pose (canonical source: magicarrowassets/creatures/goblin-shaman; runtime
+// renames "stunned - hit.png" -> stunned-hit.png, source file itself untouched). Same pose set,
+// same anchor contract, same graceful-degradation rules as BOSS_MANIFEST above -- boss-visual-
+// state.js's pose machine has no species knowledge at all, so this is purely a different manifest
+// fed into the same `loadBossPack()`/`resolveBossImage()` pair.
+const SHAMAN_RUNTIME = { idle: 'idle.png', taunt: 'taunt.png', cast: 'cast.png', stunned: 'stunned-hit.png', angry: 'angry.png', defeat: 'defeat.png', back: 'back.png' }
+export const SHAMAN_PACK_BASE = 'assets/bosses/goblin-shaman/'
+export const SHAMAN_MANIFEST = Object.fromEntries(BOSS_POSES.map((p) => [p, `${SHAMAN_PACK_BASE}${SHAMAN_RUNTIME[p]}`]))
+
+/** VIS-008: which boss species pack backs a given `def.boss.id`. The ONLY place that knows
+ * species -- boss-visual-state.js stays fully pack-agnostic (pose names/timing only), and adding
+ * a second boss scene later (Act I) is a new entry here, not a change to the state machine.
+ * Unknown ids default to Shaman, today's only boss scene. */
+const BOSS_ID_TO_SPECIES = {
+  miniboss_placeholder: 'goblin-shaman', // cp-e5: prologue boss (VIS-008 reassignment)
+}
+export const BOSS_MANIFESTS = { 'goblin-shaman': SHAMAN_MANIFEST, 'goblin-taunter': BOSS_MANIFEST }
+export function bossSpeciesFor(bossId) {
+  return BOSS_ID_TO_SPECIES[bossId] ?? 'goblin-shaman'
+}
 
 const WOLF_RUNTIME = { idle: 'idle.png', attackReady: 'attack-ready.png', attack: 'lunge.png', hit: 'hit.png', defeat: 'defeat.png' }
 // VIS-006: Dire Wolf runtime pack -- one PNG per ordinary-enemy presentation pose (canonical
@@ -46,9 +72,12 @@ export const WOLF_MANIFEST = Object.fromEntries(ENEMY_POSES.map((p) => [p, `${WO
 /** Enemy/boss id -> manifest key, for the three VS-001 scenes' known cast (cp-e4, cp-e5,
  * rock-spike). A future encounter with an unlisted id still gets *a* portrait, not a blank panel,
  * via SIDE_FALLBACK_SLOT below -- this is bookkeeping for placeholder-vs-real art, not a design
- * decision about which monster is "really" a shaman or a wolf. */
+ * decision about which monster is "really" a shaman or a wolf.
+ * VIS-008: `miniboss_placeholder` now points at the Shaman's flat fallback slot, matching the
+ * prologue-boss reassignment -- this legacy flat-portrait layer only ever fires when the real
+ * pose pack (SHAMAN_MANIFEST via BOSS_ID_TO_SPECIES) has no image loaded at all. */
 const ID_TO_SLOT = {
-  miniboss_placeholder: 'bossGoblinTaunter', // cp-e5
+  miniboss_placeholder: 'bossGoblinShaman', // cp-e5: prologue boss (VIS-008)
   grunt_e: 'enemyDireWolf', // cp-e4, urgent/melee-flavored timer
   grunt_n: 'enemyGoblinShaman', // cp-e4, slow/caster-flavored timer
   rockthrower: 'enemyGoblinShaman', // rock-spike -- no dedicated "throws rocks" slot in the roster
@@ -122,9 +151,11 @@ export const SHAMAN_MANIFEST = {
 }
 
 /** Picks the best available portrait for a target box: known id -> its slot, else the side's
- * positional fallback. Boss always resolves to bossGoblinTaunter regardless of id. */
+ * positional fallback. VIS-008: boss resolves to bossGoblinShaman (the prologue boss) regardless
+ * of id -- this legacy flat-portrait layer never falls back to Taunter now that Taunter is the
+ * reserved Act I boss, not today's boss scene. */
 export function resolveTargetImage(store, { id, side, isBoss }) {
-  if (isBoss) return store.bossGoblinTaunter ?? null
+  if (isBoss) return store.bossGoblinShaman ?? null
   const slot = (id && ID_TO_SLOT[id]) ?? SIDE_FALLBACK_SLOT[side] ?? null
   return (slot && store[slot]) ?? null
 }
