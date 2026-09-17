@@ -6,7 +6,7 @@
 
 | Task | Кто делает | Статус | Ветка |
 |---|---|---|---|
-| MKT-001 — демография официальных сообществ shortlist | Muse Spark 1.3 | READY | `mkt/MKT-001-community-demography` |
+| MKT-001 — демография официальных сообществ shortlist | Muse Spark 1.3 | DONE — ждёт решения пользователя | `mkt/MKT-001-community-demography` |
 
 ## Дальше
 
