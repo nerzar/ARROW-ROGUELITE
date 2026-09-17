@@ -6,8 +6,16 @@
 import {
   encounterFromJson, findWin, formatAction, formatEncounterReport, RunState, validateEncounter,
 } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, loadAssets } from './assets.js'
+import { ASSET_MANIFEST, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { createBoardRenderer } from './board-renderer.js'
+import {
+  appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
+  onBossGameplayEvent, readBossSnapshot, tickBossVisual,
+} from './boss-visual-state.js'
+import {
+  appearEnemyVisual, baselinePose as enemyBaseline, ENEMY_POSES, manualEnemyPose,
+  onEnemyGameplayEvent, readEnemySnapshot, tickEnemyVisual,
+} from './enemy-visual-state.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
@@ -59,6 +67,12 @@ async function getStep(scene) {
 
 const renderer = createBoardRenderer(ui.canvas)
 const assets = await loadAssets(ASSET_MANIFEST)
+// VIS-005: per-pose boss pack (missing files -> null -> idle -> placeholder fallback).
+const bossPack = await loadBossPack()
+const bossPosesLoaded = BOSS_POSES.filter((p) => bossPack[p]).length
+// VIS-006: Dire Wolf pack for ordinary enemies (same null-on-missing contract).
+const wolfPack = await loadWolfPack()
+const wolfPosesLoaded = ENEMY_POSES.filter((p) => wolfPack[p]).length
 applyDomAssets(assets)
 
 const runConfig = await fetchJson('../../encounters/cp-run-config.json').catch(() => ({ playerMaxHp: 10 }))
@@ -70,24 +84,61 @@ let board = null
 let hint = null
 let overlayTimer = 0
 let targetsBefore = []
-// PLAYTEST-FIX-001: tallest status stack (in text lines) among TOP (N-side) targets, so the
-// renderer can reserve canvas headroom above the top panel instead of overlapping the board.
-// Boss phases can move the boss to N mid-encounter, so this is the max over all phases, computed
-// once per scene (a phase change never re-reserves: the superset already covers it).
-let topReserve = null
+// VIS-005: presentation-only boss pose state. Null in enemies-mode scenes (no boss to pose).
+// Gameplay stays source of truth -- this is driven by engine events, never the reverse.
+let bossVisual = null
+const bossSnap = () => (run && def ? readBossSnapshot(run.encounter, def) : null)
+// VIS-006: presentation-only per-ACTOR ordinary-enemy pose state (Map enemyId -> visual).
+// Null in boss-mode scenes. Each actor ticks on its own snapshot, so a hit on one wolf never
+// switches the other.
+let wolfVisuals = null
 
-function topStatusReserve(d) {
-  if (d.enemies) {
-    let lines = 0
-    for (const e of d.enemies) {
-      if (e.side !== 0) continue
-      lines = Math.max(lines, 2 + (e.attackTimer ? 1 : 0) + (e.ability ? 1 : 0))
+/** Expire timed holds and re-sync baselines (e.g. a newly armed attackReady telegraph).
+ * Presentation only; never touches engine state. */
+function tickAndSyncWolves(now) {
+  if (!wolfVisuals || !run) return
+  for (const e of run.encounter.enemies ?? []) {
+    const snap = readEnemySnapshot(e)
+    let v = wolfVisuals.get(e.id)
+    if (!v) {
+      wolfVisuals.set(e.id, appearEnemyVisual(now))
+      continue
     }
-    return lines > 0 ? { lines, boss: false } : null
+    if (e.dead) {
+      wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
+      continue
+    }
+    v = tickEnemyVisual(v, now, snap)
+    if (!v.manual && now >= v.holdUntil && v.pose !== enemyBaseline(snap)) {
+      v = onEnemyGameplayEvent(v, 'sync', now, snap)
+    }
+    wolfVisuals.set(e.id, v)
   }
-  const phases = d.boss.phases.filter((p) => p.side === 0)
-  if (!phases.length) return null
-  return { lines: Math.max(...phases.map((p) => 2 + (p.attackTimer ? 1 : 0))), boss: true }
+}
+// VIS-007: per-side arena slot reserve (N = top, S = bottom) so the renderer can fit
+// the character + HUD stack between the slot and the canvas edge. Boss phases can move
+// the boss between sides mid-encounter, so this is the max over all phases per side,
+// computed once per scene (a phase change never re-reserves: the superset covers it).
+// E/W slots never need a margin reserve (their HUD stacks vertically, mid-canvas).
+let slotReserve = null
+
+function slotStatusReserve(d) {
+  const pick = (dir) => {
+    if (d.enemies) {
+      const es = d.enemies.filter((e) => e.side === dir)
+      if (!es.length) return null
+      return {
+        lines: Math.max(...es.map((e) => 2 + (e.attackTimer ? 1 : 0) + (e.ability ? 1 : 0))),
+        big: false,
+      }
+    }
+    const phases = d.boss.phases.filter((p) => p.side === dir)
+    if (!phases.length) return null
+    return { lines: Math.max(...phases.map((p) => 2 + (p.attackTimer ? 1 : 0))), big: true }
+  }
+  const top = pick(0)
+  const bottom = pick(2)
+  return top || bottom ? { top, bottom } : null
 }
 
 async function loadScene(key) {
@@ -119,10 +170,20 @@ function loadActiveStep() {
   board = step.board ?? { preset: 'unknown', seed: 0 }
   ui.scenePick.value = step.id
   ui.sceneTitle.textContent = step.title ?? step.id
-  topReserve = topStatusReserve(def)
-  renderer.resize(level, topReserve)
+  slotReserve = slotStatusReserve(def)
+  renderer.resize(level, slotReserve)
   renderer.resetFx()
   hint = null
+  // VIS-005: encounter appearance -- brief taunt, then the baseline (never a permanent taunt).
+  bossVisual = def.boss ? appearBossVisual(performance.now()) : null
+  // VIS-006: ordinary enemies appear straight in idle, one independent visual per actor.
+  wolfVisuals = null
+  if (def.enemies) {
+    wolfVisuals = new Map()
+    for (const e of run.encounter.enemies) wolfVisuals.set(e.id, appearEnemyVisual(performance.now()))
+  }
+  buildBossPoseButtons()
+  buildWolfPoseButtons()
   targetsBefore = renderer.collectTargets(run.encounter, def)
   const hasAbility = def.enemies?.some((e) => e.ability)
   ui.msgLine.textContent = def.enemies
@@ -161,6 +222,7 @@ function tap(id) {
   const s = run.encounter
   if (s.over || overlayTimer) return
   const before = renderer.collectTargets(s, def)
+  const phaseBefore = bossVisual ? s.phaseIndex : -1
   const r = s.tap(id)
   hint = null
   if (!r.ok) {
@@ -190,6 +252,35 @@ function tap(id) {
   const after = renderer.collectTargets(s, def)
   renderer.markDeaths(before, after)
   targetsBefore = after
+  // VIS-006: gameplay -> per-actor presentation. Priority per actor: defeated > attack
+  // (its own strike is the latest visible beat) > hit > baseline sync. Untouched actors only
+  // re-sync an expired hold onto the live baseline (e.g. a newly armed attackReady telegraph).
+  if (wolfVisuals) {
+    const now = performance.now()
+    const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
+    for (const e of s.enemies) {
+      const snap = readEnemySnapshot(e)
+      const v = wolfVisuals.get(e.id)
+      if (!v) continue
+      if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
+      else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
+      else if (r.hit && e.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+    }
+    tickAndSyncWolves(now)
+  }
+  // VIS-005: gameplay -> presentation. Priority: won > phase change > interrupt > hit.
+  // A miss with no interrupt only re-syncs an expired hold onto a newly armed cast baseline.
+  if (bossVisual) {
+    const now = performance.now()
+    const snap = bossSnap()
+    if (r.won) bossVisual = onBossGameplayEvent(bossVisual, 'won', now, snap)
+    else if (s.phaseIndex !== phaseBefore) bossVisual = onBossGameplayEvent(bossVisual, 'phase', now, snap)
+    else if (r.castInterrupted) bossVisual = onBossGameplayEvent(bossVisual, 'interrupted', now, snap)
+    else if (r.hit) bossVisual = onBossGameplayEvent(bossVisual, 'hit', now, snap)
+    else if (!bossVisual.manual && now >= bossVisual.holdUntil && bossVisual.pose !== baselinePose(snap)) {
+      bossVisual = onBossGameplayEvent(bossVisual, 'castStart', now, snap)
+    }
+  }
 
   let text = `#${id} ${r.hit ? 'попадание' : 'мимо'} · HP целей ${s.hp}/${s.totalHp}`
   if (r.enemyAttacked) {
@@ -236,6 +327,8 @@ function rotate(turn) {
     renderer.onRotateEnemyAttack()
   }
   renderer.markDeaths(before, renderer.collectTargets(s, def))
+  // VIS-006: a rotate can tick enemy timers (telegraphs may arm); re-sync baselines only.
+  tickAndSyncWolves(performance.now())
   setMsg(text, false)
   pushLog(`${formatAction({ kind: 'rotate', turn })}  → ${s.rotation * 90}°`)
   renderPanel()
@@ -340,7 +433,15 @@ function kick() {
 function frame(now) {
   raf = 0
   if (!run) return
-  const animating = renderer.frame(now, { s: run.encounter, def, level, assets, hint })
+  // VIS-005: expire timed holds (taunt/stunned) back to the live baseline. Presentation only.
+  if (bossVisual) bossVisual = tickBossVisual(bossVisual, now, bossSnap())
+  // VIS-006: same for per-actor wolf holds; feeds the renderer below.
+  tickAndSyncWolves(now)
+  const animating = renderer.frame(now, {
+    s: run.encounter, def, level, assets, hint,
+    boss: bossVisual ? { pack: bossPack, visual: bossVisual } : null,
+    wolf: wolfVisuals ? { pack: wolfPack, visuals: wolfVisuals } : null,
+  })
   if (animating) kick()
 }
 
@@ -371,7 +472,71 @@ function renderPanel() {
     const pinned = s.pinnedArrows
     statusLines.push(`pinned arrows: ${pinned.length ? pinned.map((p) => `#${p.id} (${p.turnsLeft}t)`).join(', ') : '—'}`)
   }
+  // VIS-005: boss presentation state (debug-panel only -- gameplay state is the engine's).
+  if (def.boss) {
+    statusLines.push(`boss art: ${bossPosesLoaded}/${BOSS_POSES.length} poses loaded`)
+    if (bossVisual) statusLines.push(`boss pose: ${bossVisual.pose}${bossVisual.manual ? ' (manual)' : ''}`)
+  }
+  // VIS-006: per-actor wolf presentation state (same debug-panel-only contract).
+  if (def.enemies && wolfVisuals) {
+    statusLines.push(`wolf art: ${wolfPosesLoaded}/${ENEMY_POSES.length} poses loaded`)
+    for (const [id, w] of wolfVisuals) statusLines.push(`wolf ${id}: ${w.pose}${w.manual ? ' (manual)' : ''}`)
+  }
   ui.status.textContent = statusLines.join('\n')
+}
+
+// VIS-005: prototype-only visual-state control. Debug-only: real gameplay events still drive
+// the pose automatically (any tap event clears a manual override).
+function buildBossPoseButtons() {
+  const row = $('bossPoseRow')
+  if (!row) return
+  row.replaceChildren()
+  if (!bossVisual) {
+    row.textContent = '— (no boss in this scene)'
+    return
+  }
+  for (const pose of BOSS_POSES) {
+    const b = document.createElement('button')
+    b.textContent = pose
+    b.title = `debug: force boss pose ${pose}`
+    b.disabled = !bossPack[pose]
+    b.onclick = () => {
+      bossVisual = manualBossPose(bossVisual, pose, performance.now())
+      renderPanel()
+      kick()
+    }
+    row.append(b)
+  }
+}
+
+// VIS-006: prototype-only per-actor visual-state control. One button group per enemy id;
+// a manual pose sticks until the next gameplay event for that actor (same contract as boss).
+function buildWolfPoseButtons() {
+  const row = $('wolfPoseRow')
+  if (!row) return
+  row.replaceChildren()
+  if (!wolfVisuals) {
+    row.textContent = '— (no ordinary enemies in this scene)'
+    return
+  }
+  for (const [id] of wolfVisuals) {
+    const label = document.createElement('span')
+    label.textContent = `${id}:`
+    label.className = 'muted'
+    row.append(label)
+    for (const pose of ENEMY_POSES) {
+      const b = document.createElement('button')
+      b.textContent = pose
+      b.title = `debug: force wolf ${id} pose ${pose}`
+      b.disabled = !wolfPack[pose]
+      b.onclick = () => {
+        wolfVisuals.set(id, manualEnemyPose(wolfVisuals.get(id), pose, performance.now()))
+        renderPanel()
+        kick()
+      }
+      row.append(b)
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -405,7 +570,7 @@ ui.restartBtn.onclick = () => {
 ui.hintBtn.onclick = showHint
 ui.debugToggle.onclick = () => ui.debugPanel.classList.toggle('hidden')
 ui.scenePick.onchange = () => loadScene(ui.scenePick.value)
-window.addEventListener('resize', () => { if (level) { renderer.resize(level, topReserve); kick() } })
+window.addEventListener('resize', () => { if (level) { renderer.resize(level, slotReserve); kick() } })
 window.addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement || ev.target instanceof HTMLSelectElement) return
   const k = ev.key.toLowerCase()
@@ -437,4 +602,23 @@ window.visualDebug = {
   tap,
   rotate,
   loadScene,
+  boss: () => bossVisual, // VIS-005: current presentation pose state (null in enemies mode)
+  setBossPose: (pose) => { // VIS-005: manual debug override, same as the debug-panel buttons
+    if (bossVisual) {
+      bossVisual = manualBossPose(bossVisual, pose, performance.now())
+      renderPanel()
+      kick()
+    }
+    return bossVisual
+  },
+  wolf: () => wolfVisuals ? Object.fromEntries([...wolfVisuals].map(([id, w]) => [id, w.pose])) : null, // VIS-006: per-actor poses (null in boss mode)
+  setWolfPose: (id, pose) => { // VIS-006: manual debug override per actor
+    if (wolfVisuals?.has(id)) {
+      wolfVisuals.set(id, manualEnemyPose(wolfVisuals.get(id), pose, performance.now()))
+      renderPanel()
+      kick()
+    }
+    return wolfVisuals?.get(id) ?? null
+  },
+  layout: () => renderer.debugLayout(), // VIS-007: per-frame arena layout (canvas coords)
 }

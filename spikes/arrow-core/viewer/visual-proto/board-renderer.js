@@ -4,7 +4,13 @@
 // It never mutates combat state and never invents rules -- game state changes are driven entirely
 // by EncounterState; this module only plays back the *result* of a tap/rotate as animation.
 import { DX, DY } from '../../dist/src/index.js'
-import { resolveTargetImage } from './assets.js'
+import { resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets.js'
+import { BOSS_ANCHOR } from './boss-visual-state.js'
+import { ENEMY_ANCHOR } from './enemy-visual-state.js'
+import {
+  BOSS_CHAR, BOSS_SLOT_DIST, charSize, faceRect,
+  HUD_GAP_PX, hudBoxes, rotatedBoardBox, SIDE_CHAR, SIDE_SLOT_DIST, slotCenter, spriteMirror,
+} from './arena-layout.js'
 
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
@@ -49,25 +55,29 @@ export function createBoardRenderer(canvas) {
   // Geometry (same span/cell/margin model as the EXP-008/009/010 viewers, tuned for bigger,
   // glow-friendly target panels).
 
-  // Last top-side status reserve (see resize): reused when resize is called without one
+  // Last slot reserve (see resize): reused when resize is called without one
   // (e.g. the per-frame fallback), so a phase change or a window resize never loses it.
-  let topReserve = null
+  let slotReserve = null
+
+  // VIS-007: per-frame debug layout (canvas coords) for automated checks. Reset on every
+  // frame; drawTarget appends one entry per live target (key/side/char/face/plate/badge/board).
+  let layoutInfo = []
+  let boardBox = { x: 0, y: 0, w: 0, h: 0 }
 
   function resize(level, reserve) {
-    if (reserve !== undefined) topReserve = reserve
+    if (reserve !== undefined) slotReserve = reserve
     const wrap = canvas.parentElement
     const { width: w, height: h } = level
     const span = Math.max(w, h)
-    // PLAYTEST-FIX-001: the TOP (N-side) enemy stacks its HP bar + status plate ABOVE its panel
-    // (away from the board). A 3-4 line plate (rock-spike's ATTACK + THROW, a boss CAST) needs
-    // more headroom above the target slot than the base margin reserves, or the plate clips at
-    // the canvas edge on smaller desktop viewports. Grow the margin just enough to fit the
-    // tallest possible top-side stack (computed from content, not hardcoded per scene); boards
-    // without a top-side multi-line status keep the exact old geometry (margin 4.4).
+    // VIS-007: the TOP (N-side) and BOTTOM (S-side) characters stand on arena slots with
+    // their HUD stack (HP bar + name/HP/ATTACK-CAST-ability plate) on the outward side,
+    // away from the board. Grow the margin just enough to fit the tallest such stack
+    // (computed from content + character footprints, not hardcoded per scene); boards
+    // without a top/bottom character keep the exact old geometry (margin 4.4).
     let margin = 4.4
-    const top = topReserve
-    if (top && top.lines > 2) {
-      margin = marginForTopStack(span, top, wrap)
+    const res = slotReserve
+    if (res && (res.top || res.bottom)) {
+      margin = marginForSlots(span, res, wrap)
     }
     const avail = Math.max(240, Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16))
     const cell = Math.max(10, Math.floor(Math.min(avail / (span + 2 * margin), 58)))
@@ -81,22 +91,31 @@ export function createBoardRenderer(canvas) {
     return geo
   }
 
-  // Solve the margin so the top-side stack (panel half + 6px + HP bar + 6px + `lines`-line plate)
-  // fits between the target slot and the canvas edge, mirroring drawTarget's metrics. Iterated
-  // twice because a bigger margin shrinks the cell, which changes the pixel budget slightly
-  // (the 10px font floor and the fixed 6px gaps don't scale with the cell).
-  function marginForTopStack(span, top, wrap) {
+  // Solve the margin so a vertical character stack (slot distance + character half +
+  // gaps + HP bar + `lines`-line plate) fits between the slot and the canvas edge, for the
+  // TOP (N) and BOTTOM (S) slots independently. Iterated because a bigger margin shrinks
+  // the cell, which changes the pixel budget slightly (the 10px font floor and the fixed
+  // 6px gaps don't scale with the cell).
+  function marginForSlots(span, res, wrap) {
     const avail = Math.max(240, Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16))
     let margin = 4.4
     for (let k = 0; k < 3; k++) {
       const cell = Math.max(10, Math.min(avail / (span + 2 * margin), 58))
-      const panelHalf = (top.boss ? 0.85 : 0.7) * cell
-      const barH = Math.max(5, cell * 0.16)
-      const fontPx = Math.max(10, Math.floor(cell * (top.boss ? 0.3 : 0.25)))
-      const plateH = top.lines * fontPx * 1.15 + fontPx * 0.5
-      const needCells = (panelHalf + 6 + barH + 6 + plateH) / cell
-      // Headroom above the target slot center is (margin - 1.9) cells; require need + 0.2 safety.
-      margin = Math.max(4.4, needCells + 1.9 + 0.2)
+      let need = 4.4
+      for (const entry of [res.top, res.bottom]) {
+        if (!entry) continue
+        const big = !!entry.big
+        const charH = (big ? BOSS_CHAR.h : SIDE_CHAR.h) * cell
+        const dist = (big ? BOSS_SLOT_DIST : SIDE_SLOT_DIST) * cell
+        const barH = Math.max(5, cell * 0.16)
+        const fontPx = Math.max(10, Math.floor(cell * (big ? 0.3 : 0.25)))
+        const plateH = entry.lines * fontPx * 1.15 + fontPx * 0.5
+        const needCells = (dist + charH / 2 + HUD_GAP_PX * 2 + barH + plateH) / cell
+        // needCells is measured from the BOARD edge (it already includes the slot
+        // distance); require it + 0.2 safety.
+        need = Math.max(need, needCells + 0.2)
+      }
+      margin = Math.max(4.4, need)
     }
     return margin
   }
@@ -247,16 +266,28 @@ export function createBoardRenderer(canvas) {
     // Idle bob + cast-pulse are continuous functions of `now`, not one-shot fx: keep the loop
     // alive while any target is alive so they never visibly freeze between combat events.
     if (targets.some((t) => !t.dead)) animating = true
+    // VIS-005: a timed boss hold (taunt bounce, stunned recoil) is also a function of `now` --
+    // keep the loop alive until it expires so the beat always plays to the baseline.
+    const bossHold = view.boss?.visual
+    if (bossHold && !bossHold.manual && now < bossHold.holdUntil) animating = true
+    // VIS-006: same for per-actor wolf holds (attack/hit beats) -- each actor ticks independently.
+    const wolfVisuals = view.wolf?.visuals
+    if (wolfVisuals) {
+      for (const w of wolfVisuals.values()) {
+        if (!w.manual && now < w.holdUntil) { animating = true; break }
+      }
+    }
     // VS-001: board surface first, target panels on top -- a target panel's label plate (name/HP/
     // CAST-ATTACK-THROW text) can extend far enough toward the board on a short/wide N or S panel
     // to reach the board's own footprint (e.g. cp-e4's N-side "slow" enemy once its 3-line plate
     // grew past 2 lines), and an opaque board surface drawn afterward silently painted over that
     // text -- a real bug the old 2-line layout happened not to trip.
-    // PLAYTEST-FIX-001: additionally, the TOP (N-side) enemy's whole status block (HP bar +
-    // name/HP/ATTACK-CAST-ability plate) now stacks AWAY from the board (see drawTarget), so its
-    // board-facing edge is the panel itself with a guaranteed visual gap to the board top.
+    // VIS-007: characters and HUD live on arena slots away from the board, so the board can
+    // never paint over them; the per-frame layout record below lets automated checks prove it.
     drawBoardSurface(col)
     drawSideReadouts(col, s, def)
+    layoutInfo = []
+    boardBox = rotatedBoardBox(geo.cx, geo.cy, geo.w * geo.cell, geo.h * geo.cell, shownAngle)
     for (const t of targets) drawTarget(col, t, now)
     ctx.save()
     ctx.setTransform(new DOMMatrix().scale(dpr, dpr).multiply(boardMatrix(shownAngle)))
@@ -270,9 +301,13 @@ export function createBoardRenderer(canvas) {
       const g = geo
       const key = targetKey(t)
       const fx = fxFor(key)
-      const long = Math.min(g.half * (t.isBoss ? 1.35 : 1.05), (t.isBoss ? 5.2 : 3.4) * g.cell)
-      const thick = (t.isBoss ? 1.7 : 1.4) * g.cell
-      const horizontal = t.side === 0 || t.side === 2
+      const cell = g.cell
+      // VIS-007: character footprint from the arena layout (cells -> px). No panel box, no
+      // clip: the sprite stands directly on the arena, bottom-center grounded at the slot.
+      const size = charSize(t.isBoss)
+      const charW = size.w * cell
+      const charH = size.h * cell
+      const slot = slotCenter(g.cx, g.cy, g.half, t.side, t.isBoss, cell, DX, DY)
       const idle = Math.sin(now / 900 + t.side * 1.7) * 1.6
       const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
       const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * g.cell : 0
@@ -281,59 +316,71 @@ export function createBoardRenderer(canvas) {
       const deathP = dying ? clamp01(deathT / 550) : t.dead ? 1 : 0
       if (t.dead && deathP >= 1 && !t.isBoss) return // fully dead regular enemy: slot stays empty
 
-      const cx = g.cx + DX[t.side] * g.targetR
-      const cy = g.cy + DY[t.side] * g.targetR
       const towardBoard = { x: -DX[t.side], y: -DY[t.side] }
-      const ox = (horizontal ? shake : 0) + towardBoard.x * lunge
-      const oy = (horizontal ? 0 : shake) + towardBoard.y * lunge + (horizontal ? idle : 0)
-      const bw = (horizontal ? long : thick) * (1 - 0.3 * deathP)
-      const bh = (horizontal ? thick : long) * (1 - 0.3 * deathP)
+      const ox = towardBoard.x * lunge + (t.side === 0 || t.side === 2 ? shake : 0)
+      const oy = towardBoard.y * lunge + (t.side === 1 || t.side === 3 ? shake : 0) + idle
 
       ctx.save()
       ctx.globalAlpha = 1 - deathP
-      ctx.translate(cx + ox, cy + oy)
-      ctx.scale(1 - 0.3 * deathP, 1 - 0.3 * deathP)
+      ctx.translate(slot.x + ox, slot.y + oy)
 
-      // Telegraph pulse: a ring (or, with a real castGlow asset, that image) that grows/fades
-      // faster and more saturated as the countdown nears 0. EXP-011/VS-001: a `kind: 'cast'`
-      // telegraph gets the violet cast palette (and the castGlow asset slot when present) instead
-      // of the plain attack's amber/red, so CAST IN N and ATTACK IN N read as visually distinct,
-      // not just different badge text.
+      // Telegraph: a pulsing ground ellipse at the feet (urgency color), not a box ring --
+      // the character itself is never framed. CAST and ATTACK stay visually distinct.
       if (Number.isFinite(t.countdown) && !t.dead) {
         const isCast = t.attackKind === 'cast'
         const urgency = t.countdown <= 1 ? 1 : t.countdown === 2 ? 0.55 : 0.3
         const cyc = (now / (520 - urgency * 260)) % 1
         ctx.save()
         if (isCast && assets.castGlow) {
-          const s2 = (Math.max(bw, bh) * 1.15) * (1 + cyc * 0.35)
+          const s2 = charW * 1.1 * (1 + cyc * 0.3)
           ctx.globalAlpha = (1 - cyc) * 0.85 * urgency
-          ctx.drawImage(assets.castGlow, -s2 / 2, -s2 / 2, s2, s2)
+          ctx.drawImage(assets.castGlow, -s2 / 2, charH / 2 - s2 / 2, s2, s2)
         } else {
-          ctx.globalAlpha = (1 - cyc) * 0.5 * urgency
+          ctx.globalAlpha = (1 - cyc) * 0.6 * urgency + 0.08 * urgency
           ctx.strokeStyle = isCast ? col.cast : urgency >= 1 ? col.danger : col.aim
           ctx.lineWidth = 2.5
-          roundRect(-bw / 2 - cyc * 10, -bh / 2 - cyc * 10, bw + cyc * 20, bh + cyc * 20, 10 + cyc * 6)
+          ctx.beginPath()
+          ctx.ellipse(0, charH / 2, charW * (0.55 + cyc * 0.25), Math.max(5, cell * 0.14) * (1 + cyc * 0.4), 0, 0, Math.PI * 2)
           ctx.stroke()
         }
         ctx.restore()
       }
 
-      // Panel: portrait image if resolved, else a gradient placeholder in the same footprint.
-      const img = resolveTargetImage(assets, t)
-      const flashWhite = now - fx.hitT >= 0 && now - fx.hitT < 110
+      // Ground shadow: soft ellipse at the feet, keeps the actor planted on the arena.
       ctx.save()
-      ctx.shadowColor = t.isBoss ? col.bossGlow : col.enemyGlow
-      ctx.shadowBlur = t.dead ? 0 : 14
-      roundRect(-bw / 2, -bh / 2, bw, bh, 10)
-      ctx.clip()
+      ctx.globalAlpha = (1 - deathP * 0.5) * 1
+      ctx.fillStyle = col.groundShadow
+      ctx.beginPath()
+      ctx.ellipse(0, charH / 2, charW * 0.42, Math.max(4, cell * 0.11), 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+
+      // Character art: pose image contain-fitted into the footprint, bottom-center
+      // (ground) anchored -- a pose swap never moves the anchor or the visual size.
+      // No panel, no clip: art can never be boxed in, and HUD (below) never sizes it.
+      const bossPack = t.isBoss ? view.boss?.pack ?? null : null
+      const bossPose = t.isBoss ? view.boss?.visual?.pose ?? 'idle' : null
+      const bossImg = bossPack ? resolveBossImage(bossPack, bossPose) : null
+      const wolfVisual = !t.isBoss ? view.wolf?.visuals?.get(key) ?? null : null
+      const wolfPose = !t.isBoss ? wolfVisual?.pose ?? 'idle' : null
+      const wolfPack = !t.isBoss ? view.wolf?.pack ?? null : null
+      const wolfImg = wolfPack ? resolveWolfImage(wolfPack, wolfPose) : null
+      const img = bossImg ?? wolfImg ?? resolveTargetImage(assets, t)
+      const bossSince = t.isBoss && view.boss?.visual ? now - view.boss.visual.startedAt : -1e9
+      const wolfSince = wolfVisual ? now - wolfVisual.startedAt : -1e9
+      const flashWhite = (now - fx.hitT >= 0 && now - fx.hitT < 110) ||
+        (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130) ||
+        (wolfPose === 'hit' && wolfSince >= 0 && wolfSince < 130)
       if (img) {
-        ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh)
+        if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH)
+        else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, charW, charH)
         if (t.dead) {
           ctx.fillStyle = col.deadOverlay
-          ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
+          ctx.fillRect(-charW / 2, -charH / 2, charW, charH)
         }
       } else {
-        const grad = ctx.createLinearGradient(0, -bh / 2, 0, bh / 2)
+        // Missing art fallback: a soft radial glow, deliberately NOT a box.
+        const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, Math.max(charW, charH) / 2)
         if (t.dead) {
           grad.addColorStop(0, col.deadA)
           grad.addColorStop(1, col.deadB)
@@ -342,44 +389,21 @@ export function createBoardRenderer(canvas) {
           grad.addColorStop(1, t.isBoss ? col.bossB : col.enemyB)
         }
         ctx.fillStyle = grad
-        ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
+        ctx.beginPath()
+        ctx.ellipse(0, 0, charW / 2, charH / 2, 0, 0, Math.PI * 2)
+        ctx.fill()
       }
       if (flashWhite) {
         ctx.fillStyle = 'rgba(255,255,255,0.55)'
-        ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
+        ctx.fillRect(-charW / 2, -charH / 2, charW, charH)
       }
-      ctx.restore()
-      ctx.strokeStyle = col.panelBorder
-      ctx.lineWidth = 1.5
-      roundRect(-bw / 2, -bh / 2, bw, bh, 10)
-      ctx.stroke()
 
-      // HP bar, directly below the panel in the panel's own local frame -- this and everything
-      // below stays anchored to *this* target regardless of which arena side it is on, so two
+      // VIS-007: HUD is a separate plate near the character -- same content (name / HP /
+      // ATTACK-CAST / THROW lines + HP bar + countdown badge), positioned by the arena
+      // layout OUTSIDE the sprite: above the head everywhere except the S slot (below the
+      // feet), always away from the board. It never sizes or clips the character, and two
       // simultaneous targets (e.g. cp-e4's two enemies) can never draw over each other.
-      // PLAYTEST-FIX-001: the TOP enemy (side N) is the exception -- its local +y points straight
-      // at the board, so a below-the-panel status block lands on the clickable board. Its HP bar
-      // and status plate are therefore stacked ABOVE the panel (away from the board), leaving a
-      // visual gap between the panel's board-facing edge and the board itself. Layout, not z-index:
-      // nothing belonging to the HUD may overlap the board footprint.
-      const topSide = t.side === 0
-      const barW = long - 14
-      const barH = Math.max(5, g.cell * 0.16)
-      const barY = topSide ? -bh / 2 - 6 - barH : bh / 2 + 6
-      if (!t.dead || t.isBoss) {
-        const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
-        ctx.fillStyle = col.hpTrack
-        roundRect(-barW / 2, barY, barW, barH, barH / 2)
-        ctx.fill()
-        ctx.fillStyle = frac <= 0.25 ? col.danger : col.hpFill
-        roundRect(-barW / 2, barY, Math.max(barH, barW * frac), barH, barH / 2)
-        ctx.fill()
-      }
-
-      // Name / HP / telegraph text, stacked under the bar. A dynamic line list rather than a fixed
-      // two lines: EXP-011 adds a CAST IN N / ATTACK IN N line (kept as its own literal-text line,
-      // not folded into the badge, per the VS-001 brief -- "отображать отдельно"), and EXP-013 adds
-      // an independent THROW IN N line when this target also carries a board ability.
+      // Layout, not z-index: nothing belonging to the HUD may overlap the board footprint.
       const fontPx = Math.max(10, Math.floor(g.cell * (t.isBoss ? 0.3 : 0.25)))
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
@@ -395,40 +419,55 @@ export function createBoardRenderer(canvas) {
         lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
       }
       const lineH = fontPx * 1.15
-      // PLAYTEST-FIX-001: TOP enemy stacks its text upward (away from the board); every other
-      // side keeps stacking downward. `lineY(i)` is the baseline of line i in local coords.
-      const firstY = topSide ? barY - 6 - fontPx * 0.5 : barY + barH + 6 + fontPx * 0.5
-      const lineY = (i) => (topSide ? firstY - i * lineH : firstY + i * lineH)
+      // VIS-007: the name/label line never stretches the plate beyond ~1.8 character
+      // widths (a long boss phase label must not become a full-width bar) -- truncate
+      // with an ellipsis. Numeric lines (HP/IN N) are never truncated.
+      ctx.font = `700 ${fontPx}px system-ui`
+      const labelMaxW = charW * 1.8
+      if (ctx.measureText(lines[0].text).width > labelMaxW) {
+        let label = lines[0].text
+        while (label.length > 1 && ctx.measureText(`${label}…`).width > labelMaxW) {
+          label = label.slice(0, -1)
+        }
+        lines[0].text = `${label}…`
+      }
       let maxW = 0
       for (const ln of lines) {
         ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
         maxW = Math.max(maxW, ctx.measureText(ln.text).width)
       }
-      const padX = 6
-      const plateW = maxW + padX * 2
-      const plateH = lineH * lines.length + fontPx * 0.5
+      const barH = Math.max(5, g.cell * 0.16)
+      const hud = hudBoxes({
+        slot: { x: 0, y: 0 },
+        char: { x: -charW / 2, y: -charH / 2, w: charW, h: charH },
+        side: t.side, fontPx, lineH, lineCount: lines.length, barH, maxTextW: maxW, cell,
+        slotAbsX: slot.x, boardCx: g.cx, boardHalfPx: g.half,
+      })
+      if (!t.dead || t.isBoss) {
+        const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
+        ctx.fillStyle = col.hpTrack
+        roundRect(hud.bar.x, hud.bar.y, hud.bar.w, hud.bar.h, hud.bar.h / 2)
+        ctx.fill()
+        ctx.fillStyle = frac <= 0.25 ? col.danger : col.hpFill
+        roundRect(hud.bar.x, hud.bar.y, Math.max(hud.bar.h, hud.bar.w * frac), hud.bar.h, hud.bar.h / 2)
+        ctx.fill()
+      }
       ctx.fillStyle = col.labelBacking
-      // Downward stack: top edge sits fontPx*0.6 above the first baseline. Upward stack (TOP
-      // enemy): bottom edge sits fontPx*0.4 below the first (bottom-most) baseline, preserving the
-      // 6px gap to the HP bar in both cases.
-      roundRect(-plateW / 2, topSide ? firstY + fontPx * 0.4 - plateH : firstY - fontPx * 0.6, plateW, plateH, 6)
+      roundRect(hud.plate.x, hud.plate.y, hud.plate.w, hud.plate.h, 6)
       ctx.fill()
       lines.forEach((ln, i) => {
         ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
         ctx.fillStyle = ln.color
-        ctx.fillText(ln.text, 0, lineY(i))
+        ctx.fillText(ln.text, 0, hud.lineY(i))
       })
 
-      // ATTACK/CAST IN badge: a small numeric chip at the panel's outer-top corner (outward = away
-      // from the board on this target's own side), independent of panel orientation. Colored by
-      // attack kind so it matches the telegraph pulse/text line above. PLAYTEST-FIX-001: the TOP
-      // enemy's HP bar and status plate moved above the panel, so its badges sit at the
-      // board-facing (bottom) corners instead -- inside the panel-to-board visual gap, clear of
-      // both the plate and the clickable board.
+      // ATTACK/CAST IN badge: a small numeric chip at the HUD plate's outer corner
+      // (outward = away from the board on this target's own side). Colored by attack kind
+      // so it matches the telegraph ellipse/text line above.
       if (Number.isFinite(t.countdown) && !t.dead) {
-        const r = Math.max(9, g.cell * 0.2)
-        const bxo = bw / 2 - r * 0.6
-        const byo = topSide ? bh / 2 + r * 0.55 : -bh / 2 - r * 0.55
+        const r = hud.badge.r
+        const bxo = hud.badge.x
+        const byo = hud.badge.y
         ctx.save()
         ctx.fillStyle = isCast ? col.cast : t.countdown <= 1 ? col.danger : col.badgeFill
         ctx.beginPath()
@@ -441,13 +480,12 @@ export function createBoardRenderer(canvas) {
         ctx.fillText(String(t.countdown), bxo, byo + 1)
         ctx.restore()
       }
-      // THROW IN badge (EXP-013): opposite corner from the attack badge, rock-brown, independent
-      // countdown -- a target can carry both at once (rock-spike's rockthrower does). Same
-      // PLAYTEST-FIX-001 mirror as the attack badge for the TOP enemy.
+      // THROW IN badge (EXP-013): opposite plate corner from the attack badge, rock-brown,
+      // independent countdown -- a target can carry both at once.
       if (!t.dead && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
-        const r = Math.max(9, g.cell * 0.2)
-        const bxo = -bw / 2 + r * 0.6
-        const byo = topSide ? bh / 2 + r * 0.55 : -bh / 2 - r * 0.55
+        const r = hud.badge.r
+        const bxo = hud.plate.x + r * 0.5
+        const byo = hud.badge.y
         ctx.save()
         ctx.fillStyle = col.rock
         ctx.beginPath()
@@ -461,7 +499,7 @@ export function createBoardRenderer(canvas) {
         ctx.restore()
       }
 
-      // CAST INTERRUPTED burst, rising just above the panel -- local coords again, so it always
+      // CAST INTERRUPTED burst, rising just above the head -- local coords again, so it always
       // reads next to its own target. Only fires for a real EXP-011 cast interrupt (see
       // onTapResult), never the legacy interruptOnHit reset.
       const sinceInterrupt = now - fx.interruptT
@@ -472,11 +510,130 @@ export function createBoardRenderer(canvas) {
         ctx.fillStyle = col.good
         ctx.font = `700 ${Math.max(10, Math.floor(g.cell * 0.24))}px system-ui`
         ctx.textAlign = 'center'
-        ctx.fillText('CAST INTERRUPTED', 0, -bh / 2 - 10 - p * 12)
+        ctx.fillText('CAST INTERRUPTED', 0, -charH / 2 - 10 - p * 12)
         ctx.restore()
       }
 
+      // VIS-007: debug layout record in canvas coords, for automated checks (HUD clear of
+      // board/sprite-face, characters unclipped, pose swaps anchored).
+      const ax = slot.x + ox
+      const ay = slot.y + oy
+      const charR = { x: ax - charW / 2, y: ay - charH / 2, w: charW, h: charH }
+      layoutInfo.push({
+        key, side: t.side, isBoss: t.isBoss,
+        char: charR,
+        face: faceRect(charR),
+        plate: { x: ax + hud.plate.x, y: ay + hud.plate.y, w: hud.plate.w, h: hud.plate.h },
+        badge: { x: ax + hud.badge.x, y: ay + hud.badge.y },
+        board: boardBox,
+      })
+
       ctx.restore()
+    }
+
+    // VIS-005/VIS-007: anchored pose draw + presentation-only transforms. The character
+    // footprint (bw/bh) comes from the arena layout; the PNG is contain-fitted and its
+    // bottom-center (ground point) is locked to the footprint's bottom-center, so a pose
+    // swap never moves the anchor or the visual size. All motion here is wall-clock
+    // cosmetics -- simulation timers are untouched.
+    function drawBossArt(img, pose, since, t, bw, bh) {
+      const iw = img.naturalWidth || img.width
+      const ih = img.naturalHeight || img.height
+      if (!iw || !ih) return
+      const fit = Math.min(bw / iw, bh / ih)
+      const dw = iw * fit
+      const dh = ih * fit
+      const off = BOSS_ANCHOR.offsets[pose] ?? { dx: 0, dy: 0 }
+      const gx = off.dx * bw
+      const gy = bh / 2 + off.dy * bh
+      const tr = bossPoseTransform(pose, since, t)
+      ctx.save()
+      ctx.translate(gx, gy)
+      ctx.scale(tr.sx, tr.sy)
+      ctx.translate(-gx + tr.tx, -gy + tr.ty)
+      ctx.drawImage(img, gx - dw * BOSS_ANCHOR.anchorX, gy - dh * BOSS_ANCHOR.anchorY, dw, dh)
+      ctx.restore()
+    }
+
+    function bossPoseTransform(pose, since, t) {
+      const tr = { sx: 1, sy: 1, tx: 0, ty: 0 }
+      if (pose === 'idle') {
+        tr.sy = 1 + 0.012 * Math.sin(now / 1100) // breathing
+        tr.ty = 1.5 * Math.sin(now / 1100 + 0.6)
+      } else if (pose === 'angry') {
+        tr.sy = 1 + 0.008 * Math.sin(now / 420) // tenser, faster idle; no flashing
+        tr.sx = 1 - 0.006 * Math.sin(now / 420)
+      } else if (pose === 'taunt' && since >= 0) {
+        if (since < 150) { // anticipation crouch
+          tr.sx = tr.sy = 0.94 + 0.06 * (since / 150)
+        } else if (since < 400) { // pop
+          const p = (since - 150) / 250
+          tr.sx = tr.sy = 1 + 0.04 * Math.sin(p * Math.PI)
+        }
+        tr.ty = -Math.abs(Math.sin(since / 180)) * 6 * Math.max(0, 1 - since / 1400) // bounce, held
+      } else if (pose === 'stunned' && since >= 0 && since < 260) {
+        tr.tx = Math.sin(since / 16) * 3 // shake, decaying with the hold
+        tr.ty = DY[t.side] * 6 * Math.max(0, 1 - since / 180) // recoil outward
+        tr.tx += DX[t.side] * 6 * Math.max(0, 1 - since / 180)
+      } else if (pose === 'cast') {
+        const p = 1 + 0.03 * Math.sin(now / 300) // pulse; castGlow hook draws separately
+        tr.sx = tr.sy = p
+      } else if (pose === 'defeat' && since >= 0) {
+        const p = clamp01(since / 350) // impact settle, then stays down
+        tr.sx = tr.sy = 1 + 0.1 * (1 - p) * (1 - p)
+        tr.ty = 4 * (1 - p)
+      }
+      return tr
+    }
+
+    // VIS-006/VIS-007: anchored wolf draw + presentation-only transforms. Same
+    // ground-anchor contract as the boss (fixed character footprint, contain-fit,
+    // bottom-center locked); mirroring follows the arena layout (face the board).
+    function drawWolfArt(img, pose, since, t, bw, bh) {
+      const iw = img.naturalWidth || img.width
+      const ih = img.naturalHeight || img.height
+      if (!iw || !ih) return
+      const fit = Math.min(bw / iw, bh / ih)
+      const dw = iw * fit
+      const dh = ih * fit
+      const off = ENEMY_ANCHOR.offsets[pose] ?? { dx: 0, dy: 0 }
+      const gx = off.dx * bw
+      const gy = bh / 2 + off.dy * bh
+      const mirror = spriteMirror(false, t.side) // side profiles face the board
+      const tr = wolfPoseTransform(pose, since, t)
+      ctx.save()
+      ctx.translate(gx, gy)
+      ctx.scale(mirror * tr.sx, tr.sy)
+      ctx.translate(-gx + tr.tx, -gy + tr.ty)
+      ctx.drawImage(img, gx - dw * ENEMY_ANCHOR.anchorX, gy - dh * ENEMY_ANCHOR.anchorY, dw, dh)
+      ctx.restore()
+    }
+
+    function wolfPoseTransform(pose, since, t) {
+      const tr = { sx: 1, sy: 1, tx: 0, ty: 0 }
+      const toBoard = { x: -DX[t.side], y: -DY[t.side] }
+      if (pose === 'idle') {
+        tr.sy = 1 + 0.012 * Math.sin(now / 1000) // breathing
+        tr.tx = 1.5 * Math.sin(now / 1400 + 0.9) // shifting weight
+      } else if (pose === 'attackReady') {
+        tr.sy = 0.96 // low stance: squash...
+        tr.sx = 1.03 // ...and coil
+        tr.tx = toBoard.x * 4 // forward tension toward the board
+        tr.ty = toBoard.y * 4 + 0.8 * Math.sin(now / 500)
+      } else if (pose === 'attack' && since >= 0) {
+        // Pose swap carries the lunge; the fx lunge offset adds travel. A short pop + recoil
+        // sells the strike without a skeletal rig.
+        const p = Math.max(0, 1 - since / 450)
+        tr.sx = tr.sy = 1 + 0.03 * p
+        tr.tx = toBoard.x * 6 * p
+        tr.ty = toBoard.y * 6 * p
+      } else if (pose === 'hit' && since >= 0 && since < 260) {
+        tr.tx = Math.sin(since / 16) * 3 // shake, decaying with the hold
+        tr.ty = DY[t.side] * 6 * Math.max(0, 1 - since / 180) // recoil outward
+        tr.tx += DX[t.side] * 6 * Math.max(0, 1 - since / 180)
+      }
+      // defeat: static -- the death fade (globalAlpha 1-deathP) is the terminal hold/fade.
+      return tr
     }
 
     function drawSideReadouts(col, s, def) {
@@ -489,7 +646,7 @@ export function createBoardRenderer(canvas) {
       for (let d = 0; d < 4; d++) {
         const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead) : d === s.bossSide
         if (isLive) continue // the target panel itself already shows this side clearly
-        const r = g.targetR + 1.05 * g.cell
+        const r = g.half + BOSS_SLOT_DIST * g.cell + 1.05 * g.cell
         const x = g.cx + DX[d] * r
         const y = g.cy + DY[d] * r
         ctx.fillStyle = col.muted
@@ -728,6 +885,8 @@ export function createBoardRenderer(canvas) {
       // rock-spike.js's debug-viewer convention so the two viewers read consistently.
       cast: dark ? '#c9a6ff' : '#7c4dbf', castGlow: dark ? 'rgba(201,166,255,0.8)' : 'rgba(124,77,191,0.55)',
       rock: dark ? '#c49a7c' : '#8d6e63', rockGlow: dark ? 'rgba(196,154,124,0.7)' : 'rgba(141,110,99,0.5)',
+      // VIS-007: soft ground shadow planting characters on the arena.
+      groundShadow: dark ? 'rgba(0,0,0,0.4)' : 'rgba(40,30,20,0.28)',
     }
   }
 
@@ -735,5 +894,7 @@ export function createBoardRenderer(canvas) {
     resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, resetFx, frame,
     get geo() { return geo },
     collectTargets,
+    /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */
+    debugLayout() { return layoutInfo },
   }
 }
