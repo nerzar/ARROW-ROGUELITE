@@ -326,13 +326,9 @@ export function createBoardRenderer(canvas) {
       ctx.shadowBlur = t.dead ? 0 : 14
       roundRect(-bw / 2, -bh / 2, bw, bh, 10)
       ctx.clip()
-      if (img) {
-        ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh)
-        if (t.dead) {
-          ctx.fillStyle = col.deadOverlay
-          ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
-        }
-      } else {
+      // Panel backdrop: same gradient the placeholder always used, so a contain-fitted real
+      // portrait letterboxes into a matching tone instead of bare canvas.
+      {
         const grad = ctx.createLinearGradient(0, -bh / 2, 0, bh / 2)
         if (t.dead) {
           grad.addColorStop(0, col.deadA)
@@ -343,6 +339,16 @@ export function createBoardRenderer(canvas) {
         }
         ctx.fillStyle = grad
         ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
+      }
+      if (img) {
+        // VIS-004: real art is fitted (contain), never stretched -- aspect is preserved so the
+        // Goblin Taunter composition reads correctly on the wide top-stage panel. Letterbox area
+        // keeps the gradient backdrop above.
+        drawImageContain(img, bw * 0.96, bh * 0.96)
+        if (t.dead) {
+          ctx.fillStyle = col.deadOverlay
+          ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
+        }
       }
       if (flashWhite) {
         ctx.fillStyle = 'rgba(255,255,255,0.55)'
@@ -693,6 +699,19 @@ export function createBoardRenderer(canvas) {
     ctx.moveTo(pts[0][0], pts[0][1])
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1])
     ctx.stroke()
+  }
+
+  // VIS-004: aspect-preserving contain-fit for real portrait art (no distortion). Falls back to
+  // a plain stretch only when natural size is unreadable (e.g. SVG without intrinsic size).
+  function drawImageContain(img, bw, bh) {
+    const iw = img.naturalWidth || img.width
+    const ih = img.naturalHeight || img.height
+    if (!iw || !ih) {
+      ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh)
+      return
+    }
+    const s = Math.min(bw / iw, bh / ih)
+    ctx.drawImage(img, (-iw * s) / 2, (-ih * s) / 2, iw * s, ih * s)
   }
 
   function roundRect(x, y, w, h, r) {

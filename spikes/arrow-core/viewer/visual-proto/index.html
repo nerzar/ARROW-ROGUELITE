@@ -24,6 +24,10 @@
 
   <div class="arena-wrap">
     <div class="board-frame" id="boardFrame">
+      <!-- VIS-004: decorative V01 frame art. Purely visual: sits UNDER the canvas (z-index),
+           never intercepts pointer events, scales around the real boardRect via CSS overscan,
+           and never changes gameplay coordinates (hitTest reads the canvas rect only). -->
+      <div class="board-frame-art" id="boardFrameArt" aria-hidden="true"></div>
       <canvas id="arena"></canvas>
     </div>
   </div>

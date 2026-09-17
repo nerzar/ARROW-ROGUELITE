@@ -24,7 +24,17 @@ body { font: 14px/1.4 system-ui, sans-serif; color: var(--ink); background: #111
   background: radial-gradient(120% 90% at 50% 20%, var(--bg-a), var(--bg-b));
   background-size: cover; background-position: center;
 }
-.bg-layer.has-image { background-image: var(--bg-image); }
+/* VIS-004: real arena art. Cover without distortion, anchored center-top so the boss dais
+   (top-center) and the central stone courtyard stay aligned with the canvas target panels and
+   the program board. The gradient is fully replaced here -- no CSS gradient sits on top of
+   the art. No dark overlay by default: the code-drawn board surface is opaque, so board
+   readability does not depend on dimming the art. If the board is ever lost against a busy
+   background, add a dedicated .bg-layer.dim::after shade -- do not touch this rule. */
+.bg-layer.has-image {
+  background-image: var(--bg-image);
+  background-color: #14101c;
+  background-size: cover; background-position: center top; background-repeat: no-repeat;
+}
 
 .topbar {
   position: absolute; top: 8px; left: 8px; right: 8px; z-index: 30;
@@ -37,12 +47,24 @@ body { font: 14px/1.4 system-ui, sans-serif; color: var(--ink); background: #111
 }
 .topbar button { cursor: pointer; }
 
-.arena-wrap { position: absolute; inset: 0; display: grid; place-items: center; padding: 12% 22%; }
+/* VIS-004: board stays the biggest element. Padding reserves top room for the boss stage,
+   side room for flanking targets, and bottom room for Rotate -- the canvas geometry itself
+   (board-renderer.js resize + PLAYTEST-FIX-001 top reserve) keeps enemy plates off the board. */
+.arena-wrap { position: absolute; inset: 0; display: grid; place-items: center; padding: 9% 17% 12%; }
 .board-frame {
   position: relative; width: 100%; height: 100%; display: grid; place-items: center;
   border-radius: 18px;
 }
-canvas#arena { max-width: 100%; max-height: 100%; touch-action: manipulation; }
+/* VIS-004: decorative V01 frame art. Fitted to the picture (contain), overscanned around the
+   real boardRect so program arrows sit visually inside the stone площадка -- the game geometry
+   is fitted to nothing here, the picture is fitted to the board. Strictly under the canvas,
+   pointer-transparent, gameplay coordinates untouched. */
+.board-frame-art {
+  position: absolute; inset: -9% -11%; z-index: 0; pointer-events: none;
+  background-size: contain; background-position: center; background-repeat: no-repeat;
+}
+.board-frame-art.has-image { display: block; }
+canvas#arena { position: relative; z-index: 1; max-width: 100%; max-height: 100%; touch-action: manipulation; }
 
 .hud { position: absolute; z-index: 20; display: flex; flex-direction: column; gap: 8px; }
 .hud-left { left: 14px; bottom: 14px; width: 220px; }
@@ -70,6 +92,8 @@ canvas#arena { max-width: 100%; max-height: 100%; touch-action: manipulation; }
 
 .msg-line { min-height: 1.4em; font-weight: 600; font-size: 13px; }
 .msg-line.bad { color: var(--danger); }
+/* #msgLine carries the hint-line class in index.html; mirror the bad state there too. */
+.hint-line.bad { color: var(--danger); }
 
 .rotate-controls {
   position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20;

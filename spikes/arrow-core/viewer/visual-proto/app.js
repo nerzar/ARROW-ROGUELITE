@@ -6,7 +6,7 @@
 import {
   encounterFromJson, findWin, formatAction, formatEncounterReport, RunState, validateEncounter,
 } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, loadAssets } from './assets.js'
+import { ASSET_MANIFEST, ASSET_META, loadAssets } from './assets.js'
 import { createBoardRenderer } from './board-renderer.js'
 
 const $ = (id) => document.getElementById(id)
@@ -101,16 +101,31 @@ function applyDomAssets(store) {
     ui.bgLayer.classList.add('has-image')
   }
   if (store.boardFrame) {
-    $('boardFrame').style.backgroundImage = `url(${store.boardFrame.src})`
-    $('boardFrame').style.backgroundSize = 'contain'
-    $('boardFrame').style.backgroundPosition = 'center'
-    $('boardFrame').style.backgroundRepeat = 'no-repeat'
+    // VIS-004: the PNG frame is a decorative layer UNDER the program board, never above it.
+    const art = document.getElementById('boardFrameArt')
+    if (art) {
+      art.style.backgroundImage = `url(${store.boardFrame.src})`
+      art.classList.add('has-image')
+    } else {
+      // Fallback for an older index.html without the art layer: same visual, still behind canvas.
+      $('boardFrame').style.backgroundImage = `url(${store.boardFrame.src})`
+      $('boardFrame').style.backgroundSize = 'contain'
+      $('boardFrame').style.backgroundPosition = 'center'
+      $('boardFrame').style.backgroundRepeat = 'no-repeat'
+    }
   }
   if (store.playerPortrait) {
     ui.playerCard.style.backgroundImage = `url(${store.playerPortrait.src})`
     ui.playerCard.style.backgroundSize = 'cover'
     ui.playerCard.style.backgroundPosition = 'center top'
     ui.playerCard.classList.add('has-portrait') // CSS applies the blend mode
+  }
+  // VIS-004: record which boss pose is on screen. boss_taunter_v01.png is the TAUNT pose
+  // (ASSET_META.bossGoblinTaunter.pose === 'taunt_reveal'), shown here for scale/composition
+  // proof only -- not the future production idle.
+  if (store.bossGoblinTaunter) {
+    ui.stage.dataset.bossPose = ASSET_META.bossGoblinTaunter.pose
+    ui.stage.dataset.bossFile = ASSET_META.bossGoblinTaunter.file
   }
 }
 
