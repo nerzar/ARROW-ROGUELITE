@@ -13,9 +13,9 @@ export interface Rect { x: number; y: number; w: number; h: number }
 export declare function slotCenter(boardCx: number, boardCy: number, boardHalfPx: number, side: number, isBoss: boolean, cell: number, DX: readonly number[], DY: readonly number[]): Pt
 export interface PodiumGround { x: number; y: number }
 export declare const PODIUM_GROUND: Record<number, PodiumGround>
-export declare function podiumSlot(side: number, isBoss: boolean, stageW: number, stageH: number, cell: number): Pt
+export declare function podiumSlot(side: number, isBoss: boolean, stageW: number, stageH: number, cell: number, groundOverride?: Record<number, PodiumGround>): Pt
 export declare const EFFECT_GROUND: Record<number, PodiumGround>
-export declare function effectGround(side: number, stageW: number, stageH: number): Pt
+export declare function effectGround(side: number, stageW: number, stageH: number, groundOverride?: Record<number, PodiumGround>): Pt
 export declare function charBox(slot: Pt, isBoss: boolean, cell: number): Rect
 export declare function groundPoint(char: Rect): Pt
 export declare function faceRect(char: Rect): Rect

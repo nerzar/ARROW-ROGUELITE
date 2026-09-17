@@ -53,9 +53,14 @@ export const PODIUM_GROUND = {
 
 /** Ground-anchored slot: same body-center contract charBox/drawTarget expect (the box is
  * centered on this point, offset up by half the character height), but measured from the
- * STAGE size instead of the board -- see PODIUM_GROUND. */
-export function podiumSlot(side, isBoss, stageW, stageH, cell) {
-  const g = PODIUM_GROUND[side]
+ * STAGE size instead of the board -- see PODIUM_GROUND.
+ *
+ * FIX-023: `groundOverride` (same {side: {x,y}} shape as PODIUM_GROUND) lets a caller substitute
+ * a different background's own measured podium points -- PODIUM_GROUND is calibrated for the
+ * flexible Moonlit Fortress art specifically and floats on any other arena image. Omitted (every
+ * existing caller) reproduces the exact PODIUM_GROUND lookup this function always did. */
+export function podiumSlot(side, isBoss, stageW, stageH, cell, groundOverride) {
+  const g = groundOverride?.[side] ?? PODIUM_GROUND[side]
   const h = charSize(isBoss).h * cell
   return { x: g.x * stageW, y: g.y * stageH - h / 2 }
 }
@@ -73,9 +78,10 @@ export const EFFECT_GROUND = {
   3: { x: 0.155, y: 0.560 }, // W: center of the left platform
 }
 
-/** VFX ground anchor in canvas px -- see EFFECT_GROUND. Independent of character size/pose. */
-export function effectGround(side, stageW, stageH) {
-  const g = EFFECT_GROUND[side]
+/** VFX ground anchor in canvas px -- see EFFECT_GROUND. Independent of character size/pose.
+ * FIX-023: same `groundOverride` substitution contract as podiumSlot, for a non-default arena. */
+export function effectGround(side, stageW, stageH, groundOverride) {
+  const g = groundOverride?.[side] ?? EFFECT_GROUND[side]
   return { x: g.x * stageW, y: g.y * stageH }
 }
 

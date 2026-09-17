@@ -103,41 +103,87 @@ export function rotateUV(u, v, angleDeg) {
  * content's own bounding box within that fixed square) depend on the current orientation's
  * cols/rows. Mirrors the legacy pixel-space `cell = fitHeight / max(w,h)` sizing, just in
  * normalized units.
+ *
+ * FIX-023: `opts.marginU`/`opts.marginV` default to the flexible-arena MARGIN_U/MARGIN_V (a dais
+ * with no baked grid wants stone breathing room around the puzzle). A baked-grid arena's plane
+ * corners already sit exactly on the painted grid's outer edge, so its caller passes margin 0 --
+ * the fitted box then fills the plane corner-to-corner and cell-to-cell matches the baked lines.
+ *
+ * `opts.colFracs`/`opts.rowFracs` (each length cols+1 / rows+1, monotonic 0..1, endpoints 0 and
+ * 1) let a caller override the default *uniform* grid-line spacing with per-arena measured
+ * fractions, for baked art whose generated grid isn't perfectly even -- a small calibration data
+ * table instead of hardcoded renderer magic numbers. Omitted (the common case) reproduces the
+ * exact uniform-spacing math this function always used.
  */
-export function fitGrid(cols, rows) {
-  const availU = 1 - 2 * MARGIN_U
-  const availV = 1 - 2 * MARGIN_V
+export function fitGrid(cols, rows, opts = {}) {
+  const marginU = opts.marginU ?? MARGIN_U
+  const marginV = opts.marginV ?? MARGIN_V
+  const availU = 1 - 2 * marginU
+  const availV = 1 - 2 * marginV
   const boxSide = Math.min(availU, availV)
   const span = Math.max(cols, rows)
   const cell = boxSide / span
   const gridU = cols * cell
   const gridV = rows * cell
+  const colFracs = opts.colFracs ?? uniformFracs(cols)
+  const rowFracs = opts.rowFracs ?? uniformFracs(rows)
   return {
     cell, gridU, gridV, boxSide,
     u0: 0.5 - gridU / 2, v0: 0.5 - gridV / 2,
     boxU0: 0.5 - boxSide / 2, boxV0: 0.5 - boxSide / 2,
+    colFracs, rowFracs,
   }
 }
 
-/** Plane corners in screen px for the given stage size. */
-export function planeCornersPx(stageW, stageH) {
+function uniformFracs(n) {
+  return Array.from({ length: n + 1 }, (_, i) => i / n)
+}
+
+/** Which [i, i+1) bucket of a monotonic 0..1 fracs table a normalized position t falls into --
+ * linear extrapolation past either end (via the boundary segment's width) so points outside the
+ * grid still resolve to an out-of-range index, exactly like the old floor((t-u0)/cell) math did
+ * for screenToCell's "point outside the board" contract. */
+function fracBucket(fracs, t) {
+  const n = fracs.length - 1
+  if (t < fracs[0]) return Math.floor((t - fracs[0]) / (fracs[1] - fracs[0]))
+  if (t >= fracs[n]) return n + Math.floor((t - fracs[n]) / (fracs[n] - fracs[n - 1]))
+  for (let i = 0; i < n; i++) if (t < fracs[i + 1]) return i
+  return n - 1
+}
+
+/** Plane corners in screen px for the given stage size. `cornersFrac` defaults to the flexible
+ * regression PLANE_CORNERS_FRAC; a baked-grid arena passes its own calibrated quad instead. */
+export function planeCornersPx(stageW, stageH, cornersFrac = PLANE_CORNERS_FRAC) {
   const px = ([u, v]) => [u * stageW, v * stageH]
   return {
-    tl: px(PLANE_CORNERS_FRAC.tl), tr: px(PLANE_CORNERS_FRAC.tr),
-    br: px(PLANE_CORNERS_FRAC.br), bl: px(PLANE_CORNERS_FRAC.bl),
+    tl: px(cornersFrac.tl), tr: px(cornersFrac.tr),
+    br: px(cornersFrac.br), bl: px(cornersFrac.bl),
   }
 }
 
 /** Convenience bundle: homography + corners for the current stage size. */
-export function createBoardPlane(stageW, stageH) {
-  const corners = planeCornersPx(stageW, stageH)
+export function createBoardPlane(stageW, stageH, cornersFrac = PLANE_CORNERS_FRAC) {
+  const corners = planeCornersPx(stageW, stageH, cornersFrac)
   return { corners, H: computeHomography(corners) }
 }
 
 /** Logical cell (col,row) center, in the given rotation, projected to screen px. */
 export function cellToScreen(plane, fit, col, row, angleDeg) {
-  const lu = fit.u0 + (col + 0.5) * fit.cell
-  const lv = fit.v0 + (row + 0.5) * fit.cell
+  const cu = (fit.colFracs[col] + fit.colFracs[col + 1]) / 2
+  const cv = (fit.rowFracs[row] + fit.rowFracs[row + 1]) / 2
+  const lu = fit.u0 + cu * fit.gridU
+  const lv = fit.v0 + cv * fit.gridV
+  const { u, v } = rotateUV(lu, lv, angleDeg)
+  return project(plane.H, u, v)
+}
+
+/** Logical grid-LINE intersection (col,row) -- a cell boundary, not cellToScreen's cell center.
+ * col ranges 0..cols, row ranges 0..rows (cols+1 / rows+1 distinct lines each way). FIX-023: the
+ * debug grid-line overlay draws exactly these points/lines against the baked art so alignment can
+ * be judged directly, using the same colFracs/rowFracs as every other projected element. */
+export function gridLineToScreen(plane, fit, col, row, angleDeg) {
+  const lu = fit.u0 + fit.colFracs[col] * fit.gridU
+  const lv = fit.v0 + fit.rowFracs[row] * fit.gridV
   const { u, v } = rotateUV(lu, lv, angleDeg)
   return project(plane.H, u, v)
 }
@@ -146,7 +192,9 @@ export function cellToScreen(plane, fit, col, row, angleDeg) {
 export function screenToCell(plane, fit, x, y, angleDeg) {
   const { u, v } = unproject(plane.H, x, y)
   const { u: lu, v: lv } = rotateUV(u, v, -angleDeg)
-  return { col: Math.floor((lu - fit.u0) / fit.cell), row: Math.floor((lv - fit.v0) / fit.cell) }
+  const tu = (lu - fit.u0) / fit.gridU
+  const tv = (lv - fit.v0) / fit.gridV
+  return { col: fracBucket(fit.colFracs, tu), row: fracBucket(fit.rowFracs, tv) }
 }
 
 /** The plane's fixed (never-rotating) backdrop quad corners, in screen px. */
@@ -154,4 +202,24 @@ export function backdropCornersPx(plane, fit) {
   const c = (u, v) => project(plane.H, u, v)
   const u0 = fit.boxU0, v0 = fit.boxV0, u1 = u0 + fit.boxSide, v1 = v0 + fit.boxSide
   return { tl: c(u0, v0), tr: c(u1, v0), br: c(u1, v1), bl: c(u0, v1) }
+}
+
+/** FIX-023: the on-screen pixel span of one grid line's edge at (col,row) -- the exact geometry
+ * (via project()) rather than the single board-wide `cell` average, so stroke width/arrowhead
+ * size/marker radius can shrink toward the far/top edge and grow toward the near/bottom edge
+ * (perspective-sensitive rendering), one source of truth shared with click hit-testing. Returns
+ * the (u-step, v-step) pixel lengths measured from the cell's own corner, not its center, so it
+ * stays meaningful for the last row/col (no neighbor to diff against). */
+export function localCellPx(plane, fit, col, row, angleDeg) {
+  const u0 = fit.u0 + fit.colFracs[col] * fit.gridU
+  const u1 = fit.u0 + fit.colFracs[col + 1] * fit.gridU
+  const v0 = fit.v0 + fit.rowFracs[row] * fit.gridV
+  const v1 = fit.v0 + fit.rowFracs[row + 1] * fit.gridV
+  const vMid = (v0 + v1) / 2
+  const uMid = (u0 + u1) / 2
+  const pu0 = project(plane.H, rotateUV(u0, vMid, angleDeg).u, rotateUV(u0, vMid, angleDeg).v)
+  const pu1 = project(plane.H, rotateUV(u1, vMid, angleDeg).u, rotateUV(u1, vMid, angleDeg).v)
+  const pv0 = project(plane.H, rotateUV(uMid, v0, angleDeg).u, rotateUV(uMid, v0, angleDeg).v)
+  const pv1 = project(plane.H, rotateUV(uMid, v1, angleDeg).u, rotateUV(uMid, v1, angleDeg).v)
+  return { u: Math.hypot(pu1.x - pu0.x, pu1.y - pu0.y), v: Math.hypot(pv1.x - pv0.x, pv1.y - pv0.y) }
 }

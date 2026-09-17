@@ -7,6 +7,7 @@ import {
   encounterFromJson, findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
+import { getArenaCalibration } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import {
   appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
@@ -100,6 +101,9 @@ const bossSnap = () => (run && def ? readBossSnapshot(run.encounter, def) : null
 // Null in boss-mode scenes. Each actor ticks on its own snapshot, so a hit on one wolf never
 // switches the other.
 let wolfVisuals = null
+// FIX-023: the ARENA_CALIBRATIONS entry for the currently-loaded TRUE baked-grid debug arena, or
+// null on every normal/flexible-arena/rectangular-regression scene -- see loadBakedArenaDebug.
+let activeCalibration = null
 
 /** Expire timed holds and re-sync baselines (e.g. a newly armed attackReady telegraph).
  * Presentation only; never touches engine state. */
@@ -126,6 +130,8 @@ function tickAndSyncWolves(now) {
 async function loadScene(key) {
   hideOverlay()
   ui.stage.classList.remove('hit-flash')
+  activeCalibration = null // flexible-arena regression path -- see loadBakedArenaDebug
+  restoreDefaultBackground()
   const seqIdx = SEQUENCE_STEPS.findIndex((s) => s.key === key)
   if (seqIdx >= 0) {
     const steps = await Promise.all(SEQUENCE_STEPS.map(getStep))
@@ -150,6 +156,7 @@ async function loadScene(key) {
 // structural requirements: level + def, independent of board size) just so a full, valid
 // EncounterState/RunState exists to drive the renderer. Never wired to any UI control.
 async function loadSquareDebug(n, seed = 1) {
+  activeCalibration = null // flexible-arena regression path -- see loadBakedArenaDebug
   const base = await getStep(STANDALONE_SCENES.find((s) => s.key === 'rock-spike'))
   const gen = generateLevel({ ...PRESETS.medium, width: n, height: n, minArrows: Math.max(4, Math.round(n * n * 0.12)) }, seed)
   if (!gen.ok || !gen.level) return { ok: false, attempts: gen.attempts, rejects: gen.rejects }
@@ -159,8 +166,59 @@ async function loadSquareDebug(n, seed = 1) {
   }
   stepCache.set(step.id, step)
   run = new RunState(runConfig, [step])
+  restoreDefaultBackground()
   loadActiveStep()
   return { ok: true, width: gen.level.width, height: gen.level.height, arrows: gen.level.arrows.length }
+}
+
+// FIX-023 debug-only: render a freshly generated SQUARE board matching a TRUE baked-grid arena's
+// boardSizeLocked, with that arena's own calibrated board-plane corners/margin (arena-
+// calibration.js) and its own background art swapped in -- proof that the projected logical grid
+// lines up cell-to-cell with the painted grid, not a guessed generic trapezoid. Never wired to any
+// UI control; restoreDefaultBackground()/activeCalibration=null on every other load path undoes
+// the background swap, so normal scenes (including the flexible-arena rectangular regression) are
+// never left on a baked-arena image.
+async function loadBakedArenaDebug(calibId, seed = 1, defSceneKey = 'rock-spike') {
+  const calib = getArenaCalibration(calibId)
+  if (!calib) return { ok: false, reason: `unknown calibration id ${calibId}` }
+  const n = calib.boardSizeLocked
+  // FIX-023: `defSceneKey` picks which existing scene's `def` this debug board borrows (level/
+  // board are still freshly generated) -- 'rock-spike' (default) has a single N-side target,
+  // 'cp-e4' has both E and W side enemies, so LEFT/RIGHT podium-anchor calibration can be checked
+  // visually without a real encounter authored against this arena's board size.
+  const base = await getStep(STANDALONE_SCENES.find((s) => s.key === defSceneKey) ?? STANDALONE_SCENES.find((s) => s.key === 'rock-spike'))
+  const gen = generateLevel({ ...PRESETS.medium, width: n, height: n, minArrows: Math.max(4, Math.round(n * n * 0.12)) }, seed)
+  if (!gen.ok || !gen.level) return { ok: false, attempts: gen.attempts, rejects: gen.rejects }
+  const step = {
+    id: `debug-baked-${calibId}`, title: `FIX-023 debug -- ${calibId} baked ${n}x${n} (seed ${seed})`,
+    level: gen.level, def: base.def, board: { preset: `baked-${calibId}`, seed },
+  }
+  stepCache.set(step.id, step)
+  run = new RunState(runConfig, [step])
+  activeCalibration = calib
+  const img = await loadImageEl(calib.background)
+  if (img) {
+    ui.bgLayer.style.setProperty('--bg-image', `url(${img.src})`)
+    ui.bgLayer.classList.add('has-image')
+  }
+  loadActiveStep()
+  return { ok: true, width: gen.level.width, height: gen.level.height, arrows: gen.level.arrows.length, calibration: calibId }
+}
+
+function loadImageEl(src) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null)
+    img.src = src
+  })
+}
+
+function restoreDefaultBackground() {
+  if (assets.background) {
+    ui.bgLayer.style.setProperty('--bg-image', `url(${assets.background.src})`)
+    ui.bgLayer.classList.add('has-image')
+  }
 }
 
 function loadActiveStep() {
@@ -172,7 +230,7 @@ function loadActiveStep() {
   board = step.board ?? { preset: 'unknown', seed: 0 }
   ui.scenePick.value = step.id
   ui.sceneTitle.textContent = step.title ?? step.id
-  renderer.resize(level)
+  renderer.resize(level, activeCalibration)
   renderer.resetFx()
   hint = null
   // VIS-008: which species pack this scene's boss uses (null in enemies-mode scenes).
@@ -578,7 +636,7 @@ ui.restartBtn.onclick = () => {
 ui.hintBtn.onclick = showHint
 ui.debugToggle.onclick = () => ui.debugPanel.classList.toggle('hidden')
 ui.scenePick.onchange = () => loadScene(ui.scenePick.value)
-window.addEventListener('resize', () => { if (level) { renderer.resize(level); kick() } })
+window.addEventListener('resize', () => { if (level) { renderer.resize(level, activeCalibration); kick() } })
 window.addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement || ev.target instanceof HTMLSelectElement) return
   const k = ev.key.toLowerCase()
@@ -649,4 +707,6 @@ window.visualDebug = {
   unprojectBoardPoint: (x, y, angleDeg) => renderer.unprojectBoardPoint(x, y, angleDeg),
   // FIX-021: square-first policy visual QA -- see loadSquareDebug's own comment.
   loadSquareDebug,
+  // FIX-023: TRUE baked-grid calibration visual QA -- see loadBakedArenaDebug's own comment.
+  loadBakedArenaDebug,
 }
