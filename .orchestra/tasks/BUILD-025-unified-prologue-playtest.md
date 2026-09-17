@@ -1,6 +1,6 @@
 # TASK: BUILD-025 — Unified Prologue Playtest
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD/INTEGRATION
 SIZE: M
 AGENT: Gemini / primary implementation
@@ -159,3 +159,117 @@ Quick recon -> short integration plan -> implementation.
 RESULT / VERIFY / FOUND -> code commit -> push -> remote SHA verify -> STATUS DONE.
 
 The final RESULT must include a short "USER PLAYTEST" section with exact launch steps and what the user should manually tune/check before reporting back.
+
+---
+
+## RESULT
+
+Implemented full Unified Prologue Playtest integration. All 5 Prologue encounters are wired as a linear sequence accessible from a single normal entry point with no console helpers required.
+
+### Changes made
+
+**`spikes/arrow-core/viewer/visual-proto/app.js`**
+- `SEQUENCE_STEPS` = 5-step Prologue (prologue-5x5 → cp-e2 → cp-e3 → cp-e4 → cp-e5); all start with 0 Rotate charges
+- `STANDALONE_SCENES` = act1-e1, act1-e2, act1-e3 (start with 2 Rotate), cp-e1 debug, rock-spike debug
+- `showOverlay('won')` handles 3 cases: last Prologue step → "Пролог пройден!" + "+2 ROTATE"; mid-sequence → "Следующий этап →"; standalone → "Победа!"
+- `showOverlay('dead')` adds secondary "Начать пролог сначала" button calling `run.restartRun()`
+- `hideOverlay` hides restartAll button on close
+- Scene dropdown grouped: Prologue steps, separator, Standalone/Debug scenes
+- `window.visualDebug` extended: `.advance()`, `.restartRun()`, `.restartStep()`
+- `sceneTitle` shows `[custom calibration applied]` badge when localStorage override is active
+- Import of `hasArenaCalibrationOverride` added
+
+**`spikes/arrow-core/viewer/visual-proto/arena-calibration.js`**
+- `getArenaCalibration()` merges localStorage overrides (key: `arena_calibration_override_<id>`)
+- New exports: `saveArenaCalibrationOverride(id, cal)`, `clearArenaCalibrationOverride(id)`, `hasArenaCalibrationOverride(id)`
+
+**`spikes/arrow-core/viewer/visual-proto/arena-calibration.d.ts`**
+- Added type declarations for 3 new override functions
+
+**`spikes/arrow-core/viewer/visual-proto/calibration-editor.html`**
+- Added "Save to browser" (`#saveStorageBtn`) and "Clear browser override" (`#clearStorageBtn`) buttons
+- Added "← Playable game" link back to `index.html`
+
+**`spikes/arrow-core/viewer/visual-proto/calibration-editor.js`**
+- Imports and wires save/clear localStorage override buttons
+
+**`spikes/arrow-core/viewer/visual-proto/index.html`**
+- Title: "Arrow-Roguelite · Prologue Playtest"; Brand: "Prologue Playtest"
+- Overlay buttons container with `overlayNext` + `overlayRestartAll` (hidden by default)
+
+**`spikes/arrow-core/viewer/visual-proto/style.css`**
+- `.overlay-buttons`, `.overlay-buttons button`, `.overlay button.secondary-btn` styles
+
+**`spikes/arrow-core/tools/serve.mjs`**
+- Root and `/viewer/` both redirect to `/viewer/visual-proto/` (main playtest entry)
+
+**`spikes/arrow-core/viewer/index.html`**
+- "▶ Playable Prologue (Visual Shell)" link added at top of hub page
+
+**`spikes/arrow-core/test/build-025-prologue-flow.test.ts`** (NEW)
+- 13 focused integration tests: encounter specs & canon validation (5), end-to-end RunState playthrough (1), restarts & state isolation (2), Stone Pin and Blocked Tap rules (3), calibration resolution + localStorage override (2)
+
+### 5-step Prologue design
+
+| Step | Scene | Board | Enemies | Key mechanic | HP/Rotate |
+|------|-------|-------|---------|-------------|-----------|
+| 1 | prologue-5x5 | 5×5 calibrated | 1 HP N (normal) | Basic arrow-path solve | starts 10 HP, 0 Rotate |
+| 2 | cp-e2 | 4×5 tiny | 2 HP E (normal) | Blocked tap costs HP | carries HP, 0 Rotate |
+| 3 | cp-e3 | 6×7 easy | 3 HP E (timer 4 dmg 2) | Time has a cost | carries HP, 0 Rotate |
+| 4 | cp-e4 | 6×7 easy | 2 simultaneous (E IN 3 + N IN 5) | Priority decision | carries HP, 0 Rotate |
+| 5 | cp-e5 | 8×10 medium | Goblin Shaman boss (Phase1 E 4HP → Phase2 N 5HP CAST IN 3) | CAST interrupt; +1 Rotate grant; +2 Rotate on win | carries HP, 0→1 Rotate |
+
+### USER PLAYTEST — launch steps
+
+1. In worktree `C:\Users\nerza\Projects\ARROW-ROGUELITE\.worktrees\BUILD-025\spikes\arrow-core` run:
+   ```
+   node tools/serve.mjs
+   ```
+2. Open `http://localhost:3000` → auto-redirects to Prologue Playtest page.
+3. (Optional) To tune calibration first: open `http://localhost:3000/viewer/visual-proto/calibration-editor.html`, adjust, click **"Save to browser"**, return via "← Playable game" link, reload. Badge `[custom calibration applied]` confirms override is active.
+4. Play Prologue steps 1–5 using only the UI (tap arrows, win/retry overlays).
+5. After Step 5 boss: "Пролог пройден!" overlay shows +2 ROTATE reward.
+6. Report back with what to change next.
+
+**What to manually check / tune:**
+- Board corners and actor anchors on Step 1 (prologue-5x5) via calibration editor if the layout looks off at your display.
+- Arrow overlap on the tiny 4×5 board (Step 2) — arrows may look cramped.
+- Timer countdown text readability on Step 3.
+- Two-enemy layout on Step 4 (grunt East + grunt North).
+- Shaman boss Phase 2 CAST indicator visibility on Step 5.
+- "Начать пролог сначала" secondary button after dying (resets to Step 1, full HP, 0 Rotate).
+
+---
+
+## VERIFY
+
+- `npm run typecheck` → **0 errors** ✅
+- `npm test` → **274 tests passed (22 test files, 0 failures)** ✅
+- `npm run build` → **clean build, 0 errors** ✅
+- Headless CDP browser verification → **9/9 checks passed** ✅
+  1. Root redirect → `/viewer/visual-proto/`
+  2. Initial state: title/brand correct, 5 steps, 10 HP, 0 Rotate
+  3. Step 1 win: arrow-path solve works, overlay "Следующий этап →" shown
+  4. Step 2 (cp-e2): blocked tap costs HP; restartStep restores 10 HP; puzzle solvable
+  5. Step 3 (cp-e3): timed encounter solved
+  6. Step 4 (cp-e4): 2 simultaneous enemies (grunt_e + grunt_n) solved
+  7. Step 5 (cp-e5): Goblin Shaman Phase1→Phase2 CAST→interrupt→normal, "Пролог пройден!" + +2 ROTATE
+  8. 1920×1080 and 1366×768 viewport layout sanity
+  9. Calibration editor: "Save to browser" + "Clear browser override" buttons functional
+
+All 13 new integration tests pass.
+Canon rules preserved: Stone Pin (no turn/damage on pinned tap), CAST interrupt (switches to normal attack), concurrent timers, board-clear-alive win.
+
+---
+
+## FOUND
+
+1. **Rotate pool is encounter-local in Phase 2, not RunState-visible until advance()**: `rotateCharges` in `RunState` shows 0 at Phase 2 entry (the `grantRotate: 1` in Phase 2 is encounter-local to `EncounterState`). Only on `run.advance()` does `winRotateReward: 2` flow into `RunState`. This is correct implemented behavior — documented here for future reference.
+
+2. **cp-e2 blocked arrow is Arrow #3 (seed 300, 4×5 board)**: Index 3 arrow is blocked at scenario start. Tapping it with `blockedTapDamage: 1` correctly deducts 1 HP without advancing world turn or resetting timers. Verified in headless test.
+
+3. **No discrepancy between code and docs found**: All COMBAT-RULES.md canon rules (CAST interrupt, Stone Pin, hit-does-not-reset-timer, board-clear-alive) were confirmed to be implemented correctly in `src/encounter.ts`. No silent divergence encountered.
+
+4. **Calibration localStorage override is additive, not atomic**: `getArenaCalibration()` deep-merges the localStorage patch over the code default. If a user saves a partial override (e.g. only board corners), actor anchors still come from code. This is intentional and safe for the tuning workflow.
+
+5. **Arrow visuals are temporary** (as noted in task): Arrow rendering was not changed; the existing temporary visuals are preserved per spec.

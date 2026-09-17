@@ -16,7 +16,7 @@
 //    `effectGround` do the identical `frac * stageSize` math), and (2) the export/copy panel.
 import { EncounterState, generateLevel, PRESETS } from '../../dist/src/index.js'
 import { ASSET_MANIFEST, loadAssets, loadWolfPack } from './assets.js'
-import { ARENA_CALIBRATIONS, getArenaCalibration } from './arena-calibration.js'
+import { ARENA_CALIBRATIONS, clearArenaCalibrationOverride, getArenaCalibration, hasArenaCalibrationOverride, saveArenaCalibrationOverride } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import { appearEnemyVisual } from './enemy-visual-state.js'
 
@@ -24,7 +24,7 @@ const $ = (id) => document.getElementById(id)
 const ui = {
   arenaPick: $('arenaPick'), gridSizePick: $('gridSizePick'),
   toggleGrid: $('toggleGrid'), toggleArrows: $('toggleArrows'), toggleSprites: $('toggleSprites'), toggleEffect: $('toggleEffect'),
-  resetBtn: $('resetBtn'), copyBtn: $('copyBtn'), downloadBtn: $('downloadBtn'),
+  resetBtn: $('resetBtn'), saveStorageBtn: $('saveStorageBtn'), clearStorageBtn: $('clearStorageBtn'), copyBtn: $('copyBtn'), downloadBtn: $('downloadBtn'),
   scaleTop: $('scaleTop'), scaleTopNum: $('scaleTopNum'),
   scaleLeft: $('scaleLeft'), scaleLeftNum: $('scaleLeftNum'),
   scaleRight: $('scaleRight'), scaleRightNum: $('scaleRightNum'),
@@ -433,6 +433,33 @@ ui.resetBtn.onclick = () => {
   rebuildEncounter()
   positionHandles()
   refreshPanels()
+}
+
+if (ui.saveStorageBtn) {
+  ui.saveStorageBtn.onclick = () => {
+    const ok = saveArenaCalibrationOverride(draft.id, buildExportObject())
+    ui.copyStatus.textContent = ok
+      ? 'Saved override to browser! Reload game to see new layout.'
+      : 'Failed to save to browser.'
+    setTimeout(() => { ui.copyStatus.textContent = '' }, 4000)
+  }
+}
+
+if (ui.clearStorageBtn) {
+  ui.clearStorageBtn.onclick = () => {
+    clearArenaCalibrationOverride(draft.id)
+    draft = deepClone(ARENA_CALIBRATIONS[draft.id] ?? original)
+    original = deepClone(draft)
+    ui.gridSizePick.value = String(draft.boardSizeLocked)
+    syncScaleInputs()
+    selected = null
+    for (const el of handleEls.values()) el.classList.remove('selected')
+    rebuildEncounter()
+    positionHandles()
+    refreshPanels()
+    ui.copyStatus.textContent = 'Browser override cleared. Reverted to code default.'
+    setTimeout(() => { ui.copyStatus.textContent = '' }, 4000)
+  }
 }
 
 ui.copyBtn.onclick = async () => {

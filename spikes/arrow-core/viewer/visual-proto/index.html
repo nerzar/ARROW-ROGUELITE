@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIS-001 combat shell</title>
+<title>Arrow-Roguelite · Prologue Playtest</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <div class="bg-layer" id="bgLayer"></div>
 
   <header class="topbar">
-    <strong>VIS-001</strong>
+    <strong>Prologue Playtest</strong>
     <label>scene <select id="scenePick"></select></label>
     <span id="sceneTitle" class="muted"></span>
     <button id="restartBtn" title="R">restart</button>
@@ -62,7 +62,10 @@
     <div class="card">
       <h2 id="overlayTitle"></h2>
       <div id="overlayBody" class="muted"></div>
-      <button id="overlayNext"></button>
+      <div class="overlay-buttons" id="overlayButtons">
+        <button id="overlayNext"></button>
+        <button id="overlayRestartAll" class="secondary-btn" style="display:none"></button>
+      </div>
     </div>
   </div>
 </div>

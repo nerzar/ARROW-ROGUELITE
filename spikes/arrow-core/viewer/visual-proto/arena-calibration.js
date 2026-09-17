@@ -104,10 +104,31 @@ export const ARENA_CALIBRATIONS = {
   },
 }
 
-/** Look up a calibration entry by id; returns null for unknown ids (never throws). */
+const STORAGE_PREFIX = 'arena_calibration_override_'
+
+/** Look up a calibration entry by id; returns null for unknown ids (never throws).
+ * In a browser environment, merges any user-saved tuning override from localStorage. */
 export function getArenaCalibration(id) {
-  const c = ARENA_CALIBRATIONS[id]
+  let c = ARENA_CALIBRATIONS[id]
   if (!c) return null
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(`${STORAGE_PREFIX}${id}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed && typeof parsed === 'object') {
+          c = {
+            ...c,
+            ...parsed,
+            boardPlaneFrac: { ...c.boardPlaneFrac, ...(parsed.boardPlaneFrac ?? {}) },
+            anchors: { ...c.anchors, ...(parsed.anchors ?? {}) },
+            effectAnchors: { ...c.effectAnchors, ...(parsed.effectAnchors ?? {}) },
+            actorScale: { ...c.actorScale, ...(parsed.actorScale ?? {}) },
+          }
+        }
+      }
+    } catch {}
+  }
   return {
     ...c,
     actorScale: {
@@ -115,6 +136,38 @@ export function getArenaCalibration(id) {
       left: c.actorScale?.left ?? 1.0,
       right: c.actorScale?.right ?? 1.0,
     },
+  }
+}
+
+/** Save user-tuned calibration override to browser localStorage. */
+export function saveArenaCalibrationOverride(id, calibration) {
+  if (typeof localStorage === 'undefined') return false
+  try {
+    localStorage.setItem(`${STORAGE_PREFIX}${id}`, JSON.stringify(calibration))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Clear user-tuned calibration override from browser localStorage. */
+export function clearArenaCalibrationOverride(id) {
+  if (typeof localStorage === 'undefined') return false
+  try {
+    localStorage.removeItem(`${STORAGE_PREFIX}${id}`)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Check if an active calibration override exists in browser localStorage. */
+export function hasArenaCalibrationOverride(id) {
+  if (typeof localStorage === 'undefined') return false
+  try {
+    return localStorage.getItem(`${STORAGE_PREFIX}${id}`) !== null
+  } catch {
+    return false
   }
 }
 

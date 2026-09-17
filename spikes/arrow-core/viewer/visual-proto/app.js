@@ -7,7 +7,7 @@ import {
   encounterFromJson, findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
-import { ARENA_CALIBRATIONS, getArenaCalibration, resolveArenaPresentation } from './arena-calibration.js'
+import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import {
   appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
@@ -25,23 +25,29 @@ const ui = {
   msgLine: $('msgLine'), canvas: $('arena'), status: $('status'), log: $('log'), report: $('report'),
   playerCard: $('playerCard'), playerHpFill: $('playerHpFill'), playerHpText: $('playerHpText'),
   rotCw: $('rotCw'), rotCcw: $('rotCcw'), rotateCharges: $('rotateCharges'),
-  overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'),
+  overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
 }
 
-// BUILD-024 / ACT-I-001 prototype sequence:
-// Prologue 5x5 (calibrated prologue-5x5-good) -> Prologue Mini-boss (reward +2 Rotate) -> Act I #1 -> Act I #2 -> Act I #3.
-// HP and shared Rotate pool persist across all sequence encounters.
+// BUILD-025: unified canon Prologue sequence:
+// 1. Prologue 5x5 (calibrated prologue-5x5-good, pure puzzle peeling shot, mob North, 1 HP)
+// 2. Prologue 2 (cp-e2: mistakes cost HP, 2 HP mob East, introduces blockedTapDamage = 1)
+// 3. Prologue 3 (cp-e3: time has a cost, 3 HP mob East, ATTACK IN 4 timer)
+// 4. Prologue 4 (cp-e4: two enemies at once, priority decision: urgent East IN 3 vs slow North IN 5)
+// 5. Prologue 5 (cp-e5: Goblin Shaman boss, Phase 1 East 4 HP -> Phase 2 North 5 HP CAST IN 3 -> INTERRUPT -> normal 4, +1 Rotate grant, +2 Rotate win reward).
 const SEQUENCE_STEPS = [
-  { key: 'prologue-5x5', title: 'Пролог · 5x5 Чистый выстрел (seed 1107)', file: '../../encounters/prologue-5x5.json' },
-  { key: 'cp-e5', title: 'Пролог · Mini-boss (seed 1571)', file: '../../encounters/cp-e5.json' },
-  { key: 'act1-e1', title: 'Act I #1 · Двуручный рубеж (seed 22)', file: '../../encounters/act1-e1.json' },
-  { key: 'act1-e2', title: 'Act I #2 · Взаимный замок (seed 112)', file: '../../encounters/act1-e2.json' },
-  { key: 'act1-e3', title: 'Act I #3 · Кастер и свита (seed 25)', file: '../../encounters/act1-e3.json' },
+  { key: 'prologue-5x5', title: 'Пролог 1 · 5x5 Чистый выстрел (seed 1107)', file: '../../encounters/prologue-5x5.json' },
+  { key: 'cp-e2', title: 'Пролог 2 · Ошибка стоит HP (seed 300)', file: '../../encounters/cp-e2.json' },
+  { key: 'cp-e3', title: 'Пролог 3 · Время имеет цену (seed 522)', file: '../../encounters/cp-e3.json' },
+  { key: 'cp-e4', title: 'Пролог 4 · Два врага одновременно (seed 10)', file: '../../encounters/cp-e4.json' },
+  { key: 'cp-e5', title: 'Пролог 5 · Goblin Shaman (seed 1571)', file: '../../encounters/cp-e5.json' },
 ]
 
 const STANDALONE_SCENES = [
-  { key: 'cp-e4', title: 'Debug · два врага одновременно (seed 10)', file: '../../encounters/cp-e4.json' },
+  { key: 'act1-e1', title: 'Act I #1 · Двуручный рубеж (seed 22)', file: '../../encounters/act1-e1.json' },
+  { key: 'act1-e2', title: 'Act I #2 · Взаимный замок (seed 112)', file: '../../encounters/act1-e2.json' },
+  { key: 'act1-e3', title: 'Act I #3 · Кастер и свита (seed 25)', file: '../../encounters/act1-e3.json' },
+  { key: 'cp-e1', title: 'Debug · cp-e1 flexible tiny (seed 3874)', file: '../../encounters/cp-e1.json' },
   { key: 'rock-spike', title: 'Debug · Rock-spike THROW/PIN (seed 15)', file: '../../encounters/rock-spike.json' },
 ]
 
@@ -139,8 +145,9 @@ async function loadScene(key) {
   const seqIdx = SEQUENCE_STEPS.findIndex((s) => s.key === key)
   if (seqIdx >= 0) {
     const steps = await Promise.all(SEQUENCE_STEPS.map(getStep))
-    // Steps 0 (prologue-5x5) and 1 (cp-e5) start with 0 Rotate charges; Act I steps (idx >= 2) start with 2 charges.
-    const initialCharges = seqIdx <= 1 ? 0 : 2
+    // All Prologue sequence steps start with 0 Rotate charges.
+    // Rotate is unlocked in combat during Boss Phase 2 (+1 local) and granted on Boss win (+2 global reward).
+    const initialCharges = 0
     run = new RunState({ ...runConfig, initialRotateCharges: initialCharges }, steps)
     if (seqIdx > 0) {
       run.debugJumpTo(seqIdx, initialCharges)
@@ -148,7 +155,8 @@ async function loadScene(key) {
   } else {
     const standalone = STANDALONE_SCENES.find((s) => s.key === key) ?? STANDALONE_SCENES[0]
     const step = await getStep(standalone)
-    run = new RunState(runConfig, [step])
+    const initialCharges = standalone.key.startsWith('act1') ? 2 : 0
+    run = new RunState({ ...runConfig, initialRotateCharges: initialCharges }, [step])
   }
   loadActiveStep()
 }
@@ -243,6 +251,8 @@ function loadActiveStep() {
   const pres = step.presentation ?? def.presentation ?? null
   const calib = resolveArenaPresentation(pres)
   activeCalibration = calib
+  const overrideActive = calib && hasArenaCalibrationOverride(calib.id)
+  ui.sceneTitle.textContent = (step.title ?? step.id) + (overrideActive ? ' [custom calibration applied]' : '')
   if (calib) {
     loadImageEl(calib.background).then((img) => {
       if (img && activeCalibration === calib) {
@@ -469,32 +479,57 @@ function showOverlay(kind) {
   if (kind === 'dead') {
     ui.overlayTitle.textContent = 'Поражение'
     ui.overlayBody.textContent = 'HP игрока закончилось.'
-    ui.overlayNext.textContent = 'Заново'
+    ui.overlayNext.textContent = 'Повторить этап'
     ui.overlayNext.onclick = () => {
       hideOverlay()
       run.restartStep()
       loadActiveStep()
     }
+    if (ui.overlayRestartAll) {
+      ui.overlayRestartAll.style.display = run.steps.length > 1 ? 'inline-block' : 'none'
+      ui.overlayRestartAll.textContent = 'Начать пролог сначала'
+      ui.overlayRestartAll.onclick = () => {
+        hideOverlay()
+        run.restartRun()
+        loadActiveStep()
+      }
+    }
   } else {
     const isSeq = run.steps.length > 1
     const isLast = !isSeq || run.isLastStep
-    ui.overlayTitle.textContent = isLast ? 'Победа!' : 'Цель выполнена'
     const reward = def.winRotateReward ?? 0
-    let body = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}.`
-    if (reward > 0) {
-      body += ` Награда: +${reward} ROTATE (общий ресурс забега: ${run.rotateCharges + reward}).`
+    if (ui.overlayRestartAll) ui.overlayRestartAll.style.display = 'none'
+
+    if (isSeq && isLast) {
+      ui.overlayTitle.textContent = 'Пролог пройден!'
+      let body = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}. `
+      if (reward > 0) {
+        body += `Награда за босса: +${reward} ROTATE (общий пул: ${run.rotateCharges + reward}). `
+      }
+      body += 'Все 5 этапов текущего пролога успешно завершены! Теперь обсуждаем дальнейшие изменения.'
+      ui.overlayBody.textContent = body
+      ui.overlayNext.textContent = 'Пройти пролог заново'
+      ui.overlayNext.onclick = () => {
+        hideOverlay()
+        run.restartRun()
+        loadActiveStep()
+      }
     } else if (isSeq) {
-      body += ` Rotate осталось: ${run.rotateCharges}.`
-    }
-    ui.overlayBody.textContent = body
-    if (isSeq && !run.isLastStep) {
-      ui.overlayNext.textContent = 'Далее →'
+      ui.overlayTitle.textContent = 'Этап пройден'
+      let body = `HP: ${run.encounter.playerHp}/${run.maxHp}.`
+      if (run.rotateCharges > 0) {
+        body += ` Rotate осталось: ${run.rotateCharges}.`
+      }
+      ui.overlayBody.textContent = body
+      ui.overlayNext.textContent = 'Следующий этап →'
       ui.overlayNext.onclick = () => {
         hideOverlay()
         run.advance()
         loadActiveStep()
       }
     } else {
+      ui.overlayTitle.textContent = 'Победа!'
+      ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}.`
       ui.overlayNext.textContent = 'Заново'
       ui.overlayNext.onclick = () => {
         hideOverlay()
@@ -507,6 +542,7 @@ function hideOverlay() {
   if (overlayTimer) clearTimeout(overlayTimer)
   overlayTimer = 0
   ui.overlay.classList.remove('show')
+  if (ui.overlayRestartAll) ui.overlayRestartAll.style.display = 'none'
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -680,7 +716,12 @@ window.addEventListener('keydown', (ev) => {
   ev.preventDefault()
 })
 
-for (const scene of ALL_SCENES) ui.scenePick.append(new Option(scene.title, scene.key))
+for (const scene of SEQUENCE_STEPS) ui.scenePick.append(new Option(scene.title, scene.key))
+const sep = new Option('── Standalone / Debug ──', '')
+sep.disabled = true
+ui.scenePick.append(sep)
+for (const scene of STANDALONE_SCENES) ui.scenePick.append(new Option(scene.title, scene.key))
+
 const initialKey = new URLSearchParams(location.hash.slice(1)).get('scene') ?? 'prologue-5x5'
 ui.scenePick.value = initialKey
 await loadScene(initialKey)
@@ -709,6 +750,19 @@ window.visualDebug = {
   tap,
   rotate,
   loadScene,
+  advance: () => {
+    const ok = run.advance()
+    if (ok) loadActiveStep()
+    return ok
+  },
+  restartRun: () => {
+    run.restartRun()
+    loadActiveStep()
+  },
+  restartStep: () => {
+    run.restartStep()
+    loadActiveStep()
+  },
   boss: () => bossVisual, // VIS-005: current presentation pose state (null in enemies mode)
   bossSpecies: () => (bossVisual ? bossSpecies : null), // VIS-008: which pack is currently active
   setBossPose: (pose) => { // VIS-005: manual debug override, same as the debug-panel buttons
