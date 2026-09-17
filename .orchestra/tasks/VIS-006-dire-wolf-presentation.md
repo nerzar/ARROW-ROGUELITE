@@ -1,12 +1,13 @@
 # TASK: VIS-006 — Dire Wolf Runtime Presentation
 
-STATUS: IN_PROGRESS
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Muse Spark (implementation agent)
 BASE_BRANCH: origin/feat/VIS-005-goblin-taunter-presentation
 BRANCH: feat/VIS-006-dire-wolf-presentation
 START_SHA: bdf06b7fd8afaa5597797a51939f6d014e2cc350
+RESULT_SHA: 4345011102eba36c65c22ca2031627d0a4809cb4 (code commit; card DONE сверх)
 
 ## Base
 
