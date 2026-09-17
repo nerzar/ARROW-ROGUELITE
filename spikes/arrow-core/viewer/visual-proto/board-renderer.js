@@ -210,7 +210,7 @@ export function createBoardRenderer(canvas, stageEl) {
   }
 
   function frame(now, view) {
-    const { s, def, level, assets, hint } = view
+    const { s, def, level, assets, hint, debug } = view
     if (!geo) resize(level)
     let animating = false
 
@@ -665,33 +665,25 @@ export function createBoardRenderer(canvas, stageEl) {
       }
     }
 
+    // BUILD-022 course correction: the arena's own painted stone well is the board surface --
+    // no drawn panel/card and no separate frame image sit on top of it (a translucent card or a
+    // second masonry frame both read as a foreign object pasted over the arena; an ART-003 flat
+    // square frame overlay was tried and rejected for exactly this reason -- see
+    // docs/ART-003-BOARD-FRAME-OVERLAY.md). This only draws the debug alignment dots/backdrop
+    // outline, gated behind the debug panel toggle so a normal playthrough shows nothing here at
+    // all -- puzzle content (arrows/glow/selection/shots, drawn elsewhere in frame()) is the only
+    // thing visually on the board, projected directly onto the arena art via board-plane.js.
     function drawBoardSurface(col, backdrop) {
+      if (!debug) return
       const g = geo
-      // FIX-021: the backdrop is the plane's own fixed footprint (see board-plane.js's
-      // fitGrid/backdropCornersPx) -- a quadrilateral that follows the stone dais's trapezoid,
-      // never rotates, and never changes shape/size across Rotate or board aspect ratio. A
-      // translucent inset panel, not an opaque card, so the masonry underneath keeps showing
-      // through (task: "не создавать ощущение floating card").
-      ctx.save()
-      ctx.shadowColor = col.boardGlow
-      ctx.shadowBlur = 18
-      quadPath(backdrop)
-      const grad = ctx.createLinearGradient(backdrop.tl.x, backdrop.tl.y, backdrop.bl.x, backdrop.bl.y)
-      grad.addColorStop(0, col.boardTop)
-      grad.addColorStop(1, col.boardBottom)
-      ctx.fillStyle = grad
-      ctx.fill()
-      ctx.restore()
       ctx.save()
       ctx.strokeStyle = col.boardBorder
-      ctx.lineWidth = 2
+      ctx.lineWidth = 1
+      ctx.setLineDash([4, 4])
       quadPath(backdrop)
       ctx.stroke()
       ctx.restore()
 
-      // Grid dots: part of the puzzle layer, so they rotate/refit with it (unlike the backdrop
-      // above). Clipped to the backdrop quad as a safety net against any rounding overflow at
-      // the plane's edges.
       ctx.save()
       quadPath(backdrop)
       ctx.clip()
@@ -910,11 +902,8 @@ export function createBoardRenderer(canvas, stageEl) {
   function palette(dark) {
     return {
       board: dark ? '#26262a' : '#ffffff',
-      // FIX-021: translucent, not opaque -- the backdrop is an inset readability panel inside
-      // the stone plane, not an opaque card sitting on top of it.
-      boardTop: dark ? 'rgba(30,28,34,0.62)' : 'rgba(255,255,255,0.55)',
-      boardBottom: dark ? 'rgba(16,15,19,0.70)' : 'rgba(220,214,198,0.62)',
-      boardBorder: dark ? 'rgba(200,195,210,0.35)' : 'rgba(120,105,70,0.45)', boardGlow: dark ? 'rgba(120,140,255,0.22)' : 'rgba(140,110,40,0.16)',
+      // BUILD-022: debug-only alignment outline (backdrop quad no longer paints a visible panel).
+      boardBorder: dark ? 'rgba(200,195,210,0.35)' : 'rgba(120,105,70,0.45)',
       dot: dark ? '#4a4a4f' : '#c9c9c6',
       arrow: dark ? '#a9a9b0' : '#8d8a80', arrowDim: dark ? '#55555a' : '#c4c4c0', aim: dark ? '#ffd76a' : '#b8791a',
       aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',

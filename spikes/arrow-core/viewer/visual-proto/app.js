@@ -445,6 +445,9 @@ function frame(now) {
     s: run.encounter, def, level, assets, hint,
     boss: bossVisual ? { pack: bossPack, visual: bossVisual } : null,
     wolf: wolfVisuals ? { pack: wolfPack, visuals: wolfVisuals } : null,
+    // BUILD-022: board alignment dots/outline are debug-only -- a normal playthrough shows only
+    // puzzle content (arrows/glow/selection/shots) directly on the arena's own stone surface.
+    debug: !ui.debugPanel.classList.contains('hidden'),
   })
   if (animating) kick()
 }
