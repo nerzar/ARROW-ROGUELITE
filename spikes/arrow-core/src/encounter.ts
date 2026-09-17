@@ -168,9 +168,17 @@ export interface EnemyDef {
   label?: string
 }
 
+/** Presentation/arena metadata (BUILD-024). Decouples visual theme/calibration from gameplay rules. */
+export interface ArenaPresentation {
+  arena?: string
+  calibration?: string
+}
+
 export interface EncounterDef {
   id: string
   title?: string
+  /** BUILD-024: optional presentation / arena metadata for visual shells. */
+  presentation?: ArenaPresentation
   /** Sequential single-target boss (EXP-008/009/010). Exactly one of `boss`/`enemies` is set. */
   boss?: { id: string; phases: BossPhase[] }
   /** Simultaneous regular enemies (EXP-010b). Exactly one of `boss`/`enemies` is set. */
@@ -987,6 +995,17 @@ export function checkEncounter(def: EncounterDef): void {
   if (def.rotateCharges !== undefined && (!Number.isInteger(def.rotateCharges) || def.rotateCharges < 0)) {
     throw new Error('rotateCharges must be a non-negative integer')
   }
+  if (def.presentation !== undefined) {
+    if (typeof def.presentation !== 'object' || def.presentation === null) {
+      throw new Error('presentation must be an object')
+    }
+    if (def.presentation.arena !== undefined && typeof def.presentation.arena !== 'string') {
+      throw new Error('presentation.arena must be a string')
+    }
+    if (def.presentation.calibration !== undefined && typeof def.presentation.calibration !== 'string') {
+      throw new Error('presentation.calibration must be a string')
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -997,6 +1016,8 @@ export const ENCOUNTER_FORMAT = 'arrow-core-encounter'
 export interface EncounterFile {
   format: typeof ENCOUNTER_FORMAT
   v: 1
+  /** BUILD-024: optional presentation / arena metadata at file level. */
+  presentation?: ArenaPresentation
   /** The board is regenerated from preset + seed; `levelHash` catches generator drift. */
   board: { preset: PresetName; seed: number; levelHash: string }
   encounter: EncounterDef
@@ -1017,8 +1038,10 @@ export function encounterFromJson(raw: unknown): { file: EncounterFile; level: L
   if (expected && hash !== expected) {
     throw new Error(`board drift: preset ${preset} seed ${seed} now hashes to ${hash}, file expects ${expected}`)
   }
+  const presentation = j.encounter?.presentation ?? j.presentation
   const def: EncounterDef = {
     ...j.encounter,
+    presentation,
     boss: j.encounter.boss
       ? {
           ...j.encounter.boss,
@@ -1040,7 +1063,7 @@ export function encounterFromJson(raw: unknown): { file: EncounterFile; level: L
     },
   }
   checkEncounter(def)
-  return { file: { ...j, encounter: def }, level: res.level }
+  return { file: { ...j, presentation, encounter: def }, level: res.level }
 }
 
 export function encounterToJson(file: EncounterFile): unknown {

@@ -1,6 +1,6 @@
 # TASK: BUILD-024 — Calibrated arena runtime v1
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Gemini / implementation
@@ -117,3 +117,59 @@ Run:
 Use isolated worktree from the start.
 Quick recon first, then short plan, then implementation.
 RESULT / VERIFY / FOUND -> code commit -> push -> remote SHA verify -> STATUS DONE.
+
+## RESULT
+
+1. **Scene/Encounter Presentation Metadata Contract**:
+   - Added `ArenaPresentation` interface (`arena?: string; calibration?: string`) in `src/encounter.ts` (re-exported through `src/index.ts`).
+   - Extended `EncounterDef` and `EncounterFile` with optional `presentation?: ArenaPresentation` metadata, decoupled from combat/puzzle rules.
+   - Validated `presentation` in `checkEncounter(def)` and preserved in `encounterFromJson` / `encounterToJson`.
+   - Added `resolveArenaPresentation(presentation)` in `viewer/visual-proto/arena-calibration.js` (and `.d.ts`), resolving calibration by id/arena name from `ARENA_CALIBRATIONS` with fallback to `null`.
+
+2. **First Production Proof 5x5 Encounter**:
+   - Added `square5` preset (5x5, minLength 2, maxLength 4, turnChance 0.12, targetFill 0.75, minFill 0.60, minArrows 4) to `src/presets.ts`.
+   - Authored `encounters/prologue-5x5.json` (square5 seed 1107, hash `4b2681e6`) with `presentation: { arena: "prologue-5x5-good", calibration: "prologue-5x5-good" }`.
+   - Proved 100% winnable puzzle sequence: Arrow 0 (East, puzzle peeling move) -> Arrow 3 (North, hits target `grunt_passive` for 1 HP -> Win).
+   - Preserves exact prologue combat-pressure contract (0 blockedTapDamage, 0 rotate).
+
+3. **Playable Visual Shell Integration (`viewer/visual-proto/app.js`)**:
+   - Inserted `prologue-5x5` into `SEQUENCE_STEPS` as the first playable sequence encounter, defaulting `initialKey` to `'prologue-5x5'`.
+   - In `getStep(scene)`, preserved step/encounter `presentation` metadata.
+   - In `loadActiveStep()`, resolved active step presentation via `resolveArenaPresentation(step.presentation ?? step.def?.presentation)`.
+   - Dynamically applied calibrated background art (`assets/arenas/prologue-act1/5x5-good.png`) when calibrated, and passed `activeCalibration` to `renderer.resize(level, activeCalibration)`.
+   - When transitioning to uncalibrated/flexible encounters (e.g. `cp-e5` mini-boss or `act1-e1` rectangular encounter), `activeCalibration` is cleared (`null`), default background is automatically restored via `restoreDefaultBackground()`, and `renderer.resize(level, null)` maintains full backward compatibility.
+   - Preserved `loadBakedArenaDebug()` and `loadSquareDebug()` helpers.
+
+4. **Testing and Verification**:
+   - Added test suite `test/build-024-calibrated-runtime.test.ts` (10 tests) covering:
+     - `resolveArenaPresentation` metadata contract and fallbacks;
+     - `prologue-5x5` encounter parsing, win proof, and serialization;
+     - `board-renderer.js` calibrated quad corners, anchors, effect anchors, actor scale decoupling, and responsive scaling at 1920x1080 and 1366x768;
+     - pointer `hitTest` accuracy across calibrated 5x5 board;
+     - flexible scene / rectangular regression compatibility (`act1-e1`).
+   - Browser verified end-to-end in headless Chrome via CDP:
+     - `index.html` loads directly into `prologue-5x5` on `prologue-5x5-good`;
+     - board plane aligns 5x5 corners to calibrated fractions;
+     - solver taps Arrow 0 then Arrow 3 -> victory overlay displayed;
+     - advancing to `cp-e5` seamlessly restores flexible background and 8x10 geometry;
+     - `act1-e1` rectangular regression encounter functions properly;
+     - `calibration-editor.html` loads and exports `prologue-5x5-good` with `boardSizeLocked: 5` and actor scales intact.
+
+## VERIFY
+
+- `npm run typecheck` -> 0 errors.
+- `npm test` -> 21 test files passed (261 tests total).
+- `npm run build` -> clean TypeScript build.
+- Browser CDP verification in headless Chrome across 1920x1080 and 1366x768 viewports:
+  - Initial load on `prologue-5x5` on `prologue-5x5-good` arena.
+  - Interactive hit testing and puzzle win flow.
+  - Sequence advance to `cp-e5` restoring flexible arena.
+  - Rectangular scene `act1-e1` verified.
+  - Calibration editor `calibration-editor.html` verified.
+
+## FOUND
+
+- Calibration baseline choice: confirmed `prologue-5x5-good` (`assets/arenas/prologue-act1/5x5-good.png`, `boardSizeLocked: 5`) as user-confirmed reference calibration from FIX-023 / CAL-002.
+- Clean separation: presentation metadata is completely decoupled from puzzle generator and combat solver rules.
+- Worktree isolation: all changes developed and tested exclusively inside `.worktrees/BUILD-024`.
+

@@ -7,7 +7,7 @@ import {
   encounterFromJson, findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
-import { ARENA_CALIBRATIONS, getArenaCalibration } from './arena-calibration.js'
+import { ARENA_CALIBRATIONS, getArenaCalibration, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import {
   appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
@@ -29,9 +29,11 @@ const ui = {
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
 }
 
-// ACT-I-001 prototype sequence: Prologue complete (reward +2 Rotate) -> Act I #1 -> Act I #2 -> Act I #3.
+// BUILD-024 / ACT-I-001 prototype sequence:
+// Prologue 5x5 (calibrated prologue-5x5-good) -> Prologue Mini-boss (reward +2 Rotate) -> Act I #1 -> Act I #2 -> Act I #3.
 // HP and shared Rotate pool persist across all sequence encounters.
 const SEQUENCE_STEPS = [
+  { key: 'prologue-5x5', title: 'Пролог · 5x5 Чистый выстрел (seed 1107)', file: '../../encounters/prologue-5x5.json' },
   { key: 'cp-e5', title: 'Пролог · Mini-boss (seed 1571)', file: '../../encounters/cp-e5.json' },
   { key: 'act1-e1', title: 'Act I #1 · Двуручный рубеж (seed 22)', file: '../../encounters/act1-e1.json' },
   { key: 'act1-e2', title: 'Act I #2 · Взаимный замок (seed 112)', file: '../../encounters/act1-e2.json' },
@@ -62,6 +64,7 @@ async function getStep(scene) {
     level: parsed.level,
     def: parsed.file.encounter,
     board: parsed.file.board,
+    presentation: parsed.file.presentation ?? parsed.file.encounter.presentation ?? scene.presentation ?? null,
   }
   stepCache.set(scene.key, step)
   return step
@@ -136,11 +139,11 @@ async function loadScene(key) {
   const seqIdx = SEQUENCE_STEPS.findIndex((s) => s.key === key)
   if (seqIdx >= 0) {
     const steps = await Promise.all(SEQUENCE_STEPS.map(getStep))
-    if (seqIdx === 0) {
-      run = new RunState({ ...runConfig, initialRotateCharges: 0 }, steps)
-    } else {
-      run = new RunState({ ...runConfig, initialRotateCharges: 2 }, steps)
-      run.debugJumpTo(seqIdx, 2)
+    // Steps 0 (prologue-5x5) and 1 (cp-e5) start with 0 Rotate charges; Act I steps (idx >= 2) start with 2 charges.
+    const initialCharges = seqIdx <= 1 ? 0 : 2
+    run = new RunState({ ...runConfig, initialRotateCharges: initialCharges }, steps)
+    if (seqIdx > 0) {
+      run.debugJumpTo(seqIdx, initialCharges)
     }
   } else {
     const standalone = STANDALONE_SCENES.find((s) => s.key === key) ?? STANDALONE_SCENES[0]
@@ -193,6 +196,7 @@ async function loadBakedArenaDebug(calibId, seed = 1, defSceneKey = 'rock-spike'
   const step = {
     id: `debug-baked-${calibId}`, title: `FIX-023 debug -- ${calibId} baked ${n}x${n} (seed ${seed})`,
     level: gen.level, def: base.def, board: { preset: `baked-${calibId}`, seed },
+    presentation: { calibration: calibId },
   }
   stepCache.set(step.id, step)
   run = new RunState(runConfig, [step])
@@ -231,6 +235,25 @@ function loadActiveStep() {
   board = step.board ?? { preset: 'unknown', seed: 0 }
   ui.scenePick.value = step.id
   ui.sceneTitle.textContent = step.title ?? step.id
+
+  // BUILD-024: resolve calibrated arena through ordinary scene/runtime presentation metadata.
+  // If the active step carries presentation (or def.presentation), resolve it via arena-calibration.
+  // If found, activeCalibration is set and its calibrated background art is displayed;
+  // otherwise activeCalibration is cleared (null) and the default flexible background is restored.
+  const pres = step.presentation ?? def.presentation ?? null
+  const calib = resolveArenaPresentation(pres)
+  activeCalibration = calib
+  if (calib) {
+    loadImageEl(calib.background).then((img) => {
+      if (img && activeCalibration === calib) {
+        ui.bgLayer.style.setProperty('--bg-image', `url(${img.src})`)
+        ui.bgLayer.classList.add('has-image')
+      }
+    })
+  } else {
+    restoreDefaultBackground()
+  }
+
   renderer.resize(level, activeCalibration)
   renderer.resetFx()
   hint = null
@@ -658,7 +681,7 @@ window.addEventListener('keydown', (ev) => {
 })
 
 for (const scene of ALL_SCENES) ui.scenePick.append(new Option(scene.title, scene.key))
-const initialKey = new URLSearchParams(location.hash.slice(1)).get('scene') ?? 'act1-e1'
+const initialKey = new URLSearchParams(location.hash.slice(1)).get('scene') ?? 'prologue-5x5'
 ui.scenePick.value = initialKey
 await loadScene(initialKey)
 

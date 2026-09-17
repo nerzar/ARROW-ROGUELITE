@@ -21,3 +21,5 @@ export interface ArenaCalibration {
 
 export declare const ARENA_CALIBRATIONS: Record<string, ArenaCalibration>
 export declare function getArenaCalibration(id: string): ArenaCalibration | null
+export declare function resolveArenaPresentation(presentation: { arena?: string; calibration?: string } | null | undefined): ArenaCalibration | null
+

@@ -117,3 +117,15 @@ export function getArenaCalibration(id) {
     },
   }
 }
+
+/**
+ * BUILD-024: Resolves an arena presentation metadata block (from EncounterDef, EncounterFile,
+ * or scene) to its full calibration entry. Returns null if presentation is absent or no calibration matches.
+ */
+export function resolveArenaPresentation(presentation) {
+  if (!presentation || typeof presentation !== 'object') return null
+  const id = presentation.calibration ?? presentation.arena
+  if (!id || typeof id !== 'string') return null
+  return getArenaCalibration(id)
+}
+

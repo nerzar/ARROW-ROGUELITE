@@ -1,0 +1,36 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "presentation": {
+    "arena": "prologue-5x5-good",
+    "calibration": "prologue-5x5-good"
+  },
+  "board": {
+    "preset": "square5",
+    "seed": 1107,
+    "levelHash": "4b2681e6"
+  },
+  "encounter": {
+    "id": "prologue_5x5",
+    "title": "Пролог · 5x5 Чистый выстрел (seed 1107)",
+    "presentation": {
+      "arena": "prologue-5x5-good",
+      "calibration": "prologue-5x5-good"
+    },
+    "boss": {
+      "id": "grunt_passive",
+      "phases": [
+        {
+          "side": 0,
+          "hpUnits": 1,
+          "label": "passive target on North"
+        }
+      ]
+    },
+    "rotate": {
+      "allow": []
+    },
+    "blockedTapDamage": 0,
+    "notes": "LD-005 Prologue 5x5 Candidate A / BUILD-024 Calibrated arena runtime v1. Board: square5 (5x5), seed 1107, 5 arrows (N1 E1 S2 W1). Only arrow #0 (E) is free at start; the sole N arrow #3 is blocked by #0. Intended sequence: turn 1 taps #0 (E, pure puzzle move peeling the blocker), turn 2 taps #3 (N, hits boss on North and kills). Preserves exact cp-e1 experience contract: game is a puzzle, not tap-and-win. Calibrated arena: prologue-5x5-good."
+  }
+}

@@ -47,6 +47,12 @@ export const PRESETS = {
     targetFill: 0.95, minFill: 0.9, maxInitialFreeRatio: 0.15, minArrows: 18,
     blockSeeking: 1, attempts: 40,
   },
+  /** Square-first policy presets (BUILD-024 / LD-005): 5x5 board. */
+  square5: {
+    width: 5, height: 5, minLength: 2, maxLength: 4, turnChance: 0.12,
+    targetFill: 0.75, minFill: 0.60, maxInitialFreeRatio: 0.65, minArrows: 4,
+    blockSeeking: 0.65, attempts: 40,
+  },
 } satisfies Record<string, GeneratorParams>
 
 export type PresetName = keyof typeof PRESETS
