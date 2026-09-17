@@ -1,12 +1,13 @@
 # TASK: LD-005 — Prologue 5x5 Pack
 
-STATUS: READY
+STATUS: DONE
 TYPE: DESIGN
 SIZE: M
 AGENT: Gemini 3.8 Flash (level / puzzle designer)
 BASE_BRANCH: design/LD-003-square-encounter-migration
 BRANCH: design/LD-005-prologue-5x5-pack
 START_SHA: 72437c36bc4ae308edb75669b9dcbe47464e9db1
+RESULT_SHA: 08af076cf28f735a1f6a3b028751bd367a744dca
 
 ## Goal
 
