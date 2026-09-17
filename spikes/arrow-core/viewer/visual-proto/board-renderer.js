@@ -4,7 +4,8 @@
 // It never mutates combat state and never invents rules -- game state changes are driven entirely
 // by EncounterState; this module only plays back the *result* of a tap/rotate as animation.
 import { DX, DY } from '../../dist/src/index.js'
-import { resolveTargetImage } from './assets.js'
+import { resolveBossImage, resolveTargetImage } from './assets.js'
+import { BOSS_ANCHOR } from './boss-visual-state.js'
 
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
@@ -247,6 +248,10 @@ export function createBoardRenderer(canvas) {
     // Idle bob + cast-pulse are continuous functions of `now`, not one-shot fx: keep the loop
     // alive while any target is alive so they never visibly freeze between combat events.
     if (targets.some((t) => !t.dead)) animating = true
+    // VIS-005: a timed boss hold (taunt bounce, stunned recoil) is also a function of `now` --
+    // keep the loop alive until it expires so the beat always plays to the baseline.
+    const bossHold = view.boss?.visual
+    if (bossHold && !bossHold.manual && now < bossHold.holdUntil) animating = true
     // VS-001: board surface first, target panels on top -- a target panel's label plate (name/HP/
     // CAST-ATTACK-THROW text) can extend far enough toward the board on a short/wide N or S panel
     // to reach the board's own footprint (e.g. cp-e4's N-side "slow" enemy once its 3-line plate
@@ -319,15 +324,25 @@ export function createBoardRenderer(canvas) {
       }
 
       // Panel: portrait image if resolved, else a gradient placeholder in the same footprint.
-      const img = resolveTargetImage(assets, t)
-      const flashWhite = now - fx.hitT >= 0 && now - fx.hitT < 110
+      // VIS-005: a boss with a loaded pose pack draws contain-fitted into the SAME panel box,
+      // bottom-center (ground) anchored per BOSS_ANCHOR, so poses with different aspect ratios
+      // (angry, defeat) never jump or resize the footprint. The panel clip stays active, so art
+      // can never spill onto the board, the projectile corridor, or the HUD.
+      const bossPack = t.isBoss ? view.boss?.pack ?? null : null
+      const bossPose = t.isBoss ? view.boss?.visual?.pose ?? 'idle' : null
+      const bossImg = bossPack ? resolveBossImage(bossPack, bossPose) : null
+      const img = bossImg ?? resolveTargetImage(assets, t)
+      const bossSince = t.isBoss && view.boss?.visual ? now - view.boss.visual.startedAt : -1e9
+      const flashWhite = (now - fx.hitT >= 0 && now - fx.hitT < 110) ||
+        (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130)
       ctx.save()
       ctx.shadowColor = t.isBoss ? col.bossGlow : col.enemyGlow
       ctx.shadowBlur = t.dead ? 0 : 14
       roundRect(-bw / 2, -bh / 2, bw, bh, 10)
       ctx.clip()
       if (img) {
-        ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh)
+        if (bossImg) drawBossArt(img, bossPose, bossSince, t, bw, bh)
+        else ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh)
         if (t.dead) {
           ctx.fillStyle = col.deadOverlay
           ctx.fillRect(-bw / 2, -bh / 2, bw, bh)
@@ -477,6 +492,60 @@ export function createBoardRenderer(canvas) {
       }
 
       ctx.restore()
+    }
+
+    // VIS-005: anchored pose draw + presentation-only transforms. The panel footprint (bw/bh)
+    // is fixed by geometry; the PNG is contain-fitted and its bottom-center (ground point) is
+    // locked to the panel's bottom-center, so a pose swap never moves the anchor or the visual
+    // size. All motion here is wall-clock cosmetics -- simulation timers are untouched.
+    function drawBossArt(img, pose, since, t, bw, bh) {
+      const iw = img.naturalWidth || img.width
+      const ih = img.naturalHeight || img.height
+      if (!iw || !ih) return
+      const fit = Math.min(bw / iw, bh / ih)
+      const dw = iw * fit
+      const dh = ih * fit
+      const off = BOSS_ANCHOR.offsets[pose] ?? { dx: 0, dy: 0 }
+      const gx = off.dx * bw
+      const gy = bh / 2 + off.dy * bh
+      const tr = bossPoseTransform(pose, since, t)
+      ctx.save()
+      ctx.translate(gx, gy)
+      ctx.scale(tr.sx, tr.sy)
+      ctx.translate(-gx + tr.tx, -gy + tr.ty)
+      ctx.drawImage(img, gx - dw * BOSS_ANCHOR.anchorX, gy - dh * BOSS_ANCHOR.anchorY, dw, dh)
+      ctx.restore()
+    }
+
+    function bossPoseTransform(pose, since, t) {
+      const tr = { sx: 1, sy: 1, tx: 0, ty: 0 }
+      if (pose === 'idle') {
+        tr.sy = 1 + 0.012 * Math.sin(now / 1100) // breathing
+        tr.ty = 1.5 * Math.sin(now / 1100 + 0.6)
+      } else if (pose === 'angry') {
+        tr.sy = 1 + 0.008 * Math.sin(now / 420) // tenser, faster idle; no flashing
+        tr.sx = 1 - 0.006 * Math.sin(now / 420)
+      } else if (pose === 'taunt' && since >= 0) {
+        if (since < 150) { // anticipation crouch
+          tr.sx = tr.sy = 0.94 + 0.06 * (since / 150)
+        } else if (since < 400) { // pop
+          const p = (since - 150) / 250
+          tr.sx = tr.sy = 1 + 0.04 * Math.sin(p * Math.PI)
+        }
+        tr.ty = -Math.abs(Math.sin(since / 180)) * 6 * Math.max(0, 1 - since / 1400) // bounce, held
+      } else if (pose === 'stunned' && since >= 0 && since < 260) {
+        tr.tx = Math.sin(since / 16) * 3 // shake, decaying with the hold
+        tr.ty = DY[t.side] * 6 * Math.max(0, 1 - since / 180) // recoil outward
+        tr.tx += DX[t.side] * 6 * Math.max(0, 1 - since / 180)
+      } else if (pose === 'cast') {
+        const p = 1 + 0.03 * Math.sin(now / 300) // pulse; castGlow hook draws separately
+        tr.sx = tr.sy = p
+      } else if (pose === 'defeat' && since >= 0) {
+        const p = clamp01(since / 350) // impact settle, then stays down
+        tr.sx = tr.sy = 1 + 0.1 * (1 - p) * (1 - p)
+        tr.ty = 4 * (1 - p)
+      }
+      return tr
     }
 
     function drawSideReadouts(col, s, def) {

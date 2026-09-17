@@ -1,3 +1,5 @@
+import { BOSS_POSES } from './boss-visual-state.js'
+
 // VIS-001: declarative asset manifest + graceful-placeholder loader for the visual combat shell.
 // Nothing here is combat logic -- it only resolves image keys to HTMLImageElement|null so
 // board-renderer.js can draw art when it exists and fall back to a drawn placeholder when it does
@@ -22,6 +24,13 @@ export const ASSET_MANIFEST = {
   castGlow: 'assets/cast-glow.png',
   hitFx: 'assets/hit-fx.png',
 }
+
+// VIS-005: Goblin Taunter runtime pack -- one PNG per presentation pose (canonical source:
+// magicarrowassets/creatures/goblin-king; runtime renames indle->idle, stuned->stunned).
+// `back` is an auxiliary pose, never a gameplay baseline. Missing files resolve to `null`
+// per pose and the renderer falls back to the idle pose, then to the legacy placeholder.
+export const BOSS_PACK_BASE = 'assets/bosses/goblin-taunter/'
+export const BOSS_MANIFEST = Object.fromEntries(BOSS_POSES.map((p) => [p, `${BOSS_PACK_BASE}${p}.png`]))
 
 /** Enemy/boss id -> manifest key, for the three VS-001 scenes' known cast (cp-e4, cp-e5,
  * rock-spike). A future encounter with an unlisted id still gets *a* portrait, not a blank panel,
@@ -53,6 +62,21 @@ export async function loadAssets(manifest = ASSET_MANIFEST) {
   const store = {}
   keys.forEach((k, i) => (store[k] = imgs[i]))
   return store
+}
+
+/** VIS-005: loads the boss pose pack in parallel; same null-on-missing contract. */
+export async function loadBossPack(manifest = BOSS_MANIFEST) {
+  const poses = Object.keys(manifest)
+  const imgs = await Promise.all(poses.map((p) => loadImage(manifest[p])))
+  const pack = {}
+  poses.forEach((p, i) => (pack[p] = imgs[i]))
+  return pack
+}
+
+/** VIS-005: pose -> image with graceful degradation (pose -> idle -> null placeholder). */
+export function resolveBossImage(pack, pose) {
+  if (!pack) return null
+  return pack[pose] ?? pack.idle ?? null
 }
 
 /** Picks the best available portrait for a target box: known id -> its slot, else the side's

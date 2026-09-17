@@ -6,8 +6,12 @@
 import {
   encounterFromJson, findWin, formatAction, formatEncounterReport, RunState, validateEncounter,
 } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, loadAssets } from './assets.js'
+import { ASSET_MANIFEST, loadAssets, loadBossPack } from './assets.js'
 import { createBoardRenderer } from './board-renderer.js'
+import {
+  appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
+  onBossGameplayEvent, readBossSnapshot, tickBossVisual,
+} from './boss-visual-state.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
@@ -37,6 +41,9 @@ async function fetchJson(url) {
 
 const renderer = createBoardRenderer(ui.canvas)
 const assets = await loadAssets(ASSET_MANIFEST)
+// VIS-005: per-pose boss pack (missing files -> null -> idle -> placeholder fallback).
+const bossPack = await loadBossPack()
+const bossPosesLoaded = BOSS_POSES.filter((p) => bossPack[p]).length
 applyDomAssets(assets)
 
 const runConfig = await fetchJson('../../encounters/cp-run-config.json').catch(() => ({ playerMaxHp: 10 }))
@@ -48,6 +55,10 @@ let board = null
 let hint = null
 let overlayTimer = 0
 let targetsBefore = []
+// VIS-005: presentation-only boss pose state. Null in enemies-mode scenes (no boss to pose).
+// Gameplay stays source of truth -- this is driven by engine events, never the reverse.
+let bossVisual = null
+const bossSnap = () => (run && def ? readBossSnapshot(run.encounter, def) : null)
 // PLAYTEST-FIX-001: tallest status stack (in text lines) among TOP (N-side) targets, so the
 // renderer can reserve canvas headroom above the top panel instead of overlapping the board.
 // Boss phases can move the boss to N mid-encounter, so this is the max over all phases, computed
@@ -83,6 +94,9 @@ async function loadScene(key) {
   renderer.resize(level, topReserve)
   renderer.resetFx()
   hint = null
+  // VIS-005: encounter appearance -- brief taunt, then the baseline (never a permanent taunt).
+  bossVisual = def.boss ? appearBossVisual(performance.now()) : null
+  buildBossPoseButtons()
   targetsBefore = renderer.collectTargets(run.encounter, def)
   const hasAbility = def.enemies?.some((e) => e.ability)
   ui.msgLine.textContent = def.enemies
@@ -121,6 +135,7 @@ function tap(id) {
   const s = run.encounter
   if (s.over || overlayTimer) return
   const before = renderer.collectTargets(s, def)
+  const phaseBefore = bossVisual ? s.phaseIndex : -1
   const r = s.tap(id)
   hint = null
   if (!r.ok) {
@@ -150,6 +165,19 @@ function tap(id) {
   const after = renderer.collectTargets(s, def)
   renderer.markDeaths(before, after)
   targetsBefore = after
+  // VIS-005: gameplay -> presentation. Priority: won > phase change > interrupt > hit.
+  // A miss with no interrupt only re-syncs an expired hold onto a newly armed cast baseline.
+  if (bossVisual) {
+    const now = performance.now()
+    const snap = bossSnap()
+    if (r.won) bossVisual = onBossGameplayEvent(bossVisual, 'won', now, snap)
+    else if (s.phaseIndex !== phaseBefore) bossVisual = onBossGameplayEvent(bossVisual, 'phase', now, snap)
+    else if (r.castInterrupted) bossVisual = onBossGameplayEvent(bossVisual, 'interrupted', now, snap)
+    else if (r.hit) bossVisual = onBossGameplayEvent(bossVisual, 'hit', now, snap)
+    else if (!bossVisual.manual && now >= bossVisual.holdUntil && bossVisual.pose !== baselinePose(snap)) {
+      bossVisual = onBossGameplayEvent(bossVisual, 'castStart', now, snap)
+    }
+  }
 
   let text = `#${id} ${r.hit ? 'попадание' : 'мимо'} · HP целей ${s.hp}/${s.totalHp}`
   if (r.enemyAttacked) {
@@ -273,7 +301,12 @@ function kick() {
 function frame(now) {
   raf = 0
   if (!run) return
-  const animating = renderer.frame(now, { s: run.encounter, def, level, assets, hint })
+  // VIS-005: expire timed holds (taunt/stunned) back to the live baseline. Presentation only.
+  if (bossVisual) bossVisual = tickBossVisual(bossVisual, now, bossSnap())
+  const animating = renderer.frame(now, {
+    s: run.encounter, def, level, assets, hint,
+    boss: bossVisual ? { pack: bossPack, visual: bossVisual } : null,
+  })
   if (animating) kick()
 }
 
@@ -301,7 +334,36 @@ function renderPanel() {
     const pinned = s.pinnedArrows
     statusLines.push(`pinned arrows: ${pinned.length ? pinned.map((p) => `#${p.id} (${p.turnsLeft}t)`).join(', ') : '—'}`)
   }
+  // VIS-005: boss presentation state (debug-panel only -- gameplay state is the engine's).
+  if (def.boss) {
+    statusLines.push(`boss art: ${bossPosesLoaded}/${BOSS_POSES.length} poses loaded`)
+    if (bossVisual) statusLines.push(`boss pose: ${bossVisual.pose}${bossVisual.manual ? ' (manual)' : ''}`)
+  }
   ui.status.textContent = statusLines.join('\n')
+}
+
+// VIS-005: prototype-only visual-state control. Debug-only: real gameplay events still drive
+// the pose automatically (any tap event clears a manual override).
+function buildBossPoseButtons() {
+  const row = $('bossPoseRow')
+  if (!row) return
+  row.replaceChildren()
+  if (!bossVisual) {
+    row.textContent = '— (no boss in this scene)'
+    return
+  }
+  for (const pose of BOSS_POSES) {
+    const b = document.createElement('button')
+    b.textContent = pose
+    b.title = `debug: force boss pose ${pose}`
+    b.disabled = !bossPack[pose]
+    b.onclick = () => {
+      bossVisual = manualBossPose(bossVisual, pose, performance.now())
+      renderPanel()
+      kick()
+    }
+    row.append(b)
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -350,5 +412,16 @@ await loadScene(initialKey)
 window.visualDebug = {
   run: () => run,
   state: () => run.encounter,
+  tap,
+  rotate,
   loadScene,
+  boss: () => bossVisual, // VIS-005: current presentation pose state (null in enemies mode)
+  setBossPose: (pose) => { // VIS-005: manual debug override, same as the debug-panel buttons
+    if (bossVisual) {
+      bossVisual = manualBossPose(bossVisual, pose, performance.now())
+      renderPanel()
+      kick()
+    }
+    return bossVisual
+  },
 }

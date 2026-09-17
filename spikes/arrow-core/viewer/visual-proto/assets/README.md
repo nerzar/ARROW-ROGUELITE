@@ -14,3 +14,22 @@ empty during development.
 | `portraits.<enemyId>` | set in `ASSET_MANIFEST.portraits` in `assets.js` | Per-enemy override, e.g. `grunt_e`, checked before the positional slot. |
 
 Recommended size: roughly square, at least 512x512, transparent background for portraits.
+
+## VIS-005: Goblin Taunter pose pack
+
+`assets/bosses/goblin-taunter/` holds one PNG per presentation pose, all drawn
+contain-fitted into the same boss panel footprint with a shared bottom-center
+ground anchor (see `../boss-visual-state.js`):
+
+| Pose | File | Shown when |
+|---|---|---|
+| `idle` | `idle.png` | phase 1 baseline (runtime rename of source `indle.png`) |
+| `taunt` | `taunt.png` | encounter appearance, briefly, then baseline |
+| `cast` | `cast.png` | armed interruptible CAST telegraph |
+| `stunned` | `stunned.png` | hit / interrupted, briefly (runtime rename of source `stuned.png`) |
+| `angry` | `angry.png` | phase 2 baseline |
+| `defeat` | `defeat.png` | boss defeated, terminal |
+| `back` | `back.png` | auxiliary pose, debug/manual only |
+
+A missing pose falls back to `idle`, then to the legacy gradient placeholder.
+No absolute paths are stored anywhere in runtime.

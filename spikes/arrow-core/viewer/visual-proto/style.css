@@ -91,6 +91,14 @@ canvas#arena { max-width: 100%; max-height: 100%; touch-action: manipulation; }
 }
 .debug-panel.hidden { display: none; }
 .debug-panel h4 { margin: 8px 0 2px; font: 700 11px system-ui; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-dim); }
+/* VIS-005: prototype-only boss visual-state control (debug panel, never gameplay). */
+.boss-pose-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.boss-pose-row button {
+  font: 600 11px system-ui; color: var(--ink); background: transparent;
+  border: 1px solid var(--panel-border); border-radius: 6px; padding: 3px 8px; cursor: pointer;
+}
+.boss-pose-row button:hover:not(:disabled) { border-color: var(--accent); }
+.boss-pose-row button:disabled { opacity: 0.35; cursor: default; }
 
 .overlay {
   position: absolute; inset: 0; display: none; place-items: center; text-align: center; z-index: 50;
