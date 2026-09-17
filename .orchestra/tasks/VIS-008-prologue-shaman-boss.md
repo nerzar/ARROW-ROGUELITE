@@ -1,13 +1,14 @@
 # TASK: VIS-008 — Prologue Goblin Shaman Boss Runtime
 
-STATUS: IN_PROGRESS
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Claude (implementation agent)
 BASE_BRANCH: origin/feat/VIS-006-dire-wolf-presentation
 BRANCH: feat/VIS-008-prologue-shaman-boss
 START_SHA: 6bb7901352cac806f4898d71d14b5f539fc16edb
-CODE_SHA: 69eaa59b0c5ef463feba127f888bd2f66060e7fd
+CODE_SHA: 69eaa59b0c5ef463feba127f888bd2f66060e7fd (code/assets/tests commit)
+RESULT_SHA: fb0f12e58b43875a5515fdc5b2d609873e9703ae (task-card commit, pushed and verified == origin)
 
 ## Base
 
