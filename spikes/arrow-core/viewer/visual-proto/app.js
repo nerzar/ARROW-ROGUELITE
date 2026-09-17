@@ -7,7 +7,7 @@ import {
   encounterFromJson, findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
-import { getArenaCalibration } from './arena-calibration.js'
+import { ARENA_CALIBRATIONS, getArenaCalibration } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import {
   appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
@@ -26,6 +26,7 @@ const ui = {
   playerCard: $('playerCard'), playerHpFill: $('playerHpFill'), playerHpText: $('playerHpText'),
   rotCw: $('rotCw'), rotCcw: $('rotCcw'), rotateCharges: $('rotateCharges'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'),
+  bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
 }
 
 // ACT-I-001 prototype sequence: Prologue complete (reward +2 Rotate) -> Act I #1 -> Act I #2 -> Act I #3.
@@ -660,6 +661,23 @@ for (const scene of ALL_SCENES) ui.scenePick.append(new Option(scene.title, scen
 const initialKey = new URLSearchParams(location.hash.slice(1)).get('scene') ?? 'act1-e1'
 ui.scenePick.value = initialKey
 await loadScene(initialKey)
+
+// FIX-023: one-click UI for loadBakedArenaDebug (previously console-only) -- picks a calibration
+// id from arena-calibration.js and loads it with cp-e4's def (E+W side targets, so LEFT/RIGHT
+// anchors are visible alongside TOP), auto-opening the debug panel so the grid-mesh overlay shows
+// immediately for calibration comparison against the baked art.
+if (ui.bakedArenaPick && ui.bakedArenaLoadBtn) {
+  for (const calib of Object.values(ARENA_CALIBRATIONS)) {
+    ui.bakedArenaPick.append(new Option(`${calib.id} (${calib.boardSizeLocked}x${calib.boardSizeLocked})`, calib.id))
+  }
+  ui.bakedArenaLoadBtn.onclick = async () => {
+    const id = ui.bakedArenaPick.value
+    if (!id) return
+    ui.debugPanel.classList.remove('hidden')
+    const r = await loadBakedArenaDebug(id, 1, 'cp-e4')
+    if (!r.ok) setMsg(`FIX-023 debug: не удалось загрузить ${id} (${r.reason ?? 'generator failed'})`, true)
+  }
+}
 
 // Debug hook for automated checks, same convention as encounterDebug/prologueDebug/cpDebug.
 window.visualDebug = {
