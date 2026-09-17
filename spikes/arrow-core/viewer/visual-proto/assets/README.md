@@ -6,7 +6,7 @@ empty during development.
 
 | Key | Path | Used for |
 |---|---|---|
-| `background` | `assets/background.png` | Full-bleed arena background behind the board. |
+| `background` | `assets/arena-moonlit-fortress.png` | Approved Moonlit Fortress arena (source `magicarrowassets/arenas/ChatGPT Image Sep 17, 2026, 09_24_35 AM.png`), full-bleed behind the board. |
 | `boardFrame` | `assets/board-frame.png` | Decorative frame drawn behind the canvas (board itself stays code-rendered). |
 | `boardTexture` | `assets/board-texture.png` | Reserved: stone/board surface texture overlay. Not yet wired into board-renderer.js. |
 | `boss` | `assets/boss.png` | Portrait for single-target `boss` encounters. |
@@ -54,3 +54,20 @@ the anchor x so the wolf faces the board on every side.
 Source folder `magicarrowassets/creatures/dire_wolf/` also holds the concept
 sheet `...11_10_59 AM (1).png` (reference only, not copied). Full source ->
 runtime mapping lives in the VIS-006 task card.
+
+## VIS-007: arena character layout
+
+Characters stand directly on the arena (no panel box, no clip) with the HUD as
+a separate plate (see `../arena-layout.js`):
+
+- boss/top footprint 2.8x3.6 cells, side enemies 2.6x2.6 cells;
+- ground shadow + urgency telegraph ellipse at the feet instead of a box ring;
+- HUD (name/HP/ATTACK-CAST-THROW + badge) above the head, below the feet only
+  on the S slot; E/W plates clamp outward so they never reach the board.
+
+## VIS-007: Goblin Shaman slot (reserved, not integrated)
+
+`SHAMAN_MANIFEST` in `../assets.js` reserves `assets/enemies/goblin-shaman/`
+(`idle/taunt/cast/stunned-hit/angry/defeat/back` per the source pack in
+`magicarrowassets/creatures/goblin-shaman/`). No PNGs copied, no state machine,
+no rendering -- a later task wires art + machine without touching the layout.

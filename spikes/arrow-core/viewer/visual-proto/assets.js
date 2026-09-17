@@ -14,7 +14,9 @@ import { ENEMY_POSES } from './enemy-visual-state.js'
 // of these paths yet; every one resolves to `null` and the renderer draws its existing gradient/
 // vector placeholder instead, exactly like the pre-VS-001 manifest already did.
 export const ASSET_MANIFEST = {
-  background: 'assets/background.png',
+  // VIS-007: approved Moonlit Fortress arena (source:
+  // magicarrowassets/arenas/ChatGPT Image Sep 17, 2026, 09_24_35 AM.png).
+  background: 'assets/arena-moonlit-fortress.png',
   boardFrame: 'assets/board-frame.png',
   bossGoblinTaunter: 'assets/boss-goblin-taunter.png',
   enemyGoblinShaman: 'assets/enemy-goblin-shaman.png',
@@ -101,6 +103,22 @@ export function resolveBossImage(pack, pose) {
 export function resolveWolfImage(pack, pose) {
   if (!pack) return null
   return pack[pose] ?? pack.idle ?? null
+}
+
+// VIS-007: Goblin Shaman SLOT reservation only. The source pack exists locally
+// (magicarrowassets/creatures/goblin-shaman/: idle/taunt/cast/stunned-hit/angry/
+// defeat/back) but no shaman state machine is integrated in this task -- these paths
+// reserve the runtime layout so a later task can drop art + machine in without
+// touching the arena layout. Nothing loads this manifest yet.
+export const SHAMAN_PACK_BASE = 'assets/enemies/goblin-shaman/'
+export const SHAMAN_MANIFEST = {
+  idle: `${SHAMAN_PACK_BASE}idle.png`,
+  taunt: `${SHAMAN_PACK_BASE}taunt.png`,
+  cast: `${SHAMAN_PACK_BASE}cast.png`,
+  stunned: `${SHAMAN_PACK_BASE}stunned-hit.png`,
+  angry: `${SHAMAN_PACK_BASE}angry.png`,
+  defeat: `${SHAMAN_PACK_BASE}defeat.png`,
+  back: `${SHAMAN_PACK_BASE}back.png`,
 }
 
 /** Picks the best available portrait for a target box: known id -> its slot, else the side's

@@ -93,24 +93,30 @@ function tickAndSyncWolves(now) {
     wolfVisuals.set(e.id, v)
   }
 }
-// PLAYTEST-FIX-001: tallest status stack (in text lines) among TOP (N-side) targets, so the
-// renderer can reserve canvas headroom above the top panel instead of overlapping the board.
-// Boss phases can move the boss to N mid-encounter, so this is the max over all phases, computed
-// once per scene (a phase change never re-reserves: the superset already covers it).
-let topReserve = null
+// VIS-007: per-side arena slot reserve (N = top, S = bottom) so the renderer can fit
+// the character + HUD stack between the slot and the canvas edge. Boss phases can move
+// the boss between sides mid-encounter, so this is the max over all phases per side,
+// computed once per scene (a phase change never re-reserves: the superset covers it).
+// E/W slots never need a margin reserve (their HUD stacks vertically, mid-canvas).
+let slotReserve = null
 
-function topStatusReserve(d) {
-  if (d.enemies) {
-    let lines = 0
-    for (const e of d.enemies) {
-      if (e.side !== 0) continue
-      lines = Math.max(lines, 2 + (e.attackTimer ? 1 : 0) + (e.ability ? 1 : 0))
+function slotStatusReserve(d) {
+  const pick = (dir) => {
+    if (d.enemies) {
+      const es = d.enemies.filter((e) => e.side === dir)
+      if (!es.length) return null
+      return {
+        lines: Math.max(...es.map((e) => 2 + (e.attackTimer ? 1 : 0) + (e.ability ? 1 : 0))),
+        big: false,
+      }
     }
-    return lines > 0 ? { lines, boss: false } : null
+    const phases = d.boss.phases.filter((p) => p.side === dir)
+    if (!phases.length) return null
+    return { lines: Math.max(...phases.map((p) => 2 + (p.attackTimer ? 1 : 0))), big: true }
   }
-  const phases = d.boss.phases.filter((p) => p.side === 0)
-  if (!phases.length) return null
-  return { lines: Math.max(...phases.map((p) => 2 + (p.attackTimer ? 1 : 0))), boss: true }
+  const top = pick(0)
+  const bottom = pick(2)
+  return top || bottom ? { top, bottom } : null
 }
 
 async function loadScene(key) {
@@ -124,8 +130,8 @@ async function loadScene(key) {
   def = parsed.file.encounter
   board = parsed.file.board
   run = new RunState(runConfig, [{ id: scene.key, title: scene.title, level, def }])
-  topReserve = topStatusReserve(def)
-  renderer.resize(level, topReserve)
+  slotReserve = slotStatusReserve(def)
+  renderer.resize(level, slotReserve)
   renderer.resetFx()
   hint = null
   // VIS-005: encounter appearance -- brief taunt, then the baseline (never a permanent taunt).
@@ -487,7 +493,7 @@ ui.restartBtn.onclick = () => loadScene(ui.scenePick.value)
 ui.hintBtn.onclick = showHint
 ui.debugToggle.onclick = () => ui.debugPanel.classList.toggle('hidden')
 ui.scenePick.onchange = () => loadScene(ui.scenePick.value)
-window.addEventListener('resize', () => { if (level) { renderer.resize(level, topReserve); kick() } })
+window.addEventListener('resize', () => { if (level) { renderer.resize(level, slotReserve); kick() } })
 window.addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement || ev.target instanceof HTMLSelectElement) return
   const k = ev.key.toLowerCase()
@@ -530,4 +536,5 @@ window.visualDebug = {
     }
     return wolfVisuals?.get(id) ?? null
   },
+  layout: () => renderer.debugLayout(), // VIS-007: per-frame arena layout (canvas coords)
 }
