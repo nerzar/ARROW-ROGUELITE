@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VIS-011 — Arrow Arena Mockups (B / C / A on the same 5x5 board)</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 13px/1.5 system-ui, sans-serif; margin: 16px auto; max-width: 1020px; padding: 0 12px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 22px 0 6px; }
+  .sub, .note { color: #777; }
+  .basebox, .legend { border: 1px solid #ccc; border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+  .basebox code, .legend code { font-size: 12px; }
+  .panel svg { display: block; width: 100%; height: auto; border: 1px solid #ccc; border-radius: 8px; background: #3a352c; }
+  .tag { display: inline-block; border: 1px solid #aaa; border-radius: 20px; padding: 1px 9px; margin: 0 6px 4px 0; font-size: 12px; }
+  .strip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .strip svg { display: block; width: 100%; height: auto; border: 1px solid #ccc; border-radius: 8px; }
+  ul.tight li { margin-bottom: 3px; }
+  table.paths { border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+  table.paths td, table.paths th { border: 1px solid #bbb; padding: 3px 8px; text-align: left; }
+  @media (prefers-color-scheme: dark) {
+    .basebox, .legend { border-color: #444; }
+    .panel svg { border-color: #444; }
+    table.paths td, table.paths th { border-color: #444; }
+  }
+</style>
+</head>
+<body>
+<h1>VIS-011 — Arrow Arena Mockups</h1>
+<div class="sub">
+  Один и тот же board, одна камера, одни logical paths — три визуальных языка
+  (B — primary, C — fallback, A — опциональное сравнение).
+  Spec: <code>docs/VIS-010-ARROW-PRESENTATION.md</code>.
+  Только мокап — runtime (<code>board-renderer.js</code>, projection, gameplay, calibration) не тронут.
+</div>
+
+<div class="basebox">
+  <b>Base scene (честная геометрия, ничего не придумано):</b><br>
+  calibration <code>prologue-5x5-good</code> — user-calibrated base (FIX-023),
+  <code>spikes/arrow-core/viewer/visual-proto/assets/arenas/prologue-act1/5x5-good.png</code> (5x5, baked grid).<br>
+  <code>boardPlaneFrac tl [0.37, 0.45] · tr [0.63, 0.45] · br [0.655, 0.818] · bl [0.348, 0.820]</code>,
+  <code>fitGrid(5,5,{marginU:0, marginV:0})</code>, stage 960×540, homography — та же closed-form
+  (Heckbert), что в <code>board-plane.js</code> (формулы продублированы в скрипте ниже, не изменены).<br>
+  Если PNG не найден (открытие вне репозитория) — за мокапом видна расписанная каменная подложка-заглушка
+  с той же трапецией и сеткой 5×5; геометрия стрелок от этого не меняется.<br>
+  Маленькие каменные бирки состояний на board — только навигация по мокапу, НЕ предложение runtime-UI.
+  Free vs blocked различаются без текста (нить есть / нити нет, alpha) — как требует VIS-010.
+</div>
+
+<h2>Логические paths (одинаковы во всех трёх панелях)</h2>
+<table class="paths">
+  <tr><th>Стрелка</th><th>Клетки (col,row, 0-based)</th><th>Выход</th><th>Состояние</th></tr>
+  <tr><td>long</td><td>(0,4)→(1,4)→(1,3)→(2,3)→(2,2)→(3,2)→(3,1)→(4,1)</td><td>EAST (правый край)</td><td>free, длинная winding</td></tr>
+  <tr><td>blocked</td><td>(0,0)→(1,0)→(2,0)</td><td>NORTH (верхний край)</td><td>blocked</td></tr>
+  <tr><td>hover</td><td>(4,4)→(4,3)→(4,2)</td><td>NORTH</td><td>hover / selected</td></tr>
+  <tr><td>pin</td><td>(0,1)→(0,2)→(1,2)</td><td>EAST</td><td>Stone Pin, 2t</td></tr>
+  <tr><td>fire</td><td>(3,3)→(3,4)</td><td>SOUTH (нижний край)</td><td>firing, снаряд уходит за край</td></tr>
+  <tr><td>hit</td><td>(1,1)→(2,1)</td><td>EAST</td><td>hit / impact на голове</td></tr>
+</table>
+<div class="note">Клетки не пересекаются (21/25 занято, свободны (3,0) и (4,0) — воздух в углу).
+Соседние paths специально идут рядом: long↔hover у правого края, hit↔pin↔blocked вверху-слева — проверка «не каша».</div>
+
+<h2>Вариант B — Engraved Groove + running pulse <span class="tag">primary proposal</span></h2>
+<div class="panel" id="panelB"></div>
+<ul class="tight">
+  <li>Тело — тёмная гравированная канавка (<code>0.30S</code>) + нить золота внутри (<code>0.07S</code>). Ничего не выходит за коридор ±0.55S.</li>
+  <li>blocked — пустая резьба без нити; free — нить статична; hover — один pulse бежит к голове; pin — разрыв нити под камнем.</li>
+  <li>firing — яркий отрезок срывается за край, канавка гаснет от хвоста; hit — вспышка дна у головы (~200 мс).</li>
+</ul>
+
+<h2>Вариант C — Solid Core + sparse direction markers <span class="tag">fallback</span></h2>
+<div class="panel" id="panelC"></div>
+<ul class="tight">
+  <li>Тело — тонкий матовый стержень (<code>0.20S</code>, ноль glow), направление — ≤3 шевронов + кайт-наконечник.</li>
+  <li>blocked — alpha 0.45 (пунктир упразднён); hover — плоская фаска-плашка + золотые шевроны; firing — стирание от хвоста.</li>
+  <li>Минимальное отклонение от текущего рендера — самая дешёвая реализация.</li>
+</ul>
+
+<h2>Вариант A — Segmented Rail <span class="tag">опционально</span></h2>
+<div class="panel" id="panelA"></div>
+<ul class="tight">
+  <li>Тело — ряд каменных плашек (<code>0.34S</code>, зазор <code>0.16S</code>), сужаются к голове. Включён: на длинной winding-стрелке
+  зазоры — единственное сравнение, показывающее дробление path против сплошных B/C.</li>
+  <li>hover — золотой марш по звеньям; firing — гаснущие звенья от хвоста; dead-логіка не показана (все стрелки живые — композиция).</li>
+</ul>
+
+<h2>Плотность 6×6 — намёк (тот же фрагмент winding path, ячейка ~0.7×)</h2>
+<div class="strip"><div><div class="sub">B groove на тесноте</div><div id="denseB"></div></div><div><div class="sub">C core на тесноте</div><div id="denseC"></div></div></div>
+<div class="note">Три параллельных изгиба с шагом как у 6×6. Смотреть: сливаются ли соседние канавки/стержни, читаются ли шевроны.</div>
+
+<div class="legend">
+  <b>Как смотреть (8 core requirements из задачи):</b>
+  1) направление мгновенно? 2) длинная читается? 3) соседи не каша? 4) free vs blocked без текста?
+  5) наконечник заметен, &lt; половины клетки? 6) перспектива сохранена (верх тоньше)? 7) у firing понятно направление?
+  8) FX не прячут соседей? Развёрнутая оценка — в <code>docs/VIS-011-ARROW-ARENA-MOCKUPS.md</code>. Финальный выбор — только за пользователем.
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+  var STAGE_W = 960, STAGE_H = 540;
+  // FIX-023 user-calibrated base quad (fractions of stage). Do NOT edit: this IS the honest geometry.
+  var CAL_FRAC = { tl: [0.37, 0.45], tr: [0.63, 0.45], br: [0.655, 0.818], bl: [0.348, 0.820] };
+  var IMG = '../spikes/arrow-core/viewer/visual-proto/assets/arenas/prologue-act1/5x5-good.png';
+
+  // ---- projection: same closed-form homography as board-plane.js ----
+  function computeHomography(c) {
+    var x0 = c.tl[0], y0 = c.tl[1], x1 = c.tr[0], y1 = c.tr[1],
+        x2 = c.br[0], y2 = c.br[1], x3 = c.bl[0], y3 = c.bl[1];
+    var dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3;
+    var dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+    var a, b, cc, d, e, f, g, h;
+    if (Math.abs(dx3) < 1e-9 && Math.abs(dy3) < 1e-9) {
+      a = x1 - x0; b = x2 - x1; cc = x0; d = y1 - y0; e = y2 - y1; f = y0; g = 0; h = 0;
+    } else {
+      var det = dx1 * dy2 - dx2 * dy1;
+      g = (dx3 * dy2 - dx2 * dy3) / det; h = (dx1 * dy3 - dx3 * dy1) / det;
+      a = x1 - x0 + g * x1; b = x3 - x0 + h * x3; cc = x0;
+      d = y1 - y0 + g * y1; e = y3 - y0 + h * y3; f = y0;
+    }
+    return { a: a, b: b, c: cc, d: d, e: e, f: f, g: g, h: h };
+  }
+  function project(H, u, v) {
+    var den = H.g * u + H.h * v + 1;
+    return [(H.a * u + H.b * v + H.c) / den, (H.d * u + H.e * v + H.f) / den];
+  }
+  var CORNERS = {
+    tl: [CAL_FRAC.tl[0] * STAGE_W, CAL_FRAC.tl[1] * STAGE_H],
+    tr: [CAL_FRAC.tr[0] * STAGE_W, CAL_FRAC.tr[1] * STAGE_H],
+    br: [CAL_FRAC.br[0] * STAGE_W, CAL_FRAC.br[1] * STAGE_H],
+    bl: [CAL_FRAC.bl[0] * STAGE_W, CAL_FRAC.bl[1] * STAGE_H]
+  };
+  var H = computeHomography(CORNERS);
+  var N = 5; // 5x5, margin 0 -> unit square maps corner-to-corner
+  function cellCenter(c, r) { return project(H, (c + 0.5) / N, (r + 0.5) / N); }
+  function cellCorner(c, r) { return project(H, c / N, r / N); }
+  // Perspective-sensitive S at a cell (analogue of localCellPx): mean of 4 edge spans.
+  function cellS(c, r) {
+    function dist(p, q) { return Math.hypot(q[0] - p[0], q[1] - p[1]); }
+    var a = cellCorner(c, r), b = cellCorner(c + 1, r), d = cellCorner(c, r + 1), e = cellCorner(c + 1, r + 1);
+    return (dist(a, b) + dist(d, e) + dist(a, d) + dist(b, e)) / 4;
+  }
+  // Screen-space direction of a logical exit vector at (cu,cv): numeric derivative of project().
+  function exitDir(cu, cv, ex) {
+    var p0 = project(H, cu, cv), p1 = project(H, cu + ex[0] * 0.02, cv + ex[1] * 0.02);
+    var l = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1;
+    return [(p1[0] - p0[0]) / l, (p1[1] - p0[1]) / l];
+  }
+
+  // ---- shared logical composition: SAME paths everywhere ----
+  var ARROWS = [
+    { id: 'long', tag: 'free · long', cells: [[0,4],[1,4],[1,3],[2,3],[2,2],[3,2],[3,1],[4,1]], exit: [1,0], state: 'free' },
+    { id: 'blocked', tag: 'blocked', cells: [[0,0],[1,0],[2,0]], exit: [0,-1], state: 'blocked' },
+    { id: 'hover', tag: 'hover', cells: [[4,4],[4,3],[4,2]], exit: [0,-1], state: 'hover' },
+    { id: 'pin', tag: 'pin · 2t', cells: [[0,1],[0,2],[1,2]], exit: [1,0], state: 'pin' },
+    { id: 'fire', tag: 'firing', cells: [[3,3],[3,4]], exit: [0,1], state: 'firing' },
+    { id: 'hit', tag: 'hit', cells: [[1,1],[2,1]], exit: [1,0], state: 'hit' }
+  ];
+  function arrowGeom(a) {
+    var pts = a.cells.map(function (cl) { return cellCenter(cl[0], cl[1]); });
+    var head = a.cells[a.cells.length - 1];
+    var S = cellS(head[0], head[1]);
+    var dir = exitDir((head[0] + 0.5) / N, (head[1] + 0.5) / N, a.exit);
+    var base = pts[pts.length - 1];
+    var tip = [base[0] + dir[0] * 0.42 * S, base[1] + dir[1] * 0.42 * S];
+    return { pts: pts, S: S, dir: dir, base: base, tip: tip, headCell: head };
+  }
+  function pathD(pts) {
+    return 'M ' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' L ');
+  }
+  function fullD(g) { // polyline extended to the head tip (for threads/cores)
+    return pathD(g.pts) + ' L ' + g.tip[0].toFixed(1) + ',' + g.tip[1].toFixed(1);
+  }
+  function kite(g, fill, op, extra) {
+    var dx = g.dir[0], dy = g.dir[1], px = -dy, py = dx, S = g.S, b = g.base;
+    function P(along, side) { return [b[0] + dx * along * S + px * side * S, b[1] + dy * along * S + py * side * S]; }
+    var t = P(0.42, 0), b1 = P(-0.13, 0.31), notch = P(-0.02, 0), b2 = P(-0.13, -0.31);
+    var s = t[0].toFixed(1) + ',' + t[1].toFixed(1) + ' ' + b1[0].toFixed(1) + ',' + b1[1].toFixed(1) +
+      ' ' + notch[0].toFixed(1) + ',' + notch[1].toFixed(1) + ' ' + b2[0].toFixed(1) + ',' + b2[1].toFixed(1);
+    return '<polygon points="' + s + '" fill="' + fill + '" opacity="' + op + '"' + (extra || '') + '/>';
+  }
+  // point at fraction t of a polyline (arclength) + tangent angle
+  function alongPts(pts, t) {
+    var lens = [0], i, L = 0;
+    for (i = 1; i < pts.length; i++) { L += Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]); lens.push(L); }
+    var target = Math.max(0, Math.min(1, t)) * L, p = pts[0], ang = 0;
+    for (i = 1; i < pts.length; i++) {
+      if (lens[i] >= target || i === pts.length - 1) {
+        var seg = lens[i] - lens[i-1] || 1, k = (target - lens[i-1]) / seg;
+        p = [pts[i-1][0] + (pts[i][0] - pts[i-1][0]) * k, pts[i-1][1] + (pts[i][1] - pts[i-1][1]) * k];
+        ang = Math.atan2(pts[i][1] - pts[i-1][1], pts[i][0] - pts[i-1][0]) * 180 / Math.PI;
+        break;
+      }
+    }
+    return { p: p, ang: ang, L: L };
+  }
+  function chevron(p, ang, size, color, op, w) {
+    var s = size / 2;
+    return '<path d="M ' + (p[0] - size * 0.35).toFixed(1) + ',' + (p[1] - s).toFixed(1) +
+      ' L ' + (p[0] + size * 0.35).toFixed(1) + ',' + p[1].toFixed(1) +
+      ' L ' + (p[0] - size * 0.35).toFixed(1) + ',' + (p[1] + s).toFixed(1) +
+      '" fill="none" stroke="' + color + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"' +
+      ' opacity="' + op + '" transform="rotate(' + ang.toFixed(1) + ' ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ')"/>';
+  }
+  function threadPartial(d, fromPct, toPct, color, w, op) {
+    return '<path d="' + d + '" pathLength="100" fill="none" stroke="' + color + '" stroke-width="' + w +
+      '" stroke-linecap="round" opacity="' + op + '" stroke-dasharray="' + (toPct - fromPct) + ' 100" stroke-dashoffset="' + (-fromPct) + '"/>';
+  }
+  function stoneBlob(mid, S, diamond) {
+    var r = 0.30 * S;
+    var blob = diamond
+      ? '<rect x="' + (-r) + '" y="' + (-r) + '" width="' + (2 * r) + '" height="' + (2 * r) +
+        '" fill="#8d6e63" stroke="#4e342e" stroke-width="2" transform="translate(' + mid[0].toFixed(1) + ' ' + mid[1].toFixed(1) + ') rotate(45)"/>'
+      : '<g><circle cx="' + mid[0].toFixed(1) + '" cy="' + mid[1].toFixed(1) + '" r="' + r.toFixed(1) +
+        '" fill="#8d6e63" stroke="#4e342e" stroke-width="2"/>' +
+        '<path d="M ' + (mid[0] - r * 0.5).toFixed(1) + ',' + (mid[1] - 1).toFixed(1) +
+        ' l ' + (r * 0.4).toFixed(1) + ',' + (r * 0.35).toFixed(1) +
+        ' l ' + (r * 0.35).toFixed(1) + ',' + (-r * 0.45).toFixed(1) +
+        ' l ' + (r * 0.35).toFixed(1) + ',' + (r * 0.3).toFixed(1) +
+        '" stroke="#4e342e" stroke-width="1.3" fill="none"/></g>';
+    var bx = mid[0] + r + 13, by = mid[1] - r - 3;
+    return blob + '<g transform="translate(' + bx.toFixed(1) + ',' + by.toFixed(1) + ')">' +
+      '<rect x="-12" y="-9" width="24" height="16" rx="4" fill="#2b241c" stroke="#c9a227" stroke-width="1"/>' +
+      '<text x="0" y="4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#ffe9a8">2t</text></g>';
+  }
+  function projectile(g, color) {
+    var t = g.tip, dx = g.dir[0], dy = g.dir[1], S = g.S;
+    var hx = t[0] + dx * 1.1 * S, hy = t[1] + dy * 1.1 * S;
+    return '<g stroke-linecap="round">' +
+      '<line x1="' + t[0].toFixed(1) + '" y1="' + t[1].toFixed(1) + '" x2="' + hx.toFixed(1) + '" y2="' + hy.toFixed(1) + '" stroke="' + color + '" stroke-width="' + (0.10 * S).toFixed(1) + '" opacity="0.85"/>' +
+      '<line x1="' + (hx - dx * 0.55 * S).toFixed(1) + '" y1="' + (hy - dy * 0.55 * S).toFixed(1) + '" x2="' + hx.toFixed(1) + '" y2="' + hy.toFixed(1) + '" stroke="#fff" stroke-width="' + (0.04 * S).toFixed(1) + '" opacity="0.8"/>' +
+      '<circle cx="' + hx.toFixed(1) + '" cy="' + hy.toFixed(1) + '" r="' + (0.10 * S).toFixed(1) + '" fill="' + color + '"/>' +
+      '<circle cx="' + hx.toFixed(1) + '" cy="' + hy.toFixed(1) + '" r="' + (0.20 * S).toFixed(1) + '" fill="' + color + '" opacity="0.25"/></g>';
+  }
+  function burst(g, color) {
+    var t = g.tip, S = g.S, out = '<g>';
+    var arms = [[1, 0], [0.7, -0.7], [0, -1], [-0.4, -0.9], [-0.9, 0.3], [-0.2, 1], [0.6, 0.8]];
+    arms.forEach(function (v) {
+      out += '<line x1="' + (t[0] + v[0] * 0.18 * S).toFixed(1) + '" y1="' + (t[1] + v[1] * 0.18 * S).toFixed(1) +
+        '" x2="' + (t[0] + v[0] * 0.52 * S).toFixed(1) + '" y2="' + (t[1] + v[1] * 0.52 * S).toFixed(1) +
+        '" stroke="' + color + '" stroke-width="' + (0.06 * S).toFixed(1) + '" stroke-linecap="round" opacity="0.95"/>';
+    });
+    out += '<circle cx="' + t[0].toFixed(1) + '" cy="' + t[1].toFixed(1) + '" r="' + (0.16 * S).toFixed(1) + '" fill="' + color + '"/>' +
+      '<circle cx="' + t[0].toFixed(1) + '" cy="' + t[1].toFixed(1) + '" r="' + (0.34 * S).toFixed(1) + '" fill="none" stroke="' + color + '" stroke-width="2" opacity="0.7"/></g>';
+    return out;
+  }
+  function stateTag(g, text) {
+    // Mockup-only navigation chip (NOT a runtime UI proposal).
+    var dx = g.dir[0], dy = g.dir[1], S = g.S;
+    var x = g.base[0] - dy * 0.52 * S + dx * 0.05 * S, y = g.base[1] + dx * 0.52 * S + dy * 0.05 * S;
+    x = Math.max(46, Math.min(STAGE_W - 46, x)); y = Math.max(16, Math.min(STAGE_H - 10, y));
+    return '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')">' +
+      '<rect x="-42" y="-10" width="84" height="17" rx="8.5" fill="#211c15" opacity="0.82"/>' +
+      '<text x="0" y="3" text-anchor="middle" font-size="10.5" fill="#e8ddc4">' + text + '</text></g>';
+  }
+
+  // ---- shared board backdrop: same quad + same grid in every panel ----
+  function boardBackdrop() {
+    var q = CORNERS;
+    var quad = 'M ' + q.tl[0] + ',' + q.tl[1] + ' L ' + q.tr[0] + ',' + q.tr[1] + ' L ' + q.br[0] + ',' + q.br[1] + ' L ' + q.bl[0] + ',' + q.bl[1] + ' Z';
+    var grid = '';
+    for (var i = 0; i <= N; i++) {
+      var a = project(H, i / N, 0), b = project(H, i / N, 1), c = project(H, 0, i / N), d = project(H, 1, i / N);
+      var edge = (i === 0 || i === N);
+      grid += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) +
+        '" stroke="#241f18" stroke-width="' + (edge ? 2.5 : 1.2) + '" opacity="' + (edge ? 0.85 : 0.55) + '"/>';
+      grid += '<line x1="' + c[0].toFixed(1) + '" y1="' + c[1].toFixed(1) + '" x2="' + d[0].toFixed(1) + '" y2="' + d[1].toFixed(1) +
+        '" stroke="#241f18" stroke-width="' + (edge ? 2.5 : 1.2) + '" opacity="' + (edge ? 0.85 : 0.55) + '"/>';
+    }
+    return { quad: quad, grid: grid };
+  }
+  function stageBackground(key) {
+    // Real arena art on top; painted stone fallback underneath (same quad) if the PNG is absent.
+    // Gradient ids are suffixed per panel: three SVGs in one document must not share ids.
+    var q = CORNERS;
+    var sb = 'stonebg-' + key, db = 'daisbg-' + key;
+    var quad = 'M ' + q.tl[0] + ',' + q.tl[1] + ' L ' + q.tr[0] + ',' + q.tr[1] + ' L ' + q.br[0] + ',' + q.br[1] + ' L ' + q.bl[0] + ',' + q.bl[1] + ' Z';
+    return '<defs><linearGradient id="' + sb + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#5a5348"/><stop offset="0.55" stop-color="#4a4438"/><stop offset="1" stop-color="#38332a"/></linearGradient>' +
+      '<linearGradient id="' + db + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#8d8574"/><stop offset="1" stop-color="#6e675b"/></linearGradient></defs>' +
+      '<rect x="0" y="0" width="' + STAGE_W + '" height="' + STAGE_H + '" fill="url(#' + sb + ')"/>' +
+      '<ellipse cx="480" cy="330" rx="360" ry="150" fill="#000" opacity="0.18"/>' +
+      '<path d="' + quad + '" fill="url(#' + db + ')" opacity="0.9"/>' +
+      '<image href="' + IMG + '" x="0" y="0" width="' + STAGE_W + '" height="' + STAGE_H + '" preserveAspectRatio="xMidYMid slice"/>';
+  }
+
+  // ================= Variant B: Engraved Groove + Running Pulse =================
+  function renderB(g, a) {
+    var d = pathD(g.pts), fd = fullD(g), S = g.S, out = '';
+    out += '<path d="' + d + '" fill="none" stroke="#3a332a" stroke-width="' + (0.30 * S).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"/>';
+    out += '<path d="' + d + '" fill="none" stroke="#1f1a13" stroke-width="' + (0.20 * S).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>';
+    var nearHead = alongPts(g.pts.concat([g.tip]), 0.93);
+    if (a.state === 'blocked') {
+      out += kite(g, '#3a332a', 0.95);
+    } else if (a.state === 'free') {
+      out += '<path d="' + fd + '" fill="none" stroke="#c9a227" stroke-width="' + (0.07 * S).toFixed(1) + '" opacity="0.75"/>';
+      out += chevron(nearHead.p, nearHead.ang, 0.30 * S, '#c9a227', 0.85, Math.max(2, 0.05 * S));
+      out += kite(g, '#57492e', 1, ' stroke="#c9a227" stroke-width="1.5"');
+    } else if (a.state === 'hover') {
+      out += '<path d="' + fd + '" fill="none" stroke="#c9a227" stroke-width="' + (0.07 * S).toFixed(1) + '" opacity="0.95"/>';
+      out += '<circle r="' + (0.09 * S).toFixed(1) + '" fill="#ffe9a8"><animateMotion dur="0.6s" repeatCount="indefinite" path="' + fd + '"/></circle>';
+      out += chevron(nearHead.p, nearHead.ang, 0.30 * S, '#ffe9a8', 1, Math.max(2, 0.055 * S));
+      out += kite(g, '#57492e', 1, ' stroke="#ffe9a8" stroke-width="1.5"');
+    } else if (a.state === 'pin') {
+      out += threadPartial(fd, 0, 40, '#c9a227', (0.07 * S).toFixed(1), 0.6);
+      out += threadPartial(fd, 64, 100, '#c9a227', (0.07 * S).toFixed(1), 0.6);
+      var mid = alongPts(g.pts, 0.5).p;
+      out += kite(g, '#4a4438', 0.85);
+      out += stoneBlob(mid, S, false);
+    } else if (a.state === 'firing') {
+      out += '<path d="' + fd + '" fill="none" stroke="#c9a227" stroke-width="' + (0.07 * S).toFixed(1) + '" opacity="0.22"/>';
+      out += threadPartial(fd, 66, 100, '#ffe9a8', (0.10 * S).toFixed(1), 1);
+      out += '<circle r="' + (0.10 * S).toFixed(1) + '" fill="#ffe9a8"><animateMotion dur="0.45s" repeatCount="indefinite" path="' + fd + '"/></circle>';
+      out += projectile(g, '#ffe9a8');
+    } else if (a.state === 'hit') {
+      out += threadPartial(fd, 72, 100, '#ffd76a', (0.11 * S).toFixed(1), 1);
+      out += kite(g, '#57492e', 0.55);
+      out += burst(g, '#ffd76a');
+    }
+    out += stateTag(g, a.tag);
+    return out;
+  }
+
+  // ================= Variant C: Solid Core + Sparse Markers =================
+  function renderC(g, a) {
+    var fd = fullD(g), S = g.S, out = '';
+    function core(color, op, w) {
+      return '<path d="' + fd + '" fill="none" stroke="' + color + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + op + '"/>';
+    }
+    function sparseChevrons(color, op) {
+      var s = '', fr = g.pts.length > 3 ? [0.3, 0.62] : [0.5];
+      fr.push(0.88);
+      var seen = {};
+      fr.forEach(function (t) {
+        var q = alongPts(g.pts.concat([g.tip]), t);
+        var key = q.p[0].toFixed(0) + ':' + q.p[1].toFixed(0);
+        if (seen[key]) return; seen[key] = 1;
+        s += chevron(q.p, q.ang, 0.34 * S, color, op, Math.max(2.2, 0.06 * S));
+      });
+      return s;
+    }
+    if (a.state === 'blocked') {
+      out += core('#6b6455', 0.45, (0.20 * S).toFixed(1)) + sparseChevrons('#6b6455', 0.45) + kite(g, '#6b6455', 0.45);
+    } else if (a.state === 'free') {
+      out += core('#ddd5bd', 1, (0.20 * S).toFixed(1)) + sparseChevrons('#efe8d2', 1) + kite(g, '#efe8d2', 1);
+    } else if (a.state === 'hover') {
+      out += core('#8a7a4a', 0.28, (0.34 * S).toFixed(1)); // flat backing plate, no blur
+      out += core('#ddd5bd', 1, (0.20 * S).toFixed(1)) + sparseChevrons('#c9a227', 1) + kite(g, '#efe8d2', 1);
+    } else if (a.state === 'pin') {
+      out += core('#6b6455', 0.5, (0.20 * S).toFixed(1)) + kite(g, '#6b6455', 0.5);
+      var mid = alongPts(g.pts, 0.5).p;
+      out += stoneBlob(mid, S, true);
+    } else if (a.state === 'firing') {
+      out += threadPartial(fd, 0, 45, '#ddd5bd', (0.20 * S).toFixed(1), 0.25);
+      out += threadPartial(fd, 45, 100, '#efe8d2', (0.20 * S).toFixed(1), 1);
+      var fly = alongPts([g.base, [g.tip[0] + g.dir[0] * 0.8 * S, g.tip[1] + g.dir[1] * 0.8 * S]], 0.75);
+      out += chevron(fly.p, Math.atan2(g.dir[1], g.dir[0]) * 180 / Math.PI, 0.34 * S, '#efe8d2', 1, Math.max(2.2, 0.06 * S));
+      out += projectile(g, '#efe8d2');
+    } else if (a.state === 'hit') {
+      var q = alongPts(g.pts.concat([g.tip]), 0.9);
+      out += chevron(q.p, q.ang, 0.40 * S, '#e8c34a', 1, Math.max(2.5, 0.07 * S));
+      out += burst(g, '#e8c34a');
+    }
+    out += stateTag(g, a.tag);
+    return out;
+  }
+
+  // ================= Variant A: Segmented Rail (optional) =================
+  function renderA(g, a) {
+    var S = g.S, out = '';
+    var ext = g.pts.concat([g.tip]);
+    var total = alongPts(ext, 1).L;
+    var segLen = 0.20 * S, gap = (a.state === 'blocked' ? 0.24 : 0.16) * S, d = 0.05 * S;
+    var lit = a.state === 'hover' ? [0.48, 0.82] : null; // VIS-010 A hover: 2-3 links lit, wave toward the head
+    if (a.state === 'firing') lit = null;
+    while (d < total - 0.1 * S) {
+      var t = d / total, q = alongPts(ext, t);
+      var taper = 1 - 0.25 * t, w = 0.30 * S * taper;
+      var gone = a.state === 'firing' && t < 0.55;
+      var gold = lit && t >= lit[0] && t <= lit[1];
+      var fill = gone ? '#5c564a' : gold ? '#c9a227' : (a.state === 'blocked' ? '#7d7668' : a.state === 'pin' ? '#8a8375' : '#e8ddc4');
+      var op = gone ? 0.3 : (a.state === 'blocked' ? 0.85 : a.state === 'pin' ? 0.7 : 1);
+      out += '<rect x="' + (-segLen / 2).toFixed(1) + '" y="' + (-w / 2).toFixed(1) + '" width="' + segLen.toFixed(1) +
+        '" height="' + w.toFixed(1) + '" rx="' + (0.06 * S).toFixed(1) + '" fill="' + fill + '" opacity="' + op +
+        '" stroke="#3d3428" stroke-width="0.8" transform="translate(' + q.p[0].toFixed(1) + ' ' + q.p[1].toFixed(1) + ') rotate(' + q.ang.toFixed(1) + ')"/>';
+      d += segLen + gap;
+    }
+    if (a.state === 'hover') {
+      out += '<circle r="' + (0.09 * S).toFixed(1) + '" fill="#ffd76a"><animateMotion dur="0.7s" repeatCount="indefinite" path="' + fullD(g) + '"/></circle>';
+      out += kite(g, '#f2e9d2', 1);
+    } else if (a.state === 'pin') {
+      out += kite(g, '#8a8375', 0.7);
+      out += stoneBlob(alongPts(g.pts, 0.5).p, S, false);
+    } else if (a.state === 'firing') {
+      out += kite(g, '#f2e9d2', 0.35) + projectile(g, '#ffd76a');
+    } else if (a.state === 'hit') {
+      out += kite(g, 'none', 1, ' stroke="#f2e9d2" stroke-width="1.5"') + burst(g, '#ffd76a');
+    } else if (a.state === 'blocked') {
+      out += kite(g, '#7d7668', 0.85);
+    } else {
+      out += kite(g, '#f2e9d2', 1);
+    }
+    out += stateTag(g, a.tag);
+    return out;
+  }
+
+  function buildPanel(elId, renderer) {
+    var bb = boardBackdrop();
+    var svg = '<svg viewBox="0 0 ' + STAGE_W + ' ' + STAGE_H + '" role="img">' + stageBackground(elId) +
+      '<path d="' + bb.quad + '" fill="none" stroke="#171310" stroke-width="3" opacity="0.8"/>' + bb.grid;
+    ARROWS.forEach(function (a) { svg += renderer(arrowGeom(a), a); });
+    svg += '</svg>';
+    document.getElementById(elId).innerHTML = svg;
+  }
+
+  // ---- 6x6 density hint: same winding fragment, tighter pitch, smaller S ----
+  function buildDense(elId, mode) {
+    var W = 470, Hh = 150, out = '<svg viewBox="0 0 ' + W + ' ' + Hh + '">';
+    out += '<rect x="0" y="0" width="' + W + '" height="' + Hh + '" fill="#847c6e"/>';
+    var paths = [
+      'M 20,110 C 120,110 90,30 190,30 C 290,30 260,110 360,110 C 400,110 420,90 450,70',
+      'M 20,128 C 120,128 90,48 190,48 C 290,48 260,128 360,128 C 400,128 420,108 450,88',
+      'M 20,92 C 120,92 90,12 190,12 C 290,12 260,92 360,92 C 400,92 420,72 450,52'
+    ];
+    var S = 26; // ~0.7x of the 5x5 head scale: simulates smaller 6x6 cells
+    paths.forEach(function (d, i) {
+      var mid = (i === 1);
+      if (mode === 'B') {
+        out += '<path d="' + d + '" fill="none" stroke="#3a332a" stroke-width="' + (0.30 * S).toFixed(1) + '" stroke-linecap="round" opacity="0.92"/>';
+        if (mid) out += '<path d="' + d + '" fill="none" stroke="#c9a227" stroke-width="' + (0.07 * S).toFixed(1) + '" opacity="0.75"/>';
+      } else {
+        out += '<path d="' + d + '" fill="none" stroke="' + (mid ? '#ddd5bd' : '#6b6455') + '" stroke-width="' + (0.20 * S).toFixed(1) + '" stroke-linecap="round" opacity="' + (mid ? 1 : 0.45) + '"/>';
+      }
+    });
+    out += '</svg>';
+    document.getElementById(elId).innerHTML = out;
+  }
+
+  buildPanel('panelB', renderB);
+  buildPanel('panelC', renderC);
+  buildPanel('panelA', renderA);
+  buildDense('denseB', 'B');
+  buildDense('denseC', 'C');
+})();
+</script>
+</body>
+</html>
