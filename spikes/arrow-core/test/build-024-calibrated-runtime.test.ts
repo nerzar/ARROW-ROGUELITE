@@ -100,20 +100,28 @@ describe('BUILD-024: resolveArenaPresentation metadata contract', () => {
       br: [0.655, 0.818],
       bl: [0.348, 0.820],
     })
+    // PLAYTEST-002: top.y (0.155 -> 0.43) and actorScale.top (1.0 -> 0.55) were re-tuned in the
+    // browser -- at the old values a full-size boss on this podium clipped the fixed topbar
+    // (reported in playtest as "floating boots"); see arena-calibration.js's own comment.
     expect(viaArena?.anchors).toEqual({
-      top: { x: 0.5, y: 0.155 },
+      top: { x: 0.5, y: 0.43 },
       left: { x: 0.17, y: 0.62 },
       right: { x: 0.83, y: 0.62 },
     })
     expect(viaArena?.effectAnchors).toEqual({
-      top: { x: 0.5, y: 0.155 },
+      top: { x: 0.5, y: 0.37 },
       left: { x: 0.17, y: 0.62 },
       right: { x: 0.83, y: 0.62 },
     })
     expect(viaArena?.actorScale).toEqual({
-      top: 1.0,
+      top: 0.55,
       left: 1.0,
       right: 1.0,
+    })
+    expect(viaArena?.spritePivot).toEqual({
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
     })
   })
 
@@ -175,15 +183,16 @@ describe('BUILD-024: board-renderer calibrated runtime integration', () => {
     expect(geo.h).toBe(5)
     expect(geo.fit.boxSide).toBe(1)
 
-    expect(geo.groundOverride[0]).toEqual({ x: 0.5, y: 0.155 })
+    // PLAYTEST-002: see the resolveArenaPresentation test above for why top.y/actorScale.top changed.
+    expect(geo.groundOverride[0]).toEqual({ x: 0.5, y: 0.43 })
     expect(geo.groundOverride[1]).toEqual({ x: 0.83, y: 0.62 })
     expect(geo.groundOverride[3]).toEqual({ x: 0.17, y: 0.62 })
 
-    expect(geo.effectGroundOverride[0]).toEqual({ x: 0.5, y: 0.155 })
+    expect(geo.effectGroundOverride[0]).toEqual({ x: 0.5, y: 0.37 })
     expect(geo.effectGroundOverride[1]).toEqual({ x: 0.83, y: 0.62 })
     expect(geo.effectGroundOverride[3]).toEqual({ x: 0.17, y: 0.62 })
 
-    expect(geo.actorScaleOverride[0]).toBe(1.0)
+    expect(geo.actorScaleOverride[0]).toBe(0.55)
     expect(geo.actorScaleOverride[1]).toBe(1.0)
     expect(geo.actorScaleOverride[3]).toBe(1.0)
 

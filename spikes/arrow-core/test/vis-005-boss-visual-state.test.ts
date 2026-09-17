@@ -95,11 +95,19 @@ describe('VIS-005 manual debug override', () => {
 })
 
 describe('VIS-005 anchor metadata', () => {
-  it('bottom-center ground anchor with a zeroed offset per pose', () => {
+  // PLAYTEST-002: offsets are no longer all-zero -- see BOSS_ANCHOR's own comment. Each pose has a
+  // measured, non-negative dy (transparent padding correction) and a zero dx (no measured
+  // horizontal asymmetry); this pins the *shape* of the contract (every pose present, dx always 0,
+  // dy always a finite, non-negative number) without hardcoding the exact tuned values here, so a
+  // future re-measurement/re-tune doesn't need to touch this test.
+  it('bottom-center ground anchor with a per-pose padding-correction offset', () => {
     expect(BOSS_ANCHOR.anchorX).toBe(0.5)
     expect(BOSS_ANCHOR.anchorY).toBe(1.0)
     for (const pose of BOSS_POSES) {
-      expect(BOSS_ANCHOR.offsets[pose]).toEqual({ dx: 0, dy: 0 })
+      const off = BOSS_ANCHOR.offsets[pose]
+      expect(off.dx).toBe(0)
+      expect(off.dy).toBeGreaterThanOrEqual(0)
+      expect(Number.isFinite(off.dy)).toBe(true)
     }
   })
 })

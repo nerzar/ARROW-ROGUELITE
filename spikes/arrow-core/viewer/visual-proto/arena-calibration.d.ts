@@ -4,6 +4,8 @@ export interface FracPt { x: number; y: number }
 export interface FracCorners { tl: [number, number]; tr: [number, number]; br: [number, number]; bl: [number, number] }
 
 export interface ActorScale { top: number; left: number; right: number }
+export interface SpritePivotOffset { dx: number; dy: number }
+export interface SpritePivot { top: SpritePivotOffset; left: SpritePivotOffset; right: SpritePivotOffset }
 
 export interface ArenaCalibration {
   id: string
@@ -17,6 +19,9 @@ export interface ArenaCalibration {
   actorScale?: ActorScale
   /** Optional override for stage-relative base cell fraction (defaults to 47.2 / 540). */
   actorBaseCellFrac?: number
+  /** PLAYTEST-002: per-side sprite pivot/foot-offset correction (fractions of the character's own
+   * footprint box), independent of `anchors`/`actorScale`. Defaults to {dx:0, dy:0} per side. */
+  spritePivot?: SpritePivot
 }
 
 export declare const ARENA_CALIBRATIONS: Record<string, ArenaCalibration>

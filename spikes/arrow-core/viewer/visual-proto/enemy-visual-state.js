@@ -25,18 +25,29 @@ export const ATTACK_READY_IN = 1
 // footprint, bottom-center aligned. anchorX/anchorY are fractions of the DRAWN image box;
 // the ground point (panel bottom-center) never moves between poses, so a pose swap with a
 // different aspect ratio cannot jump across the screen or change visual size. Per-pose
-// offsets are panel-height fractions, applied after anchoring; all zero until a real
-// misalignment is seen.
+// offsets are panel-height fractions, applied after anchoring.
+//
+// PLAYTEST-002: these were all zero, which plants the ground shadow at the image's own bottom
+// bounding-box edge -- correct only if the visible art reaches that edge with no transparent
+// padding underneath. It doesn't: the Dire Wolf source PNGs (assets/enemies/dire-wolf/*.png) all
+// have real transparent margin below the visible paws, so the wolf read as floating above its own
+// shadow (reported in playtest). Values below are measured directly from each pose's own PNG
+// (scan for the lowest non-transparent pixel row, as a fraction of image height) and shift the
+// drawn image down by exactly that much so the visible feet -- not the image's bounding box --
+// land on the ground point. This is a base/asset-level correction (same for every arena); a
+// per-arena calibration can still layer a further dx/dy on top via `spritePivot` if one arena's
+// own anchor placement needs additional tuning (see arena-calibration.js and board-renderer.js's
+// drawWolfArt, which adds the two together).
 export const ENEMY_ANCHOR = {
   anchorX: 0.5,
   anchorY: 1.0,
   scale: 1.0,
   offsets: {
-    idle: { dx: 0, dy: 0 },
-    attackReady: { dx: 0, dy: 0 },
-    attack: { dx: 0, dy: 0 },
-    hit: { dx: 0, dy: 0 },
-    defeat: { dx: 0, dy: 0 },
+    idle: { dx: 0, dy: 0.107 },
+    attackReady: { dx: 0, dy: 0.123 },
+    attack: { dx: 0, dy: 0.080 },
+    hit: { dx: 0, dy: 0.051 },
+    defeat: { dx: 0, dy: 0.243 },
   },
 }
 

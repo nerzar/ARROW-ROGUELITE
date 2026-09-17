@@ -24,19 +24,28 @@ export const STUNNED_HOLD_MS = 650
 // the ground point (panel bottom-center) never moves between poses, so a pose swap with a
 // different aspect ratio (angry 1305x1206, defeat 1536x1024 vs the 1086x1448 portrait
 // poses) cannot jump across the screen or change visual size. Per-pose offsets are panel-
-// height fractions, applied after anchoring; all zero until a real misalignment is seen.
+// height fractions, applied after anchoring.
+//
+// PLAYTEST-002: measured from assets/bosses/goblin-shaman/*.png the same way as ENEMY_ANCHOR
+// (see that file's comment) -- each pose PNG has a few percent of transparent padding below the
+// visible art, smaller than the Dire Wolf's but still a real, consistent ground-anchor offset.
+// This table is shared across every boss species (goblin-shaman AND the reserved goblin-taunter,
+// per this module's own "no species/asset knowledge" contract above) -- goblin-taunter's own
+// padding differs pose-by-pose (checked directly), so these values are exact for goblin-shaman
+// (the only species the current canon Prologue actually plays) and an approximation for
+// goblin-taunter until it ships its own content and this table is split per-species.
 export const BOSS_ANCHOR = {
   anchorX: 0.5,
   anchorY: 1.0,
   scale: 1.0,
   offsets: {
-    idle: { dx: 0, dy: 0 },
-    taunt: { dx: 0, dy: 0 },
-    cast: { dx: 0, dy: 0 },
-    stunned: { dx: 0, dy: 0 },
-    angry: { dx: 0, dy: 0 },
-    defeat: { dx: 0, dy: 0 },
-    back: { dx: 0, dy: 0 },
+    idle: { dx: 0, dy: 0.036 },
+    taunt: { dx: 0, dy: 0.038 },
+    cast: { dx: 0, dy: 0.030 },
+    stunned: { dx: 0, dy: 0.061 },
+    angry: { dx: 0, dy: 0.023 },
+    defeat: { dx: 0, dy: 0.058 },
+    back: { dx: 0, dy: 0.039 },
   },
 }
 

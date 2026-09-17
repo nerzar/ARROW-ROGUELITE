@@ -51,6 +51,37 @@ function actorScalesFor(calibration) {
   }
 }
 
+// PLAYTEST-002: presentation-only sprite pivot/foot-offset per side (0=N/top, 1=E/right,
+// 3=W/left; side 2/S has no calibration slot and stays at {dx:0,dy:0}). See arena-calibration.js's
+// `spritePivot` doc comment -- this is ADDED to the asset's own per-pose ANCHOR.offsets in
+// drawBossArt/drawWolfArt, not a replacement for it.
+// PLAYTEST-002: on the flexible/default arena (no calibration active -- most of the canon
+// Prologue's steps 2-5 carry no `presentation` block and never resolve one) a full-size actor on
+// some sides clips the stage edge or, worse, pushes its own HUD plate (name/HP/countdown -- drawn
+// ABOVE the character on every side but S) off the top of the screen entirely:
+//  - a boss-mode target (BOSS_CHAR, 6.9 cells) can land on E (cp-e2/cp-e3/cp-e5) -- PODIUM_GROUND's
+//    E/W anchors were only ever measured for an ordinary-enemy-sized (SIDE_CHAR, 6.0 cells) mob.
+//  - an ordinary enemy on N (cp-e4's second, simultaneous mob) clips its own HUD plate off-stage --
+//    PODIUM_GROUND[0]'s headroom was only verified for a boss-mode target (see arena-layout.js's
+//    BOSS_CHAR comment), not for an enemies-mode scene with a mob standing there too.
+// This default-arena-only multiplier (never applied when a calibration's own actorScale is
+// present -- see the callers below) shrinks the affected side+kind combination enough to keep the
+// character AND its HUD plate fully on stage at both 1920x1080 and 1366x768, verified via
+// visualDebug.layout().
+const DEFAULT_BOSS_SIDE_SCALE = { 0: 1.0, 1: 0.6, 2: 0.6, 3: 0.6 }
+const DEFAULT_ENEMY_SIDE_SCALE = { 0: 0.6, 1: 1.0, 2: 1.0, 3: 1.0 }
+
+const ZERO_PIVOT = { dx: 0, dy: 0 }
+function spritePivotsFor(calibration) {
+  const p = calibration?.spritePivot
+  return {
+    0: p?.top ?? ZERO_PIVOT,
+    1: p?.right ?? ZERO_PIVOT,
+    3: p?.left ?? ZERO_PIVOT,
+    2: ZERO_PIVOT,
+  }
+}
+
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
 
@@ -152,10 +183,11 @@ export function createBoardRenderer(canvas, stageEl) {
       ? stageH * (calibration.actorBaseCellFrac ?? ACTOR_BASE_CELL_FRAC)
       : cell
     const actorScaleOverride = actorScalesFor(calibration)
+    const spritePivotOverride = spritePivotsFor(calibration)
     geo = {
       w, h, plane, fit, cell, stageW, stageH, calibration,
       groundOverride, effectGroundOverride,
-      actorBaseCell, actorScaleOverride,
+      actorBaseCell, actorScaleOverride, spritePivotOverride,
     }
     return geo
   }
@@ -357,7 +389,11 @@ export function createBoardRenderer(canvas, stageEl) {
       // clip: the sprite stands directly on the arena, bottom-center grounded at the slot.
       const size = charSize(t.isBoss)
       // CAL-002: actor scale is presentation-only and independent of grid dimensions.
-      const scale = g.actorScaleOverride?.[t.side] ?? 1.0
+      // PLAYTEST-002: on the flexible/default arena (g.calibration null) a boss or ordinary enemy
+      // additionally gets DEFAULT_BOSS_SIDE_SCALE/DEFAULT_ENEMY_SIDE_SCALE's per-side reduction --
+      // see those constants' comment.
+      const defaultArenaSideScale = g.calibration ? 1.0 : (t.isBoss ? DEFAULT_BOSS_SIDE_SCALE : DEFAULT_ENEMY_SIDE_SCALE)[t.side] ?? 1.0
+      const scale = (g.actorScaleOverride?.[t.side] ?? 1.0) * defaultArenaSideScale
       const charCell = (g.actorBaseCell ?? cell) * scale
       const charW = size.w * charCell
       const charH = size.h * charCell
@@ -437,9 +473,10 @@ export function createBoardRenderer(canvas, stageEl) {
       const flashWhite = (now - fx.hitT >= 0 && now - fx.hitT < 110) ||
         (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130) ||
         (wolfPose === 'hit' && wolfSince >= 0 && wolfSince < 130)
+      const pivot = g.spritePivotOverride?.[t.side] ?? ZERO_PIVOT
       if (img) {
-        if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH)
-        else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, charW, charH)
+        if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH, pivot)
+        else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, charW, charH, pivot)
         if (t.dead) {
           // Same alpha-masked tint as the hit-flash below -- a dead sprite darkens, it
           // doesn't grow a translucent box around its transparent edges.
@@ -615,7 +652,7 @@ export function createBoardRenderer(canvas, stageEl) {
     // bottom-center (ground point) is locked to the footprint's bottom-center, so a pose
     // swap never moves the anchor or the visual size. All motion here is wall-clock
     // cosmetics -- simulation timers are untouched.
-    function drawBossArt(img, pose, since, t, bw, bh) {
+    function drawBossArt(img, pose, since, t, bw, bh, pivot = ZERO_PIVOT) {
       const iw = img.naturalWidth || img.width
       const ih = img.naturalHeight || img.height
       if (!iw || !ih) return
@@ -623,8 +660,10 @@ export function createBoardRenderer(canvas, stageEl) {
       const dw = iw * fit
       const dh = ih * fit
       const off = BOSS_ANCHOR.offsets[pose] ?? { dx: 0, dy: 0 }
-      const gx = off.dx * bw
-      const gy = bh / 2 + off.dy * bh
+      // PLAYTEST-002: calibration-level sprite pivot correction, ADDED to the asset's own per-pose
+      // offset -- see arena-calibration.js's `spritePivot` doc comment.
+      const gx = (off.dx + pivot.dx) * bw
+      const gy = bh / 2 + (off.dy + pivot.dy) * bh
       const tr = bossPoseTransform(pose, since, t)
       ctx.save()
       ctx.translate(gx, gy)
@@ -668,7 +707,7 @@ export function createBoardRenderer(canvas, stageEl) {
     // VIS-006/VIS-007: anchored wolf draw + presentation-only transforms. Same
     // ground-anchor contract as the boss (fixed character footprint, contain-fit,
     // bottom-center locked); mirroring follows the arena layout (face the board).
-    function drawWolfArt(img, pose, since, t, bw, bh) {
+    function drawWolfArt(img, pose, since, t, bw, bh, pivot = ZERO_PIVOT) {
       const iw = img.naturalWidth || img.width
       const ih = img.naturalHeight || img.height
       if (!iw || !ih) return
@@ -676,8 +715,10 @@ export function createBoardRenderer(canvas, stageEl) {
       const dw = iw * fit
       const dh = ih * fit
       const off = ENEMY_ANCHOR.offsets[pose] ?? { dx: 0, dy: 0 }
-      const gx = off.dx * bw
-      const gy = bh / 2 + off.dy * bh
+      // PLAYTEST-002: calibration-level sprite pivot correction, ADDED to the asset's own per-pose
+      // offset -- see arena-calibration.js's `spritePivot` doc comment.
+      const gx = (off.dx + pivot.dx) * bw
+      const gy = bh / 2 + (off.dy + pivot.dy) * bh
       const mirror = spriteMirror(false, t.side) // side profiles face the board
       const tr = wolfPoseTransform(pose, since, t)
       ctx.save()
@@ -822,16 +863,30 @@ export function createBoardRenderer(canvas, stageEl) {
       const fx = arrowFxFor(a.id)
       const isDenied = now - fx.deniedT >= 0 && now - fx.deniedT < 320
 
-      // Outer glow: strong + colored for a free/aimed arrow, rock-brown for a pinned one, faint for
-      // a geometrically blocked one.
+      // PLAYTEST-002: contrast outline underneath every arrow body -- a dark halo so the body reads
+      // against both bright torch-lit stone and dark shadowed stone, independent of free/blocked/
+      // pinned state. Solid line always (see below): a dashed round-capped stroke at this line
+      // width visually degenerates into a chain of beads ("caterpillar" effect) -- reported
+      // unreadable/ugly in playtest. Blocked/pinned status is conveyed by color+opacity only now.
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.shadowBlur = pinned ? 10 : free ? (aims ? 16 : 9) : 3
+      ctx.globalAlpha = free ? 0.6 : 0.45
+      ctx.strokeStyle = col.arrowOutline
+      ctx.lineWidth = lw + Math.max(2.5, lw * 0.55)
+      polyline(pts)
+      ctx.restore()
+
+      // Body: strong + colored for a free/aimed arrow, rock-brown for a pinned one, dimmer (but
+      // still clearly visible, never invisible) for a geometrically blocked one. Always a solid
+      // line -- see the outline comment above for why dashing was removed.
+      ctx.save()
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.shadowBlur = pinned ? 10 : free ? (aims ? 16 : 9) : (aims ? 7 : 4)
       ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : free ? col.freeGlow : col.mutedGlow
       ctx.strokeStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
-      ctx.globalAlpha = pinned ? 0.85 : free ? 1 : 0.55
-      ctx.setLineDash(pinned ? [lw * 0.55, lw * 0.55] : free ? [] : [lw * 0.9, lw * 0.9])
+      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
       ctx.lineWidth = lw
       polyline(pts)
       ctx.restore()
@@ -869,10 +924,22 @@ export function createBoardRenderer(canvas, stageEl) {
       const [dxr, dyr] = rotateDirPx(d, rot)
       const sz = localScale * 0.42
       ctx.save()
+      ctx.fillStyle = col.arrowOutline
+      ctx.globalAlpha = free ? 0.6 : 0.45
+      const headOutlinePad = sz * 0.22
+      ctx.beginPath()
+      ctx.moveTo(hx + dxr * (sz + headOutlinePad), hy + dyr * (sz + headOutlinePad))
+      ctx.lineTo(hx + dyr * (sz * 0.82 + headOutlinePad), hy - dxr * (sz * 0.82 + headOutlinePad))
+      ctx.lineTo(hx - dyr * (sz * 0.82 + headOutlinePad), hy + dxr * (sz * 0.82 + headOutlinePad))
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
+
+      ctx.save()
       ctx.shadowBlur = pinned ? 6 : free ? 10 : 0
       ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : col.freeGlow
       ctx.fillStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
-      ctx.globalAlpha = pinned ? 0.85 : free ? 1 : 0.6
+      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
       ctx.beginPath()
       ctx.moveTo(hx + dxr * sz, hy + dyr * sz)
       ctx.lineTo(hx + dyr * sz * 0.82, hy - dxr * sz * 0.82)
@@ -1017,7 +1084,13 @@ export function createBoardRenderer(canvas, stageEl) {
       dot: dark ? '#4a4a4f' : '#c9c9c6',
       // FIX-023: debug grid-line mesh, bright enough to read against any baked arena art.
       gridLine: dark ? 'rgba(120,220,255,0.75)' : 'rgba(20,120,180,0.75)',
-      arrow: dark ? '#a9a9b0' : '#8d8a80', arrowDim: dark ? '#55555a' : '#c4c4c0', aim: dark ? '#ffd76a' : '#b8791a',
+      // PLAYTEST-002: `arrow` brightened toward a warm parchment tone (was a mid-gray that blended
+      // into the stone under both themes) and `arrowDim` given real contrast in each theme (was
+      // near-identical to the stone tone it sits on -- effectively invisible) instead of one flat
+      // gray reused for both. `arrowOutline` is a dark halo drawn under every arrow body/head/pin
+      // marker (see drawArrow) so any arrow color still reads against bright or dark stone.
+      arrow: dark ? '#f3ecd9' : '#2c2013', arrowDim: dark ? '#c9c4b4' : '#5a4d3a', aim: dark ? '#ffd76a' : '#b8791a',
+      arrowOutline: 'rgba(12,9,6,0.75)',
       aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',
       text: dark ? '#eee' : '#20180f', muted: dark ? '#999' : '#777',
       bossA: dark ? '#5b4a63' : '#8d7a96', bossB: dark ? '#332a3a' : '#5c4d63', bossGlow: dark ? 'rgba(180,120,220,0.5)' : 'rgba(120,70,150,0.4)',

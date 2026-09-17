@@ -74,6 +74,47 @@
         </div>
       </section>
 
+      <section class="scale-section">
+        <h3>Sprite pivot / foot offset</h3>
+        <p class="muted small">
+          Corrects a sprite whose art doesn't reach the bottom of its own image (the character
+          looks like it's floating above its shadow). Moves the drawn image only -- the ground
+          anchor/shadow above stays put. dy &gt; 0 moves the art DOWN (toward the ground).
+        </p>
+        <div class="scale-controls">
+          <div class="scale-row">
+            <label for="pivotTopX">TOP dx</label>
+            <input type="range" id="pivotTopX" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotTopXNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotTopY">TOP dy</label>
+            <input type="range" id="pivotTopY" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotTopYNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotLeftX">LEFT dx</label>
+            <input type="range" id="pivotLeftX" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotLeftXNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotLeftY">LEFT dy</label>
+            <input type="range" id="pivotLeftY" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotLeftYNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotRightX">RIGHT dx</label>
+            <input type="range" id="pivotRightX" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotRightXNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotRightY">RIGHT dy</label>
+            <input type="range" id="pivotRightY" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotRightYNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+        </div>
+      </section>
+
       <section>
         <h3>Export</h3>
         <textarea id="exportText" readonly spellcheck="false"></textarea>

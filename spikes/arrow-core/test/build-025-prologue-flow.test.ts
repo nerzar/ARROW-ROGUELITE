@@ -332,7 +332,9 @@ describe('BUILD-025: Unified Prologue Playtest Flow', () => {
         expect(clearArenaCalibrationOverride(id)).toBe(true)
         expect(hasArenaCalibrationOverride(id)).toBe(false)
         const reverted = getArenaCalibration(id)
-        expect(reverted?.actorScale?.top).toBe(1.0)
+        // PLAYTEST-002: code default is 0.55, not 1.0 -- see arena-calibration.js's own comment on
+        // prologue-5x5-good's actorScale.top (a full-size boss clipped the fixed topbar at 1.0).
+        expect(reverted?.actorScale?.top).toBe(0.55)
       } finally {
         globalAny.localStorage = origStorage
       }

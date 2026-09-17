@@ -29,6 +29,17 @@
 // CAL-002: `actorScale` is presentation-only scale for TOP/LEFT/RIGHT actors (1.0 = base size).
 // Decouples actor pixel size from board grid dimensions (level.width/height, cell size, grid
 // selector), keeping mobs stable across 5x5, 6x6, 8x8, 10x10.
+//
+// PLAYTEST-002: `spritePivot` is a per-side (top/left/right) {dx, dy} correction, in fractions of
+// the character's own footprint box, ADDED on top of the pose-level offset every asset's own
+// ANCHOR.offsets already provides (enemy-visual-state.js's ENEMY_ANCHOR / boss-visual-state.js's
+// BOSS_ANCHOR). It exists because a sprite's *visible* silhouette (e.g. Dire Wolf's paws) is not
+// always flush with the bottom edge of its source PNG's bounding box -- transparent padding below
+// the visible art means anchorY=1.0 (bottom-of-bbox) plants the ground shadow well below the
+// actual paws, so the character reads as floating above its own shadow. A positive dy nudges the
+// drawn image DOWN (toward the ground point) until the visible feet meet the shadow; dx corrects
+// any similar horizontal padding asymmetry. Default {dx:0, dy:0} (no correction) for every side/
+// arena unless tuned -- see getArenaCalibration's merge and calibration-editor.js's pivot rows.
 export const ARENA_CALIBRATIONS = {
   // FIX-023: user-approved 5x5 prologue candidate (magicarrowassets/arenas/5x5-good.png,
   // explicitly named "good" by the architect -- superseded the unnamed ARENA-002
@@ -54,19 +65,43 @@ export const ARENA_CALIBRATIONS = {
     // pushed roughly half the sprite past x=0/x=stageW; see boss-shadow-moon's comment for the
     // measured clipping check that caught it.
     anchors: {
-      top: { x: 0.5, y: 0.155 },
+      // PLAYTEST-002: top.y raised from 0.155 to 0.43 -- at 0.155 the boss's own footprint
+      // (BOSS_CHAR.h = 6.9 cells, ~60% of stage height at this arena's actorBaseCellFrac) put the
+      // sprite's head and shoulders entirely above the visible stage, clipped by the fixed topbar
+      // (only the boots showed, hanging from the header -- reported in playtest as "floating
+      // boots"). 0.43 plants the boss's feet just above the board's own top edge instead of on the
+      // distant back platform the un-scaled anchor pointed at; actorScale.top below shrinks the
+      // sprite enough that its head clears the topbar with margin at both 1920x1080 (char top
+      // ~106px) and 1366x768 (char top ~24px past the topbar) -- verified via visualDebug.layout().
+      top: { x: 0.5, y: 0.43 },
       left: { x: 0.17, y: 0.62 },
       right: { x: 0.83, y: 0.62 },
     },
     effectAnchors: {
-      top: { x: 0.5, y: 0.155 },
+      // PLAYTEST-002: kept a fixed offset above the actor anchor (same pattern as left/right's
+      // anchors.y 0.62 vs effectAnchors.y 0.56 -- the telegraph anchor sits on the podium's flat
+      // top, the actor's own feet at the lip) instead of the old fixed 0.155, which pointed at the
+      // distant back platform the boss's feet no longer stand on.
+      top: { x: 0.5, y: 0.37 },
       left: { x: 0.17, y: 0.62 },
       right: { x: 0.83, y: 0.62 },
     },
     actorScale: {
-      top: 1.0,
+      // PLAYTEST-002: 0.55 -- see the anchors.top comment. A full 1.0 boss at this podium's
+      // available headroom always clips the topbar on this specific background crop.
+      top: 0.55,
       left: 1.0,
       right: 1.0,
+    },
+    spritePivot: {
+      // PLAYTEST-002: the Dire Wolf's own transparent-padding correction now lives at the asset
+      // level (enemy-visual-state.js's ENEMY_ANCHOR.offsets, measured per-pose from the source
+      // PNGs) since it's a property of the asset, not this specific arena -- see that file's
+      // comment. No arena-specific correction is needed on top of it here; tune per-side if this
+      // arena's own anchor placement still looks off once the base fix is in.
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
     },
   },
   'boss-shadow-moon': {
@@ -97,9 +132,17 @@ export const ARENA_CALIBRATIONS = {
       right: { x: 0.83, y: 0.6 },
     },
     actorScale: {
-      top: 1.0,
+      // PLAYTEST-002: same headroom problem as prologue-5x5-good's anchors.top comment -- this
+      // debug-only arena (loadBakedArenaDebug) never got a matching fix since it's off the normal
+      // Prologue path, but a 1.0 boss here clips the topbar too.
+      top: 0.55,
       left: 1.0,
       right: 1.0,
+    },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0.08 },
+      right: { dx: 0, dy: 0.08 },
     },
   },
 }
@@ -124,6 +167,11 @@ export function getArenaCalibration(id) {
             anchors: { ...c.anchors, ...(parsed.anchors ?? {}) },
             effectAnchors: { ...c.effectAnchors, ...(parsed.effectAnchors ?? {}) },
             actorScale: { ...c.actorScale, ...(parsed.actorScale ?? {}) },
+            spritePivot: {
+              top: { ...c.spritePivot?.top, ...(parsed.spritePivot?.top ?? {}) },
+              left: { ...c.spritePivot?.left, ...(parsed.spritePivot?.left ?? {}) },
+              right: { ...c.spritePivot?.right, ...(parsed.spritePivot?.right ?? {}) },
+            },
           }
         }
       }
@@ -135,6 +183,13 @@ export function getArenaCalibration(id) {
       top: c.actorScale?.top ?? 1.0,
       left: c.actorScale?.left ?? 1.0,
       right: c.actorScale?.right ?? 1.0,
+    },
+    // PLAYTEST-002: sprite pivot/foot-offset correction, independent of ground anchor position and
+    // actor scale -- see the ARENA_CALIBRATIONS comment above. Defaults to no correction.
+    spritePivot: {
+      top: { dx: c.spritePivot?.top?.dx ?? 0, dy: c.spritePivot?.top?.dy ?? 0 },
+      left: { dx: c.spritePivot?.left?.dx ?? 0, dy: c.spritePivot?.left?.dy ?? 0 },
+      right: { dx: c.spritePivot?.right?.dx ?? 0, dy: c.spritePivot?.right?.dy ?? 0 },
     },
   }
 }

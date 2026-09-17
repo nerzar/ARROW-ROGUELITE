@@ -71,14 +71,17 @@ function makeLevel(size: number) {
 }
 
 describe('CAL-002 arena calibration metadata', () => {
-  it('prologue-5x5-good and boss-shadow-moon have actorScale defaulted to 1.0', () => {
+  // PLAYTEST-002: top is no longer 1.0 on either arena -- a full-size boss on the N podium
+  // clipped the fixed topbar at that scale (reported in playtest, fixed in the browser and
+  // verified via visualDebug.layout()); see arena-calibration.js's own comment on `anchors.top`.
+  it('prologue-5x5-good and boss-shadow-moon have actorScale.top reduced to fit the boss under the topbar, left/right left at 1.0', () => {
     const p = ARENA_CALIBRATIONS['prologue-5x5-good']
     expect(p).toBeDefined()
-    expect(p.actorScale).toEqual({ top: 1.0, left: 1.0, right: 1.0 })
+    expect(p.actorScale).toEqual({ top: 0.55, left: 1.0, right: 1.0 })
 
     const b = ARENA_CALIBRATIONS['boss-shadow-moon']
     expect(b).toBeDefined()
-    expect(b.actorScale).toEqual({ top: 1.0, left: 1.0, right: 1.0 })
+    expect(b.actorScale).toEqual({ top: 0.55, left: 1.0, right: 1.0 })
   })
 
   it('getArenaCalibration provides backward-compatible defaults when actorScale is omitted', () => {
@@ -162,9 +165,11 @@ describe('CAL-002 independent actor scale in board-renderer', () => {
     const baseRight = baseLayout.find((e: any) => e.side === 1)!.char
     const baseLeft = baseLayout.find((e: any) => e.side === 3)!.char
 
+    // PLAYTEST-002: spread baseCalib.actorScale first (top is no longer 1.0 -- see that
+    // calibration's own comment) so this override only touches `left`, matching the test's intent.
     const modifiedCalib: ArenaCalibration = {
       ...baseCalib,
-      actorScale: { top: 1.0, left: 1.4, right: 1.0 },
+      actorScale: { ...baseCalib.actorScale!, left: 1.4 },
     }
     renderer.resize(level, modifiedCalib)
     renderer.frame(0, { s, def: PREVIEW_DEF, level, assets: {}, hint: null, boss: null, debug: false })
@@ -196,9 +201,10 @@ describe('CAL-002 independent actor scale in board-renderer', () => {
     const baseRight = baseLayout.find((e: any) => e.side === 1)!.char
     const baseLeft = baseLayout.find((e: any) => e.side === 3)!.char
 
+    // PLAYTEST-002: same fix as the LEFT-scale test above -- preserve base top/left, only override right.
     const modifiedCalib: ArenaCalibration = {
       ...baseCalib,
-      actorScale: { top: 1.0, left: 1.0, right: 0.75 },
+      actorScale: { ...baseCalib.actorScale!, right: 0.75 },
     }
     renderer.resize(level, modifiedCalib)
     renderer.frame(0, { s, def: PREVIEW_DEF, level, assets: {}, hint: null, boss: null, debug: false })
@@ -231,7 +237,7 @@ describe('CAL-002 independent actor scale in board-renderer', () => {
 
     const modifiedCalib: ArenaCalibration = {
       ...baseCalib,
-      actorScale: { top: 1.6, left: 1.0, right: 1.0 },
+      actorScale: { ...baseCalib.actorScale!, top: 1.6 },
     }
     renderer.resize(level, modifiedCalib)
     renderer.frame(0, { s, def: PREVIEW_DEF, level, assets: {}, hint: null, boss: null, debug: false })
@@ -240,8 +246,11 @@ describe('CAL-002 independent actor scale in board-renderer', () => {
     const modRight = modLayout.find((e: any) => e.side === 1)!.char
     const modLeft = modLayout.find((e: any) => e.side === 3)!.char
 
-    expect(modTop.w).toBeCloseTo(baseTop.w * 1.6, 4)
-    expect(modTop.h).toBeCloseTo(baseTop.h * 1.6, 4)
+    // PLAYTEST-002: base top scale is no longer 1.0 (see prologue-5x5-good's own comment), so the
+    // expected ratio is 1.6 / baseCalib's own top scale, not a bare 1.6x.
+    const topRatio = 1.6 / baseCalib.actorScale!.top
+    expect(modTop.w).toBeCloseTo(baseTop.w * topRatio, 4)
+    expect(modTop.h).toBeCloseTo(baseTop.h * topRatio, 4)
     expect(modRight.w).toBeCloseTo(baseRight.w, 4)
     expect(modRight.h).toBeCloseTo(baseRight.h, 4)
     expect(modLeft.w).toBeCloseTo(baseLeft.w, 4)

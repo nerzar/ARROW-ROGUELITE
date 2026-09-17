@@ -29,6 +29,12 @@ const ui = {
   scaleLeft: $('scaleLeft'), scaleLeftNum: $('scaleLeftNum'),
   scaleRight: $('scaleRight'), scaleRightNum: $('scaleRightNum'),
   linkSideScale: $('linkSideScale'),
+  pivotTopX: $('pivotTopX'), pivotTopXNum: $('pivotTopXNum'),
+  pivotTopY: $('pivotTopY'), pivotTopYNum: $('pivotTopYNum'),
+  pivotLeftX: $('pivotLeftX'), pivotLeftXNum: $('pivotLeftXNum'),
+  pivotLeftY: $('pivotLeftY'), pivotLeftYNum: $('pivotLeftYNum'),
+  pivotRightX: $('pivotRightX'), pivotRightXNum: $('pivotRightXNum'),
+  pivotRightY: $('pivotRightY'), pivotRightYNum: $('pivotRightYNum'),
   stage: $('stage'), bgLayer: $('bgLayer'), canvas: $('arena'), handlesLayer: $('handlesLayer'),
   selectedInfo: $('selectedInfo'), valuesTable: $('valuesTable'), exportText: $('exportText'), copyStatus: $('copyStatus'),
 }
@@ -197,6 +203,44 @@ function wireScaleEvents() {
   })
 }
 
+// PLAYTEST-002: sprite pivot/foot-offset rows -- same range+number pairing pattern as actor
+// scale above, one pair per side per axis (dx/dy), no link checkbox (each side is independently
+// wrong or right, unlike LEFT/RIGHT actor scale which is usually symmetric).
+function syncPivotInputs() {
+  const p = draft.spritePivot
+  const set = (rangeEl, numEl, v) => { rangeEl.value = String(v); numEl.value = v.toFixed(3) }
+  set(ui.pivotTopX, ui.pivotTopXNum, p.top.dx)
+  set(ui.pivotTopY, ui.pivotTopYNum, p.top.dy)
+  set(ui.pivotLeftX, ui.pivotLeftXNum, p.left.dx)
+  set(ui.pivotLeftY, ui.pivotLeftYNum, p.left.dy)
+  set(ui.pivotRightX, ui.pivotRightXNum, p.right.dx)
+  set(ui.pivotRightY, ui.pivotRightYNum, p.right.dy)
+}
+
+function wirePivotEvents() {
+  function onPivotChange(side, axis, val, rangeEl, numEl) {
+    val = Math.max(-0.3, Math.min(0.3, Math.round(val * 1000) / 1000))
+    draft.spritePivot[side][axis] = val
+    rangeEl.value = String(val)
+    numEl.value = val.toFixed(3)
+    renderer.resize(level, draft)
+    refreshPanels()
+  }
+  function wireRow(side, axis, rangeEl, numEl) {
+    rangeEl.addEventListener('input', () => onPivotChange(side, axis, Number(rangeEl.value), rangeEl, numEl))
+    numEl.addEventListener('input', () => {
+      const v = Number(numEl.value)
+      if (Number.isFinite(v)) onPivotChange(side, axis, v, rangeEl, numEl)
+    })
+  }
+  wireRow('top', 'dx', ui.pivotTopX, ui.pivotTopXNum)
+  wireRow('top', 'dy', ui.pivotTopY, ui.pivotTopYNum)
+  wireRow('left', 'dx', ui.pivotLeftX, ui.pivotLeftXNum)
+  wireRow('left', 'dy', ui.pivotLeftY, ui.pivotLeftYNum)
+  wireRow('right', 'dx', ui.pivotRightX, ui.pivotRightXNum)
+  wireRow('right', 'dy', ui.pivotRightY, ui.pivotRightYNum)
+}
+
 function loadArena(id) {
   const calib = getArenaCalibration(id)
   if (!calib) return
@@ -210,11 +254,19 @@ function loadArena(id) {
       right: original.actorScale.right ?? 1.0,
     }
   }
+  // PLAYTEST-002: same defensive defaulting as actorScale above, for calibrations saved before
+  // spritePivot existed.
+  original.spritePivot = {
+    top: { dx: original.spritePivot?.top?.dx ?? 0, dy: original.spritePivot?.top?.dy ?? 0 },
+    left: { dx: original.spritePivot?.left?.dx ?? 0, dy: original.spritePivot?.left?.dy ?? 0 },
+    right: { dx: original.spritePivot?.right?.dx ?? 0, dy: original.spritePivot?.right?.dy ?? 0 },
+  }
   draft = deepClone(original)
   ui.gridSizePick.value = String(draft.boardSizeLocked)
   ui.bgLayer.style.setProperty('--bg-image', `url(${draft.background})`)
   ui.bgLayer.classList.add('has-image')
   syncScaleInputs()
+  syncPivotInputs()
   selected = null
   rebuildEncounter()
   positionHandles()
@@ -337,7 +389,13 @@ function updateValuesTable() {
     `<tr><td><span class="swatch" style="background:var(--actor)"></span>LEFT actor scale</td><td>—</td><td>${s.left.toFixed(2)}x</td></tr>`,
     `<tr><td><span class="swatch" style="background:var(--actor)"></span>RIGHT actor scale</td><td>—</td><td>${s.right.toFixed(2)}x</td></tr>`,
   ].join('')
-  ui.valuesTable.innerHTML = `<tr><th>handle</th><th>px (x, y)</th><th>frac / scale</th></tr>${rows}${scaleRows}`
+  const p = draft?.spritePivot ?? { top: { dx: 0, dy: 0 }, left: { dx: 0, dy: 0 }, right: { dx: 0, dy: 0 } }
+  const pivotRows = [
+    `<tr><td><span class="swatch" style="background:var(--actor)"></span>TOP sprite pivot</td><td>—</td><td>dx ${p.top.dx.toFixed(3)}, dy ${p.top.dy.toFixed(3)}</td></tr>`,
+    `<tr><td><span class="swatch" style="background:var(--actor)"></span>LEFT sprite pivot</td><td>—</td><td>dx ${p.left.dx.toFixed(3)}, dy ${p.left.dy.toFixed(3)}</td></tr>`,
+    `<tr><td><span class="swatch" style="background:var(--actor)"></span>RIGHT sprite pivot</td><td>—</td><td>dx ${p.right.dx.toFixed(3)}, dy ${p.right.dy.toFixed(3)}</td></tr>`,
+  ].join('')
+  ui.valuesTable.innerHTML = `<tr><th>handle</th><th>px (x, y)</th><th>frac / scale</th></tr>${rows}${scaleRows}${pivotRows}`
 }
 
 const round4 = (n) => Math.round(n * 10000) / 10000
@@ -347,6 +405,7 @@ function buildExportObject() {
   const a = draft.anchors
   const e = draft.effectAnchors
   const s = draft.actorScale
+  const p = draft.spritePivot
   return {
     id: draft.id,
     background: draft.background,
@@ -370,13 +429,18 @@ function buildExportObject() {
       left: round4(s.left),
       right: round4(s.right),
     },
+    spritePivot: {
+      top: { dx: round4(p.top.dx), dy: round4(p.top.dy) },
+      left: { dx: round4(p.left.dx), dy: round4(p.left.dy) },
+      right: { dx: round4(p.right.dx), dy: round4(p.right.dy) },
+    },
   }
 }
 
 /** Formats as a ready-to-paste ARENA_CALIBRATIONS entry -- same quoting/shape arena-calibration.js
  * itself uses, so the output can be pasted straight in as a `'<id>': { ... },` entry. */
 function formatCalibrationEntry(o) {
-  const c = o.boardPlaneFrac, a = o.anchors, e = o.effectAnchors, s = o.actorScale
+  const c = o.boardPlaneFrac, a = o.anchors, e = o.effectAnchors, s = o.actorScale, p = o.spritePivot
   return `'${o.id}': {
   id: '${o.id}',
   background: '${o.background}',
@@ -398,6 +462,11 @@ function formatCalibrationEntry(o) {
     top: ${s.top},
     left: ${s.left},
     right: ${s.right},
+  },
+  spritePivot: {
+    top: { dx: ${p.top.dx}, dy: ${p.top.dy} },
+    left: { dx: ${p.left.dx}, dy: ${p.left.dy} },
+    right: { dx: ${p.right.dx}, dy: ${p.right.dy} },
   },
 },`
 }
@@ -428,6 +497,7 @@ ui.resetBtn.onclick = () => {
   draft = deepClone(original)
   ui.gridSizePick.value = String(draft.boardSizeLocked)
   syncScaleInputs()
+  syncPivotInputs()
   selected = null
   for (const el of handleEls.values()) el.classList.remove('selected')
   rebuildEncounter()
@@ -452,6 +522,7 @@ if (ui.clearStorageBtn) {
     original = deepClone(draft)
     ui.gridSizePick.value = String(draft.boardSizeLocked)
     syncScaleInputs()
+    syncPivotInputs()
     selected = null
     for (const el of handleEls.values()) el.classList.remove('selected')
     rebuildEncounter()
@@ -517,6 +588,7 @@ if (typeof ResizeObserver !== 'undefined') {
 
 createHandles()
 wireScaleEvents()
+wirePivotEvents()
 const initialId = new URLSearchParams(location.hash.slice(1)).get('arena') ?? 'prologue-5x5-good'
 ui.arenaPick.value = ARENA_CALIBRATIONS[initialId] ? initialId : ui.arenaPick.options[0]?.value
 loadArena(ui.arenaPick.value)
@@ -532,6 +604,14 @@ window.calibrationEditorDebug = {
     if (left !== undefined) draft.actorScale.left = left
     if (right !== undefined) draft.actorScale.right = right
     syncScaleInputs()
+    renderer.resize(level, draft)
+    refreshPanels()
+  },
+  setSpritePivot: (side, dx, dy) => {
+    if (!draft.spritePivot[side]) return
+    if (dx !== undefined) draft.spritePivot[side].dx = dx
+    if (dy !== undefined) draft.spritePivot[side].dy = dy
+    syncPivotInputs()
     renderer.resize(level, draft)
     refreshPanels()
   },

@@ -133,11 +133,18 @@ describe('VIS-006 manual debug override', () => {
 })
 
 describe('VIS-006 anchor metadata', () => {
-  it('bottom-center ground anchor with a zeroed offset per pose', () => {
+  // PLAYTEST-002: offsets are no longer all-zero -- see ENEMY_ANCHOR's own comment (Dire Wolf's
+  // source PNGs have real transparent padding below the visible paws, which read as the wolf
+  // floating above its own ground shadow). Same shape-only contract as VIS-005's version of this
+  // test: every pose present, dx always 0, dy always finite and non-negative.
+  it('bottom-center ground anchor with a per-pose padding-correction offset', () => {
     expect(ENEMY_ANCHOR.anchorX).toBe(0.5)
     expect(ENEMY_ANCHOR.anchorY).toBe(1.0)
     for (const pose of ENEMY_POSES) {
-      expect(ENEMY_ANCHOR.offsets[pose]).toEqual({ dx: 0, dy: 0 })
+      const off = ENEMY_ANCHOR.offsets[pose]
+      expect(off.dx).toBe(0)
+      expect(off.dy).toBeGreaterThanOrEqual(0)
+      expect(Number.isFinite(off.dy)).toBe(true)
     }
   })
   it('exactly the five ordinary poses, no boss-specific states', () => {
