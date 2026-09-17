@@ -232,12 +232,25 @@ Run:
    Both arenas' anchors moved to x=0.17/0.83 and re-verified. Root cause: these compositions have a
    narrower usable side-podium spread than the old flexible Moonlit Fortress art; a fixed fraction
    tuned for one background doesn't transfer to another without checking actual sprite bounds.
-2. `background-size: cover` crop on non-16:9 art is easy to miss and silently misplaces a plane
-   calibrated from raw image-pixel fractions -- `boss-shadow-moon` (1619x971, aspect 1.667 vs the
-   stage's forced 16:9) needed an explicit correction (~1.066x vertical stretch + recentering); see
-   docs/FIX-023-GRID-CALIBRATED-BOARD.md. `prologue-5x5-good` (1672x941) is close enough to 16:9
-   that this correction is negligible, but a future arena calibration should check this ratio
-   before trusting raw pixel fractions.
+2. **Course correction after DONE, before user acceptance:** the user flagged the initial
+   `boss-shadow-moon` calibration as still visibly wrong (screenshot showing the debug grid mesh
+   clearly off the baked tile lines), despite the source-PNG gradient-edge-detection method
+   described above looking internally consistent. Root cause: this art's frame border is densely
+   decorated (corner gem studs, skull medallions, an inline-diamond pattern along every edge), so
+   the gradient/variance scan repeatedly locked onto a decoration's edge instead of the true
+   frame/tile boundary -- confidently and wrong (strong signal, wrong location), off by ~60-70px in
+   a 540px-tall stage. `background-size: cover`'s crop on this non-16:9 (1619x971, aspect 1.667)
+   art is real and was applied correctly, but "the conversion math was right" didn't matter when
+   the underlying source-image measurement it was converting was itself wrong. Fixed (commit
+   `c04eef2`) by calibrating directly in STAGE pixel space instead: render the debug grid overlay,
+   screenshot, read the corner offset against the baked art's gem studs in that single composited
+   image (no source-image measurement, nothing to get out of sync with what's on screen), correct,
+   repeat. Re-verified click hit-testing and the rotate/click-mapping round-trip with the corrected
+   corners -- both pass. `prologue-5x5-good` was checked the same way and needed no change.
+   docs/FIX-023-GRID-CALIBRATED-BOARD.md rewritten to document the method that actually worked.
+   **Lesson for future arena calibration:** don't trust a source-image automated measurement
+   without independently checking the rendered result against the art -- prefer calibrating
+   directly against the debug overlay in stage space from the start.
 3. No approved 6x6 baked-grid arena exists yet (only 5x5 candidates were explicitly approved mid-
    task) -- `boss-shadow-moon` (ARENA-002, not separately re-approved) stands in as the 6x6 proof.
    A follow-up task should supply/confirm the real 6x6 pick.
@@ -250,8 +263,9 @@ Run:
    way, by moving to an isolated `.worktrees/FIX-023`. Still recommend every task get its own
    worktree from the start rather than starting in the shared root.
 
-RESULT_SHA (code): d78e587 -- feat(FIX-023): grid-calibrated board projection + per-arena side
-actor anchors. This DONE/bookkeeping commit follows it and is origin HEAD after push (verified
+RESULT_SHA (code): d78e587 (initial) + c04eef2 (boss-shadow-moon calibration fix, see FOUND #2) --
+c04eef2 is the final code state. The next DONE/bookkeeping commit follows it and is origin HEAD
+after push (verified
 below).
 
 ## Delivery
