@@ -1,6 +1,6 @@
 # TASK: ASSET-003 — Complete Creature Library
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD/FIX
 SIZE: M
 AGENT: Claude / visual implementation
@@ -135,3 +135,109 @@ USER PLAYTEST:
 - tell the user only where the creature dropdown is and which newly added spider/slime entries to click first.
 
 Commit, push, verify remote SHA, mark DONE.
+
+---
+
+## RESULT
+
+All 10 source folders in `magicarrowassets/creatures` are now separate, selectable
+`CREATURE_CATALOG` entries. Nothing was excluded.
+
+**3 new species added** (`asset-catalog.js`, `assets.js`, new files under
+`viewer/visual-proto/assets/enemies/<species>/`):
+
+- **`small-spider`** — source folder had no named poses at all: one concept/reference sheet
+  (labelled "8 DIRECTIONS + POSES", not a usable sprite) plus 7 individually generated isolated
+  frames. Identified each frame's pose by comparing it against the concept sheet's own labels: a
+  clean grounded front stance -> `idle`, a rearing/threat pose -> `attackReady`, a web-spit pose
+  -> `attack`, a dizzy-with-stars pose -> `hit`. No death/collapse frame exists among the 7, so
+  `defeat` is deliberately left unmapped — falls back to `idle` (allowed by the task's own
+  fallback rule, and safer than guessing).
+- **`toxic-demonic-spider`** — source folder already had a full named pose set
+  (`idle/angry/back/cast/death/stun` + 1 concept file). Mapped `idle`, `stun` -> `hit`, `death` ->
+  `defeat` (same convention as the pre-existing `green-slime`/`small-goblin` packs). Visually
+  distinct from both other spiders: green-glowing carapace with a venom-sac mouth, vs.
+  `small-spider`'s bronze/gold coloring and `spider-brute`'s larger size + red glow.
+- **`small-green-slime`** — source folder had a clean `idle`/`hit stun` (space in filename,
+  renamed on copy)/`death` trio plus `back.png` and two jump-related extras (`down - jump.png`,
+  `taunt. - jump -up.png`) that were skipped as ambiguous/not needed for the 5-pose contract.
+  Visually distinct from `green-slime`: a small, round, big-yellow-eyed, friendly-looking slime,
+  vs. `green-slime`'s taller, fanged, menacing design.
+
+**7 existing species audited**, all confirmed rendering their own art (none fall back to Dire
+Wolf): `dire-wolf`, `green-slime`, `small-goblin`, `spider-brute`, `skeleton-child`,
+`goblin-shaman`, `goblin-taunter` (= Goblin King). No wrong/rough mappings found — `ENEMY_MANIFESTS`
+already had a real entry for every one of them (this was a pure addition task, not a fix of any
+existing wiring).
+
+**Presentation defaults (task requirement #4)**: no per-species scale/pivot code was needed —
+`board-renderer.js`'s actor placement is keyed by board *side/slot* (existing calibration), not by
+species, and every new source image is already a full-body, centered, transparent-background
+render at the same convention as every other species already in the catalog. Confirmed visually
+grounded/not-clipped for all 3 new species in the browser (see VERIFY).
+
+**Default HP/timer values** for the 3 new catalog entries are authoring-convenience starting
+points (per the existing pattern every other species already uses), not a balance decision:
+`small-spider` HP 1 + timer(4,1) (small poke-attack, matches its web-spit pose), 
+`toxic-demonic-spider` HP 3 + timer(3,2) (elite/venomous, matches Dire Wolf's cadence),
+`small-green-slime` HP 1, no timer (weak, matches `green-slime`'s own low-threat pattern). All
+freely user-tunable per level in the editor's existing HP/Attack Timer fields.
+
+## VERIFY
+
+Ran in an isolated worktree (`.worktrees/ASSET-003`, own `node_modules`, dev server on a scratch
+port):
+
+- `npm run typecheck` / `npm run build` — 0 errors (asset copies + `viewer/visual-proto/*.js`
+  edits are outside `tsconfig.json`'s `include`).
+- `npm test` — 288/288 passed (24 files), unchanged from before this task.
+- Browser (built-in Claude Browser, Chromium), against the task's own checklist:
+  1. Creature dropdown now lists 10 entries (was 7); counted directly in the accessibility tree.
+  2. Explicitly selected and screenshotted all 10: Small Spider, Toxic Demonic Spider, Spider
+     Brute, Small Green Slime, Green Slime, Small Goblin, Skeleton Child, Dire Wolf, Goblin
+     Shaman, Goblin King/Taunter — every one renders its own distinct art in the live editor
+     preview (grounded, centered, correctly identified).
+  3. Confirmed each selection changes the rendered creature immediately (no reload needed).
+  4. Confirmed none silently renders as Dire Wolf — each of the 10 is visually distinct from Dire
+     Wolf and from each other; `read_network_requests` showed every new species' `idle`/`hit`/
+     `attack*`/`defeat` PNGs loading with `200 OK` under
+     `viewer/visual-proto/assets/enemies/<species>/`.
+  5. Save -> reload round-trip: set Level 1's enemy to `toxic-demonic-spider`, clicked Save
+     (badge: "Saved to campaigns/campaign.json & storage"), fully reloaded the page (badge:
+     "Loaded from file") — the species was still selected and rendering correctly. Reverted this
+     test change afterwards (`git checkout -- campaigns/campaign.json`) so no unrelated content
+     change is in this task's diff.
+  6. Play Level: launched the actual playable Prologue runtime (`app.js`, not the editor) with
+     that same level — it rendered "Toxic Demonic Spider (Enemy)" identically to the editor
+     preview, confirming `app.js`'s generic `ENEMY_MANIFESTS`-driven pack loading (unchanged code)
+     picks up the new species automatically.
+  7. `read_console_messages`: only pre-existing missing placeholder assets (`board-frame.png`,
+     `boss-goblin-*.png`, etc., already documented 404-ing since CAL-001) — no new errors.
+- Cleaned up before committing: reverted the test Save to `campaigns/campaign.json`; only the
+  intended catalog/manifest code + the 10 new image files are in the diff.
+
+RESULT_SHA: 3df4fcd9c74cd316baa0c3929faa0f27764a14be (code commit).
+
+## USER PLAYTEST
+
+1. Open the Campaign Authoring Tool, pick any level, look at **Enemies (Center-first) -> Creature**
+   dropdown.
+2. Click through the 3 new entries first: **Small Spider**, **Toxic Demonic Spider**, **Small
+   Green Slime** — each should immediately show a distinct creature in the live preview.
+3. Everything else (HP, Attack Timer, slot, Save/Play) works exactly the same as any other
+   species.
+
+## FOUND
+
+- No source folder was excluded — all 10 are now selectable. The only thing intentionally *not*
+  wired is a `defeat` pose for `small-spider` (no death-looking frame exists among its 7
+  generated images) — it gracefully falls back to `idle`, per the task's own explicit fallback
+  rule, rather than guessing which ambiguous frame might be a death pose.
+- `small-green-slime`'s source folder has two extra jump-related frames (`down - jump.png`,
+  `taunt. - jump -up.png`) that weren't mapped to anything — they don't correspond to any of the
+  5 `ENEMY_POSES` and their compound names make the intended semantics ambiguous; left unused
+  rather than invented into a pose.
+- `dire_wolf`'s own source folder is still 6 unnamed raw frames with no named poses — out of
+  scope here since the project's Dire Wolf pack was already curated and working from a prior task
+  (VIS-006); this task only touched species that were missing or needed auditing, and Dire Wolf
+  was confirmed still correct (see VERIFY #4), not re-curated.
