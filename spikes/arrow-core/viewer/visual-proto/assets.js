@@ -85,6 +85,26 @@ const ENEMY_RUNTIME_GREEN_SLIME = { idle: 'idle.png', hit: 'stun-hit.png', defea
 const ENEMY_RUNTIME_SMALL_GOBLIN = { idle: 'idle.png', hit: 'stun.png', defeat: 'death.png' }
 const ENEMY_RUNTIME_SPIDER_BRUTE = { idle: 'idle.png' }
 const ENEMY_RUNTIME_SKELETON_CHILD = { idle: 'idle.png' }
+// ASSET-003: three source folders (small-spider, toxic-demonic-spider, small-green-slime) were
+// entirely missing from the catalog -- inspected every file in each folder (see FOUND in the
+// ASSET-003 task-card for the full pose-by-pose read) rather than skipping any for lacking a
+// complete named pose set, per the task's "don't curate away a usable model" rule.
+// small-spider ships as 8 individually generated frames (no named poses, a 1-image concept/
+// reference sheet plus 7 isolated sprites) -- identified by comparing each frame against the
+// concept sheet's own pose labels: a clean grounded front stance -> idle, a rearing/threat pose
+// -> attackReady, a web-spit pose -> attack, a dizzy-with-stars pose -> hit. No death/collapse
+// frame exists among the 7, so defeat is deliberately left unmapped (falls back to idle).
+const ENEMY_RUNTIME_SMALL_SPIDER = { idle: 'idle.png', attackReady: 'attack-ready.png', attack: 'attack.png', hit: 'hit.png' }
+// toxic-demonic-spider ships a full named pose set (idle/angry/back/cast/death/stun) already
+// distinct in identity (venom-sac mouth, green-glowing carapace) from both small-spider (bronze/
+// gold, no venom sac) and spider-brute (larger, red-glow eyes) -- idle/stun->hit/death->defeat
+// mapped directly, matching the same convention as green-slime's own idle/stun-hit/death set.
+const ENEMY_RUNTIME_TOXIC_SPIDER = { idle: 'idle.png', hit: 'hit.png', defeat: 'defeat.png' }
+// small-green-slime is a visually distinct, separate design from green-slime (a smaller, friendly
+// round-eyed slime vs. green-slime's taller, fanged, menacing one) with its own clean idle/hit
+// (dizzy-spiral-eyes)/defeat (collapsed) trio -- same idle/hit/defeat convention as every other
+// slime/goblin pack above.
+const ENEMY_RUNTIME_SMALL_GREEN_SLIME = { idle: 'idle.png', hit: 'hit.png', defeat: 'defeat.png' }
 
 function enemyManifest(base, runtime) {
   return Object.fromEntries(ENEMY_POSES.filter((p) => runtime[p]).map((p) => [p, `${base}${runtime[p]}`]))
@@ -93,6 +113,9 @@ export const GREEN_SLIME_MANIFEST = enemyManifest('assets/enemies/green-slime/',
 export const SMALL_GOBLIN_MANIFEST = enemyManifest('assets/enemies/small-goblin/', ENEMY_RUNTIME_SMALL_GOBLIN)
 export const SPIDER_BRUTE_MANIFEST = enemyManifest('assets/enemies/spider-brute/', ENEMY_RUNTIME_SPIDER_BRUTE)
 export const SKELETON_CHILD_MANIFEST = enemyManifest('assets/enemies/skeleton-child/', ENEMY_RUNTIME_SKELETON_CHILD)
+export const SMALL_SPIDER_MANIFEST = enemyManifest('assets/enemies/small-spider/', ENEMY_RUNTIME_SMALL_SPIDER)
+export const TOXIC_SPIDER_MANIFEST = enemyManifest('assets/enemies/toxic-demonic-spider/', ENEMY_RUNTIME_TOXIC_SPIDER)
+export const SMALL_GREEN_SLIME_MANIFEST = enemyManifest('assets/enemies/small-green-slime/', ENEMY_RUNTIME_SMALL_GREEN_SLIME)
 
 /** ASSET-002: species -> ordinary-enemy pose manifest, for the campaign editor's per-enemy
  * `species` field (asset-catalog.js's CREATURE_CATALOG ids). Unknown/unset species falls back to
@@ -115,6 +138,11 @@ export const ENEMY_MANIFESTS = {
   'skeleton-child': SKELETON_CHILD_MANIFEST,
   'goblin-shaman': SHAMAN_MANIFEST,
   'goblin-taunter': BOSS_MANIFEST,
+  // ASSET-003: complete the creature library -- previously missing entirely from both this
+  // manifest map and CREATURE_CATALOG (asset-catalog.js), so selecting them wasn't possible.
+  'small-spider': SMALL_SPIDER_MANIFEST,
+  'toxic-demonic-spider': TOXIC_SPIDER_MANIFEST,
+  'small-green-slime': SMALL_GREEN_SLIME_MANIFEST,
 }
 export function enemyManifestFor(species) {
   return ENEMY_MANIFESTS[species] ?? WOLF_MANIFEST

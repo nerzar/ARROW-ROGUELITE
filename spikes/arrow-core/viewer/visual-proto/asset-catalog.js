@@ -121,6 +121,36 @@ export const CREATURE_CATALOG = [
     defaultSide: 0,
     defaultTimer: null,
   },
+  // ASSET-003: complete the creature library -- these 3 source folders
+  // (magicarrowassets/creatures/small-spider, toxic-demonic-spider, small-green-slime) had usable
+  // isolated art but no catalog entry at all, so they were never selectable in the editor.
+  {
+    id: 'small-spider',
+    label: 'Small Spider (Enemy)',
+    kind: 'enemy',
+    species: 'small-spider',
+    defaultHp: 1,
+    defaultSide: 0,
+    defaultTimer: { interval: 4, damage: 1 },
+  },
+  {
+    id: 'toxic-demonic-spider',
+    label: 'Toxic Demonic Spider (Enemy)',
+    kind: 'enemy',
+    species: 'toxic-demonic-spider',
+    defaultHp: 3,
+    defaultSide: 0,
+    defaultTimer: { interval: 3, damage: 2 },
+  },
+  {
+    id: 'small-green-slime',
+    label: 'Small Green Slime (Enemy)',
+    kind: 'enemy',
+    species: 'small-green-slime',
+    defaultHp: 1,
+    defaultSide: 0,
+    defaultTimer: null,
+  },
 ]
 
 export function getArenaCatalog() {
