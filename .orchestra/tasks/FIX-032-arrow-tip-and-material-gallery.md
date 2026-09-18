@@ -1,8 +1,8 @@
-# TASK: FIX-032 — Arrow Tip Fit + Material Gallery
+# TASK: FIX-032 — Arrow Tip Fit + Existing Material Gallery
 
 STATUS: READY
 TYPE: FIX/TOOL
-SIZE: S/M
+SIZE: S
 BASE_BRANCH: build/BUILD-034-integrate-filled-arrows
 BRANCH: fix/FIX-032-arrow-tip-and-material-gallery
 START_SHA: 952d6361b5159aa0067960c1146fc4ede9d8378f
@@ -24,20 +24,28 @@ START_SHA: 952d6361b5159aa0067960c1146fc4ede9d8378f
 
 Не менять gameplay ради компенсации геометрии.
 
-## 2. Подключить отдельную страницу выбора материалов
+## 2. Вернуть/подключить уже существующую страницу material gallery
 
-Добавить в текущую BUILD-034 отдельную страницу для быстрого сравнения всех arrow materials.
+Страница УЖЕ существует в BUILD-032/033:
 
-Требование:
-- страница использует ТОТ ЖЕ `filled-arrow-geom.js`, `filled-arrow-materials.js` и текущий renderer path, который работает в playable;
-- не держать вторую независимую копию material/render logic из старой BUILD-033 демки;
-- показать все 15 текущих материалов и дать быстро переключать их;
-- оставить geometry controls только если они реально полезны; главное — material comparison;
-- по возможности показывать несколько реальных arrow shapes: straight, bend, multi-bend, разные направления;
-- дать понятный URL из dev server;
-- переход из playable/debug UI на эту страницу и обратно — если это делается маленькой правкой.
+`viewer/filled-arrow.html`
 
-Старую BUILD-033 demo page можно использовать как UI-референс, но не возвращать её собственную homography/runtime как второй источник истины.
+Ранее открывалась как:
+`http://localhost:5177/viewer/filled-arrow.html`
+
+Не создавать новую страницу с нуля.
+
+Нужно:
+- перенести/подключить существующие `filled-arrow.html` + нужный UI-код поверх BUILD-034;
+- адаптировать страницу так, чтобы она использовала актуальные `filled-arrow-geom.js` и `filled-arrow-materials.js` BUILD-034;
+- по возможности переиспользовать общий render helper BUILD-034, а не держать расходящуюся копию material logic;
+- сохранить удобный material selector и geometry controls существующей страницы;
+- показать все 15 текущих материалов;
+- сохранить быстрые hotkeys/selector, если они уже работают;
+- дать рабочий URL на новом dev server;
+- при маленькой правке добавить переход между playable и gallery.
+
+Собственную demo-homography/tilt можно оставить только там, где она нужна именно для preview-страницы; material registry и geometry должны быть общими с playable.
 
 ## Boundaries
 
@@ -45,6 +53,7 @@ START_SHA: 952d6361b5159aa0067960c1146fc4ede9d8378f
 - Не менять encounter/gameplay.
 - Не выбирать финальный материал за пользователя.
 - Не трогать VIS-013/014/016/FIX-030.
+- Не переписывать gallery заново без необходимости.
 - Не делать merge в main.
 
 ## Verify
@@ -53,7 +62,8 @@ START_SHA: 952d6361b5159aa0067960c1146fc4ede9d8378f
 - крайние стрелы N/E/S/W визуально корректны;
 - Rotate не ломает геометрию;
 - playable Prologue запускается;
-- material gallery открывается и переключает все 15 материалов;
+- существующая `viewer/filled-arrow.html` снова открывается;
+- gallery переключает все 15 материалов;
 - gallery и playable используют один material registry / filled geometry;
 - tests + typecheck + build.
 
@@ -62,9 +72,8 @@ START_SHA: 952d6361b5159aa0067960c1146fc4ede9d8378f
 Коротко:
 - branch + SHA;
 - URL playable;
-- URL material gallery;
+- URL `viewer/filled-arrow.html`;
 - какое значение/правило стало у tip reach;
-- список 15 materials;
 - RESULT / VERIFY / FOUND.
 
 Commit + push, без merge в main.
