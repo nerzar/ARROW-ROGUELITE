@@ -128,6 +128,9 @@ SHA: 6580e68f08a99aba9768e008eec15f71f9076dcf (code c3a888b + report; код н�
 - Added species-level HUD size (`hudScale`, 0.5..2, default 1): plate font/bar/badge scale around
   the same anchor; E/W board clamp still wins. Save/reload + runtime wired, tests extended.
 - User's live `creature-poses.json` tuning intentionally left uncommitted.
+- Round 3 (accepted): HP bar /3 via `HP_BAR_FRAC` in `hudBoxes`; shadow /3 via shared
+  `SHADOW_*` constants; offset number inputs unclamped (sliders ±1); HUD name/label line
+  removed from the plate (HP + timers only), dead truncation code removed.
 
 ## FOUND
 
