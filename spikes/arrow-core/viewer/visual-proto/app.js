@@ -19,6 +19,7 @@ import {
   appearEnemyVisual, baselinePose as enemyBaseline, ENEMY_POSES, manualEnemyPose,
   onEnemyGameplayEvent, readEnemySnapshot, tickEnemyVisual,
 } from './enemy-visual-state.js'
+import { FLIGHT_MS } from './projectile-flight.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
@@ -29,7 +30,7 @@ const ui = {
   rotCw: $('rotCw'), rotCcw: $('rotCcw'), rotateCharges: $('rotateCharges'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
-  arrowStylePick: $('arrowStylePick'), arrowMatPick: $('arrowMatPick'),
+  arrowStylePick: $('arrowStylePick'), arrowMatPick: $('arrowMatPick'), flightStylePick: $('flightStylePick'),
 }
 
 // BUILD-025/CAL-004: canon Prologue sequence -- now shared with calibration-editor.js via
@@ -366,35 +367,51 @@ function tap(id) {
   const fledBack = fledStep.back
   renderer.markFled(before, after)
   targetsBefore = after
-  // VIS-006: gameplay -> per-actor presentation. Priority per actor: defeated > attack
-  // (its own strike is the latest visible beat) > hit > baseline sync. Untouched actors only
-  // re-sync an expired hold onto the live baseline (e.g. a newly armed attackReady telegraph).
-  if (wolfVisuals) {
-    const now = performance.now()
-    const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
-    for (const e of s.enemies) {
-      const snap = readEnemySnapshot(e)
-      const v = wolfVisuals.get(e.id)
-      if (!v) continue
-      if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
-      else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
-      else if (r.hit && e.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+  // BUILD-035: the monster's hit reaction starts when the projectile ARRIVES, not when the
+  // player taps. Pose events, death fade (markDeaths) and the win overlay all wait out the
+  // flight; the renderer already holds the pre-tap HP presentation until then (pendingHp)
+  // and the flash/shake are stamped at arrival. Misses have no arrival to wait for.
+  // Arrival order is preserved naturally: each tap's reaction fires on its own timer, and a
+  // stale fire (restart/scene change since) is dropped by the encounter identity guard.
+  const enc = s
+  const defAtTap = def
+  const wolfMap = wolfVisuals
+  const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
+  const fireImpact = () => {
+    if (!run || run.encounter !== enc || def !== defAtTap) return
+    renderer.markDeaths(before, after)
+    // VIS-006: gameplay -> per-actor presentation. Priority per actor: defeated > attack
+    // (its own strike is the latest visible beat) > hit > baseline sync. Untouched actors only
+    // re-sync an expired hold onto the live baseline (e.g. a newly armed attackReady telegraph).
+    if (wolfMap && wolfVisuals === wolfMap) {
+      const now = performance.now()
+      for (const e of enc.enemies) {
+        const snap = readEnemySnapshot(e)
+        const v = wolfMap.get(e.id)
+        if (!v) continue
+        if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
+        else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
+        else if (r.hit && e.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+      }
+      tickAndSyncWolves(now)
     }
-    tickAndSyncWolves(now)
-  }
-  // VIS-005: gameplay -> presentation. Priority: won > phase change > interrupt > hit.
-  // A miss with no interrupt only re-syncs an expired hold onto a newly armed cast baseline.
-  if (bossVisual) {
-    const now = performance.now()
-    const snap = bossSnap()
-    if (r.won) bossVisual = onBossGameplayEvent(bossVisual, 'won', now, snap)
-    else if (s.phaseIndex !== phaseBefore) bossVisual = onBossGameplayEvent(bossVisual, 'phase', now, snap)
-    else if (r.castInterrupted) bossVisual = onBossGameplayEvent(bossVisual, 'interrupted', now, snap)
-    else if (r.hit) bossVisual = onBossGameplayEvent(bossVisual, 'hit', now, snap)
-    else if (!bossVisual.manual && now >= bossVisual.holdUntil && bossVisual.pose !== baselinePose(snap)) {
-      bossVisual = onBossGameplayEvent(bossVisual, 'castStart', now, snap)
+    // VIS-005: gameplay -> presentation. Priority: won > phase change > interrupt > hit.
+    // A miss with no interrupt only re-syncs an expired hold onto a newly armed cast baseline.
+    if (bossVisual) {
+      const now = performance.now()
+      const snap = bossSnap()
+      if (r.won) bossVisual = onBossGameplayEvent(bossVisual, 'won', now, snap)
+      else if (enc.phaseIndex !== phaseBefore) bossVisual = onBossGameplayEvent(bossVisual, 'phase', now, snap)
+      else if (r.castInterrupted) bossVisual = onBossGameplayEvent(bossVisual, 'interrupted', now, snap)
+      else if (r.hit) bossVisual = onBossGameplayEvent(bossVisual, 'hit', now, snap)
+      else if (!bossVisual.manual && now >= bossVisual.holdUntil && bossVisual.pose !== baselinePose(snap)) {
+        bossVisual = onBossGameplayEvent(bossVisual, 'castStart', now, snap)
+      }
     }
+    if (r.won) scheduleWin()
   }
+  if (r.hit) setTimeout(fireImpact, FLIGHT_MS)
+  else fireImpact()
 
   let text = `#${id} ${r.hit ? 'попадание' : 'мимо'} · HP целей ${s.hp}/${s.totalHp}`
   if (r.enemyAttacked) {
@@ -442,8 +459,9 @@ function tap(id) {
   )
   renderPanel()
   kick()
-  if (r.won) scheduleWin()
-  else if (r.playerDead) scheduleGameOver()
+  // BUILD-035: the win overlay waits inside fireImpact (after arrival); a loss has no
+  // projectile, so it stays immediate.
+  if (r.playerDead) scheduleGameOver()
 }
 
 function rotate(turn) {
@@ -797,6 +815,18 @@ const hashParams = new URLSearchParams(location.hash.slice(1))
 const mode = queryParams.get('mode') ?? hashParams.get('mode')
 const stageParam = queryParams.get('stage') ?? hashParams.get('stage')
 
+// BUILD-035: projectile flight style switcher. Painting only -- same trajectory sync
+// (FLIGHT_MS arrival timing) for every style. ?flight=lob starts with the lob arc.
+// Dropdown in the debug panel + window.visualDebug.setFlightStyle for automation.
+{
+  const flightParam = queryParams.get('flight') ?? hashParams.get('flight')
+  if (flightParam) renderer.setFlightStyle(flightParam)
+  if (ui.flightStylePick) {
+    for (const id of renderer.listFlightStyles()) ui.flightStylePick.append(new Option(id, id))
+    ui.flightStylePick.value = renderer.getFlightStyle()
+    ui.flightStylePick.onchange = () => { renderer.setFlightStyle(ui.flightStylePick.value); kick() }
+  }
+}
 // BUILD-034: arrow presentation selector. Debug/QA only -- it picks how arrows are PAINTED and
 // has no gameplay effect (hit-testing goes through screenToCell/ownerAt either way).
 //   ?arrow=<materialId>   one of renderer.listArrowMaterials() -- default `warm-bevel`
@@ -918,6 +948,8 @@ window.visualDebug = {
   // BUILD-035: live projectile shots + hit-anchors (debug/QA only -- no gameplay effect).
   shots: () => renderer.debugShots(),
   anchors: () => renderer.debugAnchors(),
+  // BUILD-035: flight style switcher (painting only, same trajectory sync every style).
+  setFlightStyle: (st) => { renderer.setFlightStyle(st); if (ui.flightStylePick) ui.flightStylePick.value = renderer.getFlightStyle(); kick(); return renderer.getFlightStyle() },
   // FIX-021: board-plane projection debug API -- corners/logical fit + point projection, so
   // browser checks can verify click mapping and plane geometry without eyeballing pixels.
   boardPlane: () => renderer.boardPlane(),

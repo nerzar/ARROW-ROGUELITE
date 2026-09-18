@@ -60,6 +60,7 @@ Commit + push. Не merge в main.
 - Снаряд самосветящийся в обеих темах (hit — vivid amber, miss — тихий gray).
 - Engine, damage, filled-arrow board renderer не тронуты. Debug hooks `debugShots/debugAnchors` + `visualDebug.shots/anchors` (QA-only, как `debugLayout`).
 - Round 2 (accepted): разгон после вылета (phase A t^2.2, phase B fast-start/soft-landing вместо smootherstep — был stall на стыке), speed-based squash/stretch фигуры (speed в px/ms из модуля, thin до 0.45 / stretch до 1.8).
+- Round 3 (accepted): 5 стилей полёта с переключателем (standard/heavy/needle/crit/lob + `?flight=`, dropdown, `visualDebug.setFlightStyle`; стиль замораживается на шоте; crit — white core + arrival ring; lob — arc в спеке); синхронизация прилёта с реакцией (позы/flash/shake/HP/death/win ждут FLIGHT_MS через pendingHp + fireImpact с identity guard; arrival order сохраняется).
 
 ## VERIFY
 

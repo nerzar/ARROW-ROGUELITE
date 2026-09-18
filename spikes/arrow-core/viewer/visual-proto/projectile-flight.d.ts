@@ -3,7 +3,7 @@
 export declare const FLIGHT_MS: number
 export declare const STRAIGHT_FRAC: number
 export interface FlightPt { x: number; y: number }
-export interface FlightSpec { from: FlightPt; dir: FlightPt; target: FlightPt | null; straightLen: number }
+export interface FlightSpec { from: FlightPt; dir: FlightPt; target: FlightPt | null; straightLen: number; arc?: number }
 export interface FlightPose { x: number; y: number; angle: number; speed: number }
 export declare function straightLen(from: FlightPt, target: FlightPt): number
 export declare function flightPoint(t: number, spec: FlightSpec): FlightPose

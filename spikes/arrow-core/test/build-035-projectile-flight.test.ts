@@ -127,3 +127,38 @@ describe('BUILD-035 miss leg', () => {
     }
   })
 })
+
+describe('BUILD-035 lob arc', () => {
+  const arced = { from: FROM, dir: EAST, target: TARGET, straightLen: straightLen(FROM, TARGET), arc: 80 }
+
+  it('endpoints are unchanged by the arc', () => {
+    const a = flightPoint(0, arced)
+    expect(a.x).toBeCloseTo(FROM.x, 9)
+    const b = flightPoint(1, arced)
+    expect(b.x).toBeCloseTo(TARGET.x, 6)
+    expect(b.y).toBeCloseTo(TARGET.y, 6)
+  })
+
+  it('the arc bulges the steered leg upward, never the exit phase', () => {
+    const flat = flightPoint(0.6, spec())
+    const lob = flightPoint(0.6, arced)
+    expect(lob.y).toBeLessThan(flat.y)
+    // Exit phase stays on the ray even with an arc set.
+    expect(flightPoint(0.2, arced).y).toBeCloseTo(FROM.y, 9)
+  })
+
+  it('arc 0 (or omitted) reproduces the flat trajectory exactly', () => {
+    const explicit = { ...spec(), arc: 0 }
+    for (const t of [0.4, 0.6, 0.85]) {
+      const a = flightPoint(t, spec())
+      const b = flightPoint(t, explicit)
+      expect(b.x).toBeCloseTo(a.x, 9)
+      expect(b.y).toBeCloseTo(a.y, 9)
+    }
+  })
+
+  it('a miss ignores the arc', () => {
+    const s = { from: FROM, dir: EAST, target: null, straightLen: 300, arc: 80 }
+    expect(flightPoint(0.7, s).y).toBeCloseTo(FROM.y, 9)
+  })
+})

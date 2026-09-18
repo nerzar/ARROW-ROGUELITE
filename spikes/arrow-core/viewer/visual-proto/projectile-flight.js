@@ -56,13 +56,15 @@ function quadBezier(p0, p1, p2, u) {
 /**
  * Projectile pose at time t. spec: { from: {x,y} (exit cell center, canvas px),
  * dir: {x,y} (exit unit vector, canvas px), target: {x,y} | null (hit-anchor, canvas px),
- * straightLen: number (px) }. Returns { x, y, angle, speed } with angle = canvas heading
+ * straightLen: number (px), arc?: number (px, default 0 -- raised lob bulge of phase B) }.
+ * Returns { x, y, angle, speed } with angle = canvas heading
  * (radians, for ctx.rotate -- the arrow figure is drawn pointing +x) and speed in canvas
  * px per millisecond (for speed-based squash/stretch -- the renderer thins and elongates
  * the figure with speed and relaxes it into the hit).
  */
 export function flightPoint(t, spec) {
-  const { from, dir, target } = spec
+  const { from, dir, target, arc } = spec
+  const bulge = typeof arc === 'number' && Number.isFinite(arc) && arc > 0 ? arc : 0
   const L = spec.straightLen > 0 ? spec.straightLen : 1
   const tt = clamp01(t)
   const heading = Math.atan2(dir.y, dir.x)
@@ -78,7 +80,9 @@ export function flightPoint(t, spec) {
     }
     const J = { x: from.x + dir.x * L, y: from.y + dir.y * L }
     const jt = len(sub(target, J))
-    const C = { x: J.x + dir.x * Math.max(1, jt * 0.5), y: J.y + dir.y * Math.max(1, jt * 0.5) }
+    // The control sits on the exit ray (heading continuity); `arc` lifts it for a lob.
+    // The junction itself stays on the ray -- the exit read never bends early.
+    const C = { x: J.x + dir.x * Math.max(1, jt * 0.5), y: J.y + dir.y * Math.max(1, jt * 0.5) - bulge }
     return quadBezier(J, C, target, fastStart((q - STRAIGHT_FRAC) / (1 - STRAIGHT_FRAC)))
   }
   const p = posAt(tt)
