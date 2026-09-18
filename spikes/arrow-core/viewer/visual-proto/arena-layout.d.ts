@@ -21,9 +21,9 @@ export declare function charBox(slot: Pt, isBoss: boolean, cell: number): Rect
 export declare function groundPoint(char: Rect): Pt
 export declare function faceRect(char: Rect): Rect
 export declare function spriteMirror(isBoss: boolean, side: number): number
-export interface HudInput { slot: Pt; char: Rect; side: number; fontPx: number; lineH: number; lineCount: number; barH: number; maxTextW: number; cell: number; slotAbsX?: number; boardCx?: number; boardHalfPx?: number }
+export interface HudInput { slot: Pt; char: Rect; side: number; fontPx: number; lineH: number; lineCount: number; barH: number; maxTextW: number; cell: number; slotAbsX?: number; boardCx?: number; boardHalfPx?: number; offset?: Pt }
 export interface Badge { x: number; y: number; r: number }
-export interface HudBoxes { bar: Rect; plate: Rect; badge: Badge; lineY: (i: number) => number }
+export interface HudBoxes { bar: Rect; plate: Rect; badge: Badge; lineY: (i: number) => number; lineX: number }
 export declare function hudBoxes(input: HudInput): HudBoxes
 export declare function rectsOverlap(a: Rect, b: Rect): boolean
 export declare function rotatedBoardBox(cx: number, cy: number, wPx: number, hPx: number, angleDeg: number): Rect

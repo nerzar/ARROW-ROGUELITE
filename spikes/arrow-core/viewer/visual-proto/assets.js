@@ -155,7 +155,7 @@ export async function applyPoseOverrides(url = 'creature-poses.json') {
       ENEMY_MANIFESTS[species] = { ...(ENEMY_MANIFESTS[species] ?? {}), ...poses }
       if (BOSS_MANIFESTS[species]) BOSS_MANIFESTS[species] = { ...BOSS_MANIFESTS[species], ...poses }
     }
-    setSpeciesPresentation(species, { pivot: entry?.pivot, scale: entry?.scale })
+    setSpeciesPresentation(species, { pivot: entry?.pivot, scale: entry?.scale, hudOffset: entry?.hudOffset, shadowOffset: entry?.shadowOffset })
   }
 }
 

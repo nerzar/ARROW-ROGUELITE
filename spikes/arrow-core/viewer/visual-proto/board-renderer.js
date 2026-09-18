@@ -7,7 +7,7 @@ import { DX, DY } from '../../dist/src/index.js'
 import { bossSpeciesFor, resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets.js'
 import { BOSS_ANCHOR } from './boss-visual-state.js'
 import { ENEMY_ANCHOR } from './enemy-visual-state.js'
-import { speciesPivotDelta, speciesScale } from './species-presentation.js'
+import { speciesHudOffset, speciesPivotDelta, speciesScale, speciesShadowOffset } from './species-presentation.js'
 import {
   ACTOR_BASE_CELL_FRAC,
   charSize, effectGround, faceRect,
@@ -460,6 +460,19 @@ export function createBoardRenderer(canvas, stageEl) {
       const charW = size.w * charCell
       const charH = size.h * charCell
       const slot = podiumSlot(t.side, t.isBoss, g.stageW, g.stageH, charCell, g.groundOverride)
+      // CAL-005: species default presentation -- the middle layer between the shared
+      // ANCHOR.offsets and this scene's own spritePivot override (see
+      // species-presentation.js's composition-order doc comment). A species with nothing saved
+      // in the Pose Editor contributes {dx:0,dy:0}/1/{0,0}/{0,0}, so every line below is a
+      // no-op until the user actually authors a default for it. HUD/shadow offsets are
+      // footprint fractions converted to px against this target's own character footprint.
+      const speciesId = t.isBoss ? bossSpeciesFor(t.id) : (t.species ?? 'dire-wolf')
+      const speciesPivot = speciesPivotDelta(speciesId)
+      const speciesHudFrac = speciesHudOffset(speciesId)
+      const hudOffPx = { x: speciesHudFrac.x * charW, y: speciesHudFrac.y * charH }
+      const speciesShadowFrac = speciesShadowOffset(speciesId)
+      const shadowOffPx = { x: speciesShadowFrac.x * charW, y: speciesShadowFrac.y * charH }
+      const artScale = speciesScale(speciesId)
       const idle = Math.sin(now / 900 + t.side * 1.7) * 1.6
       const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
       const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * charCell : 0
@@ -568,12 +581,13 @@ export function createBoardRenderer(canvas, stageEl) {
 
       // Ground shadow: soft ellipse at the feet, keeps the actor planted on the arena. Stays on
       // the character's own foot point (not the effect anchor) -- this is "where I stand", not a
-      // telegraph.
+      // telegraph. CAL-005: the species shadow offset moves it independently of the art pivot --
+      // pivoting/scaling the sprite never moves the shadow, only this offset does.
       ctx.save()
       ctx.globalAlpha = (1 - deathP * 0.5) * 1
       ctx.fillStyle = col.groundShadow
       ctx.beginPath()
-      ctx.ellipse(0, charH / 2, charW * 0.42, Math.max(4, charCell * 0.11), 0, 0, Math.PI * 2)
+      ctx.ellipse(shadowOffPx.x, charH / 2 + shadowOffPx.y, charW * 0.42, Math.max(4, charCell * 0.11), 0, 0, Math.PI * 2)
       ctx.fill()
       ctx.restore()
 
@@ -603,15 +617,9 @@ export function createBoardRenderer(canvas, stageEl) {
         (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130) ||
         (wolfPose === 'hit' && wolfSince >= 0 && wolfSince < 130)
       const pivot = g.spritePivotOverride?.[t.side] ?? ZERO_PIVOT
-      // TOOL-002: species default presentation -- the middle layer between the shared
-      // ANCHOR.offsets above and this scene's own spritePivot override (see
-      // species-presentation.js's composition-order doc comment). A species with no saved
-      // pivot/scale in the Pose Editor contributes {dx:0,dy:0}/1, so this is a no-op until the
-      // user actually authors a default for it.
-      const speciesId = t.isBoss ? bossSpeciesFor(t.id) : (t.species ?? 'dire-wolf')
-      const speciesPivot = speciesPivotDelta(speciesId)
+      // TOOL-002/CAL-005: scene pivot + species default (speciesId/speciesPivot/artScale are
+      // resolved once above, next to the HUD/shadow species offsets from the same entry).
       const scenePivot = { dx: pivot.dx + speciesPivot.dx, dy: pivot.dy + speciesPivot.dy }
-      const artScale = speciesScale(speciesId)
       if (img) {
         if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH, scenePivot, artScale)
         else if (wolfImg || fleeImg) drawWolfArt(img, wolfPoseShown, wolfSince, t, charW, charH, scenePivot, artScale)
@@ -699,6 +707,7 @@ export function createBoardRenderer(canvas, stageEl) {
         char: { x: -charW / 2, y: -charH / 2, w: charW, h: charH },
         side: t.side, fontPx, lineH, lineCount: lines.length, barH, maxTextW: maxW, cell: charCell,
         slotAbsX: slot.x, boardCx: boardBBox.x + boardBBox.w / 2, boardHalfPx: boardBBox.w / 2,
+        offset: hudOffPx, // CAL-005: one species-level anchor moves bar + plate + badges + lines
       })
       if (!t.dead || t.isBoss) {
         const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
@@ -715,7 +724,7 @@ export function createBoardRenderer(canvas, stageEl) {
       lines.forEach((ln, i) => {
         ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
         ctx.fillStyle = ln.color
-        ctx.fillText(ln.text, 0, hud.lineY(i))
+        ctx.fillText(ln.text, hud.lineX, hud.lineY(i))
       })
 
       // ATTACK/CAST IN badge: a small numeric chip at the HUD plate's outer corner
@@ -782,6 +791,9 @@ export function createBoardRenderer(canvas, stageEl) {
         face: faceRect(charR),
         plate: { x: ax + hud.plate.x, y: ay + hud.plate.y, w: hud.plate.w, h: hud.plate.h },
         badge: { x: ax + hud.badge.x, y: ay + hud.badge.y },
+        // CAL-005: ground-shadow center in canvas coords -- for automated checks that the
+        // shadow follows only its own species offset, never the art pivot.
+        shadow: { x: ax + shadowOffPx.x, y: ay + charH / 2 + shadowOffPx.y },
         effectAnchor: eff,
         board: boardBBox,
       })

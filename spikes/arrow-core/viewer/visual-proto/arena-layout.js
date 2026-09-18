@@ -133,21 +133,26 @@ export function spriteMirror(isBoss, side) {
  * even for long labels. Returns { bar, plate, badge } rects + the per-line
  * baseline ys in draw order. All boxes are slot-relative (the renderer draws translated).
  */
-export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, maxTextW, cell, slotAbsX, boardCx, boardHalfPx }) {
+export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, maxTextW, cell, slotAbsX, boardCx, boardHalfPx, offset }) {
   const down = side === 2 // S slot mirrors the stack below the feet
   const gap = HUD_GAP_PX
+  // CAL-005: species-level HUD offset in canvas px (the renderer converts species-presentation.js's
+  // footprint fractions). Shifts the whole stack -- bar, plate, badge, baselines -- by one anchor.
+  // Omitted/zero reproduces exactly the geometry this function always computed.
+  const ox = offset?.x ?? 0
+  const oy = offset?.y ?? 0
   const barW = Math.max(10, char.w - 14)
   const bar = {
-    x: slot.x - barW / 2,
-    y: down ? slot.y + char.h / 2 + gap : slot.y - char.h / 2 - gap - barH,
+    x: slot.x - barW / 2 + ox,
+    y: (down ? slot.y + char.h / 2 + gap : slot.y - char.h / 2 - gap - barH) + oy,
     w: barW,
     h: barH,
   }
   const plateW = maxTextW + 12
   const plateH = lineH * lineCount + fontPx * 0.5
   const plate = {
-    x: slot.x - plateW / 2,
-    y: down ? bar.y + bar.h + gap : bar.y - gap - plateH,
+    x: slot.x - plateW / 2 + ox,
+    y: down ? bar.y + bar.h + gap : bar.y - gap - plateH, // bar already carries oy, so the plate stacks with it
     w: plateW,
     h: plateH,
   }
@@ -166,15 +171,18 @@ export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, max
   const r = Math.max(9, cell * 0.2)
   const badge = {
     x: plate.x + plate.w - r * 0.5,
-    y: down ? plate.y + plate.h - r * 0.3 : plate.y + r * 0.3,
+    y: (down ? plate.y + plate.h - r * 0.3 : plate.y + r * 0.3),
     r,
   }
   // Line baselines in draw order: line 0 (name) sits closest to the HP bar in both
-  // orientations, details stack away from the sprite.
+  // orientations, details stack away from the sprite. plate.y already carries oy.
   const lineY = (i) => (down
     ? plate.y + fontPx * 0.9 + i * lineH
     : plate.y + plate.h - fontPx * 0.4 - i * lineH)
-  return { bar, plate, badge, lineY }
+  // Text x in draw order: the renderer centers lines on the slot; the offset shifts them
+  // with the plate. Exposed so bar/plate/text/badge all share the one anchor.
+  const lineX = slot.x + ox
+  return { bar, plate, badge, lineY, lineX }
 }
 
 /** Axis-aligned rect overlap (edges touching is NOT overlap). */
