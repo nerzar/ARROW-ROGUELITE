@@ -14,6 +14,7 @@ export const DEFAULTS = {
   bend: 0.30,
   bendStyle: 'arc',
   tipReach: 0.50,
+  tailExtend: 0,
   headLen: 0.62,
   headHalf: 0.42,
 }
@@ -59,7 +60,21 @@ export function buildFilledArrow(cells, dir, w, o, DX, DY) {
   const head = centers[centers.length - 1]
   const tip = add(head, scale(dv, o.tipReach ?? 0.62))
   const neck = add(tip, scale(dv, -o.headLen))
-  const spine = roundCenterline([...centers.slice(0, -1), neck], o.bend, o.bendStyle)
+  // FIX-032b: `tailExtend` pushes the very start of the shaft further back along its own
+  // direction, in cell units. The tip inset alone just made the whole arrow shorter; extending the
+  // tail by a comparable amount keeps its mass while the point stops short of the grid line.
+  const spinePts = [...centers.slice(0, -1), neck]
+  const tailExtend = o.tailExtend ?? 0
+  if (tailExtend > 0) {
+    if (spinePts.length >= 2) {
+      const t0 = norm(sub(spinePts[1], spinePts[0]))
+      spinePts[0] = add(spinePts[0], scale(t0, -tailExtend))
+    } else {
+      // Single-cell arrow: the spine is just the neck, so give it a stub of shaft to sit on.
+      spinePts.unshift(add(spinePts[0], scale(dv, -tailExtend)))
+    }
+  }
+  const spine = roundCenterline(spinePts, o.bend, o.bendStyle)
   const left = []
   const right = []
   for (let i = 0; i < spine.length; i++) {

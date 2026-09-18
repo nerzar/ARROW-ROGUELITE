@@ -21,6 +21,29 @@ import { project, rotateUV } from './board-plane.js'
  * old overhanging tip back. One source of truth. */
 export const ARROW_SHAPE = { ...GEOM_DEFAULTS }
 
+/**
+ * FIX-032b: how far the figure keeps away from the grid, in SCREEN PIXELS rather than cell
+ * fractions. A fraction of a cell is the wrong unit for this: the same 0.02 cell is a hairline on
+ * a 5x5 board and a visible notch on a 10x10 one, and the board's own perspective makes the far
+ * row's cells smaller again. The user asked for "about 5px short of the grid line", so that is
+ * what is stored here and converted per arrow against that arrow's own local cell size.
+ *
+ *   tipPx  -- the point stops this many px before the board edge (0.5 cell from the head centre)
+ *   tailPx -- the shaft starts this many px further back, so the arrow doesn't just get shorter
+ */
+export const ARROW_INSET_PX = { tipPx: 5, tailPx: 8 }
+
+/** Resolve the px insets against a concrete px-per-cell into the cell-unit knobs the geometry
+ * builder wants. Clamped so a very small cell can never invert the head or eat the whole shaft. */
+export function shapeForCell(cellPx, base = ARROW_SHAPE, inset = ARROW_INSET_PX) {
+  const cell = Math.max(8, cellPx || 0)
+  return {
+    ...base,
+    tipReach: Math.max(0.18, 0.5 - (inset.tipPx ?? 0) / cell),
+    tailExtend: Math.max(0, Math.min(0.3, (inset.tailPx ?? 0) / cell)),
+  }
+}
+
 /** Interpolate a monotonic 0..1 grid-line table at a continuous cell coordinate.
  * t is in cell units (0 = first grid line, cols = last). Integers reproduce gridLineToScreen and
  * `col + 0.5` reproduces cellToScreen exactly. Linear extrapolation past either end via the

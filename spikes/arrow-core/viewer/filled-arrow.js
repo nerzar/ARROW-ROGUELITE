@@ -31,11 +31,13 @@ import {
 } from './visual-proto/filled-arrow-geom.js'
 import { MATERIALS, findMaterial } from './visual-proto/filled-arrow-materials.js'
 import {
+  ARROW_INSET_PX,
   ARROW_SHAPE,
   buildArrowPathWith,
   createHoverFade,
   materialIsAnimated,
   paintFilledArrow,
+  shapeForCell,
 } from './visual-proto/filled-arrow-render.js'
 
 const $ = (id) => document.getElementById(id)
@@ -48,6 +50,8 @@ const ui = {
   bendStyle: $('bendStyle'),
   showIds: $('showIds'),
   tilt: $('tilt'), tiltV: $('tiltV'),
+  tipPx: $('tipPx'), tipPxV: $('tipPxV'),
+  tailPx: $('tailPx'), tailPxV: $('tailPxV'),
 }
 const ctx = ui.canvas.getContext('2d')
 
@@ -66,6 +70,10 @@ const params = {
   ...ARROW_SHAPE,
   material: 'warm-bevel', // accepted default (BUILD-033)
   tilt: 0,                // perspective amount for the homography preview
+  // FIX-032b: grid clearance in px -- same knobs the playable uses, exposed here so the value can
+  // be dialled in against real art before it is baked into ARROW_INSET_PX.
+  tipPx: ARROW_INSET_PX.tipPx,
+  tailPx: ARROW_INSET_PX.tailPx,
 }
 
 // ---------------------------------------------------------------------------
@@ -150,7 +158,8 @@ function paintArrow(a, geo, H, now) {
   const built = buildArrowPathWith(
     a,
     (pt) => { const [x, y] = applyH(H, pt); return { x, y } },
-    DX, DY, level.width, params,
+    DX, DY, level.width,
+    shapeForCell(geo.cell, params, { tipPx: params.tipPx, tailPx: params.tailPx }),
   )
   paintFilledArrow(ctx, built, {
     col: GALLERY_COL,
@@ -282,6 +291,7 @@ function renderPanel() {
     `осталось: ${board.remaining} · свободных: ${board.freeCount}${board.cleared ? ' · ВСЕ ВЫШЛИ' : ''}`,
     `геометрия: ONE filled path в board-space → homography на экран`,
     `материал: ${materialLabel(params.material)} · shaft ${params.shaftFull.toFixed(2)} · bend ${params.bendStyle} ${params.bend.toFixed(2)} · tilt ${params.tilt.toFixed(2)}`,
+    `отступ от грида: tip ${params.tipPx}px · tail ${params.tailPx}px · cell ${Math.round(computeGeo().cell)}px`,
   ]
   ui.info.textContent = lines.join('\n')
 }
@@ -356,12 +366,16 @@ function syncLabels() {
   ui.shaftV.textContent = params.shaftFull.toFixed(2)
   ui.bendV.textContent = params.bend.toFixed(2)
   ui.tiltV.textContent = params.tilt.toFixed(2)
+  ui.tipPxV.textContent = `${params.tipPx}px`
+  ui.tailPxV.textContent = `${params.tailPx}px`
 }
 ui.shaft.oninput = () => { params.shaftFull = Number(ui.shaft.value); syncLabels(); kick() }
 ui.bend.oninput = () => { params.bend = Number(ui.bend.value); syncLabels(); kick() }
 ui.bendStyle.onchange = () => { params.bendStyle = ui.bendStyle.value; kick() }
 ui.showIds.onchange = kick
 ui.tilt.oninput = () => { params.tilt = Number(ui.tilt.value); syncLabels(); kick() }
+ui.tipPx.oninput = () => { params.tipPx = Number(ui.tipPx.value); syncLabels(); kick() }
+ui.tailPx.oninput = () => { params.tailPx = Number(ui.tailPx.value); syncLabels(); kick() }
 $('undo').onclick = () => { if (board.undo() !== -1) { shots = []; ui.msg.textContent = 'undo'; kick() } }
 $('reset').onclick = start
 $('apply').onclick = start
@@ -386,6 +400,8 @@ ui.seed.value = '1'
 ui.shaft.value = String(params.shaftFull)
 ui.bend.value = String(params.bend)
 ui.tilt.value = String(params.tilt)
+ui.tipPx.value = String(params.tipPx)
+ui.tailPx.value = String(params.tailPx)
 syncLabels()
 setMaterial('warm-bevel')
 start()

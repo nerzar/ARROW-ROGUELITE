@@ -19,7 +19,7 @@ import {
 // BUILD-034: filled-arrow renderer (single closed board-space shape + Muse material pack),
 // projected through this renderer's own calibrated plane. The legacy stroke renderer below is
 // kept intact as a debug/fallback style -- see ARROW_STYLES / setArrowStyle.
-import { buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow } from './filled-arrow-render.js'
+import { buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow, shapeForCell } from './filled-arrow-render.js'
 import { MATERIALS } from './filled-arrow-materials.js'
 
 // STORY-001: scripted-flee presentation beat, shared by every `flee` enemy. Three beats
@@ -1042,7 +1042,10 @@ export function createBoardRenderer(canvas, stageEl) {
       // actor layout, not arrow paint, so outside a browser we simply fall through to the stroke
       // path instead of shipping a fake Path2D just to satisfy them.
       if (arrowStyle === 'filled' && typeof Path2D !== 'undefined') {
-        const built = buildArrowPath(a, { plane: geo.plane, fit: geo.fit, cols: geo.w }, shownAngle, DX, DY)
+        // FIX-032b: the tip/tail insets are px, so they are resolved against THIS arrow's own
+        // local cell size (already perspective-aware via localScaleAt) -- the gap to the grid
+        // line reads the same on a near/bottom arrow as on a far/top one.
+        const built = buildArrowPath(a, { plane: geo.plane, fit: geo.fit, cols: geo.w }, shownAngle, DX, DY, shapeForCell(localScale))
         paintFilledArrow(ctx, built, {
           col, materialId: arrowMaterial, localScale, now, seed: a.id,
           free, pinned, aims, hover: hoverFade.amount(a.id), isBlocked, isBlocker, isHint, isDenied,
