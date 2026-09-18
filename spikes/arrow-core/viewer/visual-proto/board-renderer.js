@@ -1068,16 +1068,22 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.lineTo(baseX - dyr * (headHalfW + pad), baseY + dxr * (headHalfW + pad))
         ctx.closePath()
       }
+      // VIS-014: both kite passes are fully opaque (alpha 1), never state-dimmed. The head's job
+      // is to be the shaft's opaque cap -- the shaft's own wide, round-capped layers (glow/keyline/
+      // bevel) sit right underneath it, and any alpha<1 here let them bleed through at the neck
+      // (visible on blocked/pinned arrows as a blurry, mismatched-color bulge -- exactly the
+      // "shaft shows through the head" defect the task called out, and exactly what made a free
+      // arrow's head render as a clean instant-width jump while a blocked one didn't). Blocked/
+      // pinned/aimed already read as distinct via color (headFill) alone, so opacity isn't needed
+      // to convey state here.
       ctx.save()
       ctx.fillStyle = pal.keyline
-      ctx.globalAlpha = free ? 0.85 : 0.6
       kite(sz * 0.22)
       ctx.fill()
       ctx.restore()
 
       ctx.save()
       ctx.fillStyle = headFill
-      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
       kite(0)
       ctx.fill()
       // Emboss chevron: a light V from the tip back into the kite, same core language as
