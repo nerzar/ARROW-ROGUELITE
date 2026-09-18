@@ -38,7 +38,7 @@ BOARD хранит не только одну текущую задачу, а **
 | Task/направление | Статус | Что именно хотим |
 |---|---|---|
 | ACT-I-002 — Act I Vertical Slice | PLANNED | Развить уже существующие первые Act I encounters в короткий кусок настоящего акта, который интересно проходить, а не просто технически тестировать. |
-| RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, 2–3 типа апгрейдов, желание сделать ещё один забег. |
+| RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, небольшой понятный набор апгрейдов, желание сделать ещё один забег. |
 | VFX integration | WAITING FOR VFX-001 | В игру попадают только эффекты, которые пользователь реально выбрал в lab/reference-pass. Reusable VFX-система строится под выбранные эффекты, а не заранее. |
 | AUDIO-001 — Combat Audio | PLANNED LATER | После принятого визуального combat feel: hit/cast/death/reward SFX, без преждевременного большого sound-system. |
 | VK production pass | PLANNED LATER | SDK, saves, lifecycle/fullscreen, audio rules, rewarded ads, analytics, слабые устройства — после приятного vertical slice. |
@@ -51,6 +51,10 @@ BOARD хранит не только одну текущую задачу, а **
 - позже run должен раскрыть **Serpent Form**;
 - ещё позже — **Chain**;
 - boss rewards должны менять правила/поведение стрел, а не быть только +цифры.
+
+Для Act I пока сохраняем уже выбранный рабочий подход: интересные seed'ы отбираются руками, их direction/turn timeline смотрится отдельно, а encounters скриптуются поверх. Не лезть раньше времени в generic direction quotas / «бесконечную генерацию» только ради универсальности.
+
+Визуальное производство не откладывать «на самый конец»: gameplay/content и нужные для playtest арты/VFX могут двигаться параллельно, но визуальные решения всё равно принимает пользователь глазами.
 
 Конкретные encounter counts, баланс и порядок внутри актов не фиксировать молча — это решается отдельными task/playtest.
 
