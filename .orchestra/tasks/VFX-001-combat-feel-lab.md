@@ -1,6 +1,6 @@
 # TASK: VFX-001 — Combat Feel Lab
 
-STATUS: READY
+STATUS: DONE
 TYPE: EXP/VISUAL
 SIZE: M
 BASE_BRANCH: main
@@ -116,3 +116,68 @@ START_SHA: 42037e739b432c92470af61fc7e985b42f41f789
 Commit + push этой ветки.
 Не merge в main.
 Остановиться и ждать пользовательского визуального выбора.
+
+## RESULT
+
+`viewer/visual-proto/vfx-lab.html` (+ `vfx-lab.css`, `vfx-lab.js`, 1973 строки) — самостоятельный
+стенд на одном URL. Игровое ядро и playable-страница не тронуты (в diff ровно 3 новых файла).
+
+Что на стенде:
+
+- **10 эффектов** запускаются независимо, у каждого свой `trigger` и только полезные ему контролы:
+  projectile trail, impact flash, hit sparks, damage number, enemy recoil/squash, visual hit-stop,
+  camera impulse, death burst/poof, boss impact (shockwave + dust), reward pop.
+- **8 presets** (light hit / heavy hit / magic hit / boss hit / kill / boss kill / blocked tap /
+  reward) — каждый задаёт цельную связку значений и тайминги цепочки; удар привязан к прилёту
+  снаряда, так что длительность trail двигает весь момент попадания.
+- **Take-контролы:** target spot (top/left/right/boss — actor всегда ВНЕ поля, снаряд летит от
+  соответствующего края доски), preview speed (0.25/0.5/1x), replay/pause, `freeze at` (скраб —
+  стоп-кадр в любой точке), `frame URL`, `PNG` (сохранить кадр), toggle time bars.
+- **Time bars** оставлены: real vs display время + красная метка hit-stop окна. Именно они
+  превращают hit-stop из «ощущения» в измеримую величину (например 60ms @ 0.10x).
+- **Hit-stop** — исключительно display-time warp (`timeWarp(tRaw, hs)`): анимации замирают, камера
+  продолжает двигаться. Симуляционное время не существует в lab вообще.
+- Тонирование спрайта сделано `source-atop` внутри offscreen-буфера (урок BUILD-020 — никакой
+  белый прямоугольник поверх силуэта), dissolve — `destination-out` в том же буфере.
+- Ассеты переиспользованы как reference: арена `arena-moonlit-fortress.png`, small-goblin /
+  goblin-shaman idle. Board-space часть эффектов — через `board-plane.project()`.
+
+## VERIFY
+
+- `npm run typecheck` — 0; `npm run build` — 0; `npm test` — **321 passed (27 files)**.
+- Browser (headless Chrome, localhost serve): страница открывается по одному URL, консоль чистая
+  (`--enable-logging=stderr`, 0 Uncaught/TypeError).
+- Все 10 карточек проверены через `?card=<id>&at=` — каждая собирает свой take (1–4 эффекта);
+  `card=boss` сам переключает spot на boss.
+- Все 8 presets проверены через `?preset=<id>` — take собирается, значения применяются в панель.
+- Deep-link `?preset=heavy-hit&at=300` открывается в `frozen @ 300ms`; real 300ms / display 246ms —
+  расхождение ровно на съеденное hit-stop время, т.е. time-warp считается корректно.
+- Пиксельная проба (яркостная статистика по кадрам, 194px downscale): baseline 15 ярких пикселей →
+  trail@80ms 45 (в коридоре полёта 30) → impact@160ms 54 → damage@200ms 59 → после@340ms 14
+  (вернулись к baseline). Эффекты появляются в нужном месте, в нужное время и убираются за собой.
+- Playable-страница не изменилась: в diff ветки нет `index.html`/`app.js`/`board-renderer.js`.
+- Кадры для просмотра: `artifacts/vfx-001/*.png` (4 шт, gitignored, локально).
+
+## FOUND
+
+- `stageSize()` обязан читаться из layout, а не из `canvas.width/height`: до первого кадра там
+  лежат дефолтные 300x150, и take, собранный до первой отрисовки (любой deep-link), запекает
+  координаты в неправильном пространстве — эффекты рисовались в левом верхнем углу, а спрайт на
+  месте. Исправлено чтением `getBoundingClientRect` + `autoHeal` (пересборка того же take после
+  первой отрисовки, только для нетронутого deep-link состояния).
+- У `heavy-hit` и др. при t < tint.at множитель `clamp01(1 - (t-at)/dur)` даёт 1 → спрайт на мгновение
+  заливается белым полностью. Сейчас это выглядит как вспышка на попадании; если не понравится —
+  это один clamp в `drawTarget`, вынести в решение пользователя.
+- CLI-скриншоты Chrome в PowerShell теряют `&` в URL — для проверки использован обходной путь
+  (одиночный query-параметр / dump-dom). На сам lab не влияет: в браузере deep-link работает.
+
+## SHA
+
+Code: `eadd067` (spike/VFX-001-combat-feel-lab)
+
+## URL lab
+
+`http://localhost:5177/viewer/visual-proto/vfx-lab.html` (или порт любого запуска
+`npm run viewer` в `spikes/arrow-core`; примеры кадров:
+`.../vfx-lab.html?preset=heavy-hit&at=130`, `?preset=boss-kill&spot=boss&at=430`,
+`?card=trail&at=100`)
