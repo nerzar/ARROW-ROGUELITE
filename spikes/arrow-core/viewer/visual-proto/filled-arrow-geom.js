@@ -1,10 +1,19 @@
 // BUILD-032: pure board-space geometry + homography. No DOM — unit-testable in node.
 // Board-space units are cells, origin = board top-left.
 
+// FIX-032: `tipReach` and `headLen` are now two independent numbers.
+// They used to be the same 0.62: the tip was hardcoded at 0.62 cells forward of the last cell's
+// CENTRE and the neck was walked back by `headLen`, which put the neck exactly on that centre. A
+// cell half-width is 0.5, so the tip stuck out 0.12 cells past the board edge on an outer row.
+// Shrinking the reach alone used to shorten the head by the same amount, i.e. change the accepted
+// BUILD-032/033 silhouette. Now `tipReach` (how far forward the point sits) and `headLen` (how
+// long the head is) move separately: at 0.50/0.62 the tip lands exactly on the board edge while
+// the head keeps its full 0.62 length, with the neck sitting 0.12 cells behind the cell centre.
 export const DEFAULTS = {
   shaftFull: 0.35,
   bend: 0.30,
   bendStyle: 'arc',
+  tipReach: 0.50,
   headLen: 0.62,
   headHalf: 0.42,
 }
@@ -48,7 +57,7 @@ export function buildFilledArrow(cells, dir, w, o, DX, DY) {
   const dv = [DX[dir], DY[dir]]
   const perp = [-dv[1], dv[0]]
   const head = centers[centers.length - 1]
-  const tip = add(head, scale(dv, 0.62))
+  const tip = add(head, scale(dv, o.tipReach ?? 0.62))
   const neck = add(tip, scale(dv, -o.headLen))
   const spine = roundCenterline([...centers.slice(0, -1), neck], o.bend, o.bendStyle)
   const left = []

@@ -19,7 +19,7 @@ import {
 // BUILD-034: filled-arrow renderer (single closed board-space shape + Muse material pack),
 // projected through this renderer's own calibrated plane. The legacy stroke renderer below is
 // kept intact as a debug/fallback style -- see ARROW_STYLES / setArrowStyle.
-import { buildArrowPath, materialIsAnimated, paintFilledArrow } from './filled-arrow-render.js'
+import { buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow } from './filled-arrow-render.js'
 import { MATERIALS } from './filled-arrow-materials.js'
 
 // STORY-001: scripted-flee presentation beat, shared by every `flee` enemy. Three beats
@@ -122,6 +122,9 @@ export function createBoardRenderer(canvas, stageEl) {
   // independent of both.
   let arrowStyle = 'filled'
   let arrowMaterial = 'warm-bevel'
+  // FIX-032: hover is eased 0..1 per arrow instead of snapping. Presentation only -- setHover()
+  // still receives whatever hitTest resolved, and nothing here feeds back into gameplay.
+  const hoverFade = createHoverFade()
 
   function fxFor(key) {
     let fx = targetFx.get(key)
@@ -411,6 +414,9 @@ export function createBoardRenderer(canvas, stageEl) {
     // still on the board.
     if (arrowStyle === 'filled' && materialIsAnimated(arrowMaterial) &&
         level.arrows.some((a) => s.board.isAlive(a.id))) animating = true
+    // FIX-032: keep the loop alive for the length of a hover fade-in/out.
+    hoverFade.set(hoverId)
+    if (hoverFade.tick(now)) animating = true
 
     const dark = typeof matchMedia !== 'undefined' ? matchMedia('(prefers-color-scheme: dark)').matches : true
     const col = palette(dark)
@@ -1039,7 +1045,7 @@ export function createBoardRenderer(canvas, stageEl) {
         const built = buildArrowPath(a, { plane: geo.plane, fit: geo.fit, cols: geo.w }, shownAngle, DX, DY)
         paintFilledArrow(ctx, built, {
           col, materialId: arrowMaterial, localScale, now, seed: a.id,
-          free, pinned, aims, isHover, isBlocked, isBlocker, isHint, isDenied,
+          free, pinned, aims, hover: hoverFade.amount(a.id), isBlocked, isBlocker, isHint, isDenied,
         })
         // Pin marker/badges keep their old anchor (the head cell's own centre), so the rock cue
         // sits exactly where the stroke renderer put it.
@@ -1278,6 +1284,8 @@ export function createBoardRenderer(canvas, stageEl) {
       arrow: dark ? '#f3ecd9' : '#2c2013', arrowDim: dark ? '#c9c4b4' : '#5a4d3a', aim: dark ? '#ffd76a' : '#b8791a',
       arrowOutline: 'rgba(12,9,6,0.75)',
       aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',
+      // FIX-032: warm neutral so the hover halo reads on top of any material's own palette.
+      hoverGlow: dark ? 'rgba(255,241,206,0.9)' : 'rgba(255,246,222,0.95)',
       text: dark ? '#eee' : '#20180f', muted: dark ? '#999' : '#777',
       bossA: dark ? '#5b4a63' : '#8d7a96', bossB: dark ? '#332a3a' : '#5c4d63', bossGlow: dark ? 'rgba(180,120,220,0.5)' : 'rgba(120,70,150,0.4)',
       enemyA: dark ? '#4a5563' : '#7c8ea0', enemyB: dark ? '#2b323c' : '#54606e', enemyGlow: dark ? 'rgba(120,170,220,0.45)' : 'rgba(70,100,140,0.35)',
