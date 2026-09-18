@@ -151,6 +151,14 @@ export interface EnemyAbility {
  * own side/HP/attackTimer, independent of every other enemy in the encounter. Unlike `BossPhase`
  * these do not sequence — all alive enemies exist and attack in parallel from encounter start.
  */
+export interface EnemyFlee {
+  /** Landed hits after which this enemy taunts and leaves the arena instead of dying.
+   * Must be a positive integer strictly below `hp` (enforced by `checkEncounter`) — that is
+   * what makes the enemy structurally unkillable: the flee always fires before death could. */
+  afterHits: number
+  label?: string
+}
+
 export interface EnemyDef {
   /** Stable id, e.g. for viewer labels and attack attribution. */
   id: string
@@ -165,6 +173,8 @@ export interface EnemyDef {
   /** EXP-013: a board-affecting ability on its own independent countdown. Absent = none. Not
    * modeled on `BossPhase` — this spike only needs it on simultaneous enemies. */
   ability?: EnemyAbility
+  /** STORY-001: optional scripted flee (see above). Absent = this enemy fights to the death. */
+  flee?: EnemyFlee
   label?: string
 }
 
@@ -251,6 +261,9 @@ export type TapResult =
       pinExpired?: number[]
       /** EXP-013, `enemies` mode only: new pins an ability created this turn. */
       pinnedThisTurn?: { id: number; turnsLeft: number }[]
+      /** STORY-001, `enemies` mode only: enemies that fled the arena this turn (scripted
+       * `flee` event fired — taunt beat for the presentation layer). Empty when none fled. */
+      fled?: { id: string; label?: string }[]
       playerHp: number
       won: boolean
       lost: boolean
@@ -386,7 +399,9 @@ export class EncounterState {
    * cleared while the player is still alive. Running out of arrows that can reach a live target is
    * *not* an automatic loss — the player keeps clearing the rest of the puzzle under fire.
    * `enemies` mode: "the target is killed" generalizes to "every mandatory enemy is dead" — an
-   * enemy explicitly marked `mandatory: false` never blocks a win by itself.
+   * enemy explicitly marked `mandatory: false` never blocks a win by itself. STORY-001: a fled
+   * enemy is NOT dead (it still has HP left), so a mandatory fled enemy keeps this false — the
+   * encounter then ends only through the board-clear path below, never instantly on the flee.
    */
   get won(): boolean {
     if (this.def.enemies) {
@@ -455,6 +470,10 @@ export class EncounterState {
     hp: number
     hpMax: number
     dead: boolean
+    /** STORY-001: this enemy already taunted and left the arena (scripted `flee` fired).
+     * Fled is not dead: it takes no more hits, attacks, or abilities, but a mandatory fled
+     * enemy still blocks the all-mandatory-dead win — only a full board clear ends it. */
+    fled: boolean
     countdown: number
     mandatory: boolean
     label?: string
@@ -472,6 +491,7 @@ export class EncounterState {
         hp: Math.max(0, this.enemyHp[i]),
         hpMax: e.hp,
         dead: this.enemyHp[i] <= 0,
+        fled: this.isFled(i),
         countdown: this.enemyCountdown[i],
         mandatory: e.mandatory ?? true,
         label: e.label,
@@ -502,11 +522,24 @@ export class EncounterState {
     return rotateDir(this.board.topo.dirs[id] as Dir, this.rot)
   }
 
+  /**
+   * STORY-001: has enemy `i` already taunted and left the arena? Derived from remaining HP
+   * (`hp - enemyHp[i] >= flee.afterHits`), so undo/clone/key/solver need no extra state —
+   * they all restore or replay HP. `checkEncounter` guarantees `afterHits < hp`, therefore a
+   * fled enemy always still has HP left: fled never coincides with dead.
+   */
+  private isFled(i: number): boolean {
+    const flee = this.def.enemies![i].flee
+    if (!flee) return false
+    return this.def.enemies![i].hp - this.enemyHp[i] >= flee.afterHits
+  }
+
   /** Enemies mode: the first alive enemy standing on `side`, or -1 (at most one is expected per side
-   * at this spike's scale — see docs/LEVEL-DESIGNER.md; targeting UI for several is out of scope). */
+   * at this spike's scale — see docs/LEVEL-DESIGNER.md; targeting UI for several is out of scope).
+   * STORY-001: fled enemies already left the arena and can no longer be hit. */
   private targetIndexAt(side: Dir): number {
     if (!this.def.enemies) return -1
-    return this.def.enemies.findIndex((e, i) => e.side === side && this.enemyHp[i] > 0)
+    return this.def.enemies.findIndex((e, i) => e.side === side && this.enemyHp[i] > 0 && !this.isFled(i))
   }
 
   wouldHit(id: number): boolean {
@@ -624,7 +657,7 @@ export class EncounterState {
     const pinnedThisTurn: { id: number; turnsLeft: number }[] = []
     const defs = this.def.enemies!
     for (let i = 0; i < defs.length; i++) {
-      if (this.enemyHp[i] <= 0) continue
+      if (this.enemyHp[i] <= 0 || this.isFled(i)) continue
       const ability = defs[i].ability
       if (!ability) continue
       this.enemyAbilityCountdown[i]--
@@ -713,7 +746,8 @@ export class EncounterState {
    * enemy's own `interruptOnHit`/EXP-011 cast-interrupt fire). An enemy already at 0 hp is skipped: a
    * kill lands before this runs (see `tapEnemies`), so the enemy that died this turn never gets to
    * retaliate — same rule as the boss's "killed this turn: no retaliation", just per-enemy instead of
-   * per-encounter. Per-enemy interrupt precedence mirrors `advanceTurn`: EXP-011 cast-interrupt first,
+   * per-encounter. STORY-001: a fled enemy is likewise skipped — it already left the arena and its
+   * countdown freezes (it neither attacks nor re-arms). Per-enemy interrupt precedence mirrors `advanceTurn`: EXP-011 cast-interrupt first,
    * then the EXP-010 legacy `interruptOnHit` reset, then the plain tick.
    */
   private advanceEnemiesTurn(hitTargetIdx: number): { interrupted: boolean; castInterrupted: boolean; attacked: boolean; damage: number; attacks: { id: string; damage: number }[] } {
@@ -723,7 +757,7 @@ export class EncounterState {
     let damage = 0
     const attacks: { id: string; damage: number }[] = []
     for (let i = 0; i < this.enemyHp.length; i++) {
-      if (this.enemyHp[i] <= 0) continue
+      if (this.enemyHp[i] <= 0 || this.isFled(i)) continue
       const at = this.currentEnemyAttackTimer(i)
       if (!at) continue
       if (at.kind === 'cast' && at.interruptible && i === hitTargetIdx) {
@@ -782,6 +816,10 @@ export class EncounterState {
     const hit = targetIdx >= 0
     if (hit) this.enemyHp[targetIdx] = Math.max(0, this.enemyHp[targetIdx] - 1)
     this.log.push({ kind: 'tap', id, hit, timerBefore })
+    // STORY-001: a hit target could never have been fled before this tap (targetIndexAt skips
+    // fled), so a fled check right after the decrement is exactly "fled this turn".
+    const hitEnemy = hit ? this.def.enemies![targetIdx] : undefined
+    const fled = hit && this.isFled(targetIdx) ? [{ id: hitEnemy!.id, label: hitEnemy!.label }] : []
 
     let interrupted = false
     let castInterrupted = false
@@ -806,7 +844,7 @@ export class EncounterState {
     return {
       ok: true, arenaDir, hit, phaseBefore: 0, phaseAfter: 0, granted: 0,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
-      pinExpired, pinnedThisTurn,
+      pinExpired, pinnedThisTurn, fled,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
   }
@@ -968,6 +1006,16 @@ export function checkEncounter(def: EncounterDef): void {
       if (!Number.isInteger(e.hp) || e.hp < 1) throw new Error(`enemy ${i}: hp must be a positive integer`)
       if (e.attackTimer) checkAttackTimer(e.attackTimer, `enemy ${i}`)
       if (e.ability) checkAbility(e.ability, `enemy ${i}`)
+      if (e.flee !== undefined) {
+        // STORY-001: the flee must be reachable before death could take the enemy — otherwise
+        // the scripted event could never fire and the "unkillable" contract would be a lie.
+        if (!Number.isInteger(e.flee.afterHits) || e.flee.afterHits < 1) {
+          throw new Error(`enemy ${i}: flee.afterHits must be a positive integer`)
+        }
+        if (e.flee.afterHits >= e.hp) {
+          throw new Error(`enemy ${i}: flee.afterHits (${e.flee.afterHits}) must be below hp (${e.hp}) so the flee fires before death`)
+        }
+      }
     })
   }
   if (!Array.isArray(def.rotate?.allow) || def.rotate.allow.some((t) => t !== 1 && t !== -1)) {

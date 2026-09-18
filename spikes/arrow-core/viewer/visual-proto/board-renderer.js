@@ -17,6 +17,18 @@ import {
   backdropCornersPx, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx, screenToCell,
 } from './board-plane.js'
 
+// STORY-001: scripted-flee presentation beat, shared by every `flee` enemy. Three beats
+// sequenced by gameplay, not wall-clock: taunt (starts once the hit impact lands, holds one
+// full player turn) -> back slide (back pose drifting outward, holds the next full turn) ->
+// leave (fast slide + fade when the following tap resolves). Missing art degrades through
+// the usual resolveWolfImage pose->idle chain.
+const FLEE_HIT_DELAY_MS = 260
+const FLEE_EXIT_MS = 850
+// Moon drift during its own turn, in screen px outward from the podium: ramps up over
+// FLEE_BACK_SLIDE_MS, then holds — the turn itself lasts until the next tap.
+const FLEE_BACK_DRIFT_PX = 20
+const FLEE_BACK_SLIDE_MS = 1200
+
 // FIX-023: an ARENA_CALIBRATIONS entry's {top,left,right} anchor group (either `anchors` or
 // `effectAnchors`), converted into arena-layout.js's PODIUM_GROUND/EFFECT_GROUND side-number
 // shape (0=N/top, 1=E/right, 3=W/left; side 2/S stays on the shared unused fallback -- no current
@@ -103,7 +115,7 @@ export function createBoardRenderer(canvas, stageEl) {
   function fxFor(key) {
     let fx = targetFx.get(key)
     if (!fx) {
-      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9 }
+      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9, fleeT: -1e9, fleeBackT: -1e9, fleeExitT: -1e9 }
       targetFx.set(key, fx)
     }
     return fx
@@ -284,6 +296,39 @@ export function createBoardRenderer(canvas, stageEl) {
     }
   }
 
+  // STORY-001: scripted-flee counterpart of markDeaths. The engine flips `fled` synchronously
+  // on the tap; this stamps the presentation beat's t0 so drawTarget can play taunt-then-exit.
+  // Generic per enemy id — any future `flee` content reuses it with no new code.
+  function markFled(targetsBefore, targetsAfter) {
+    const now = performance.now()
+    for (const before of targetsBefore) {
+      const after = targetsAfter.find((t) => targetKey(t) === targetKey(before))
+      if (!before.fled && after && after.fled) fxFor(targetKey(before)).fleeT = now
+    }
+  }
+
+  // STORY-001: advances fled enemies one beat per tap: taunt turn over -> back slide,
+  // back-slide turn over -> leave. Called on every successful tap BEFORE markFled stamps new
+  // flees, so a fresh flee always plays the full taunt -> back -> leave sequence. Returns
+  // { back, away } id lists so app.js can announce each beat. Generic per enemy id.
+  function markFledAdvance(targetsAfter) {
+    const now = performance.now()
+    const advanced = { back: [], away: [] }
+    for (const t of targetsAfter) {
+      if (t.isBoss || !t.fled) continue
+      const fx = fxFor(targetKey(t))
+      if (fx.fleeT < 0) continue
+      if (fx.fleeBackT < 0) {
+        fx.fleeBackT = now
+        advanced.back.push(t.id)
+      } else if (fx.fleeExitT < 0) {
+        fx.fleeExitT = now
+        advanced.away.push(t.id)
+      }
+    }
+    return advanced
+  }
+
   function resetFx() {
     shots = []
     targetFx.clear()
@@ -303,6 +348,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // species resolves to undefined here and falls back to Dire Wolf's pack at the call site.
       return s.enemies.map((e) => ({
         id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead,
+        fled: e.fled,
         countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
         species: def.enemies.find((raw) => raw.id === e.id)?.species,
         isBoss: false,
@@ -343,6 +389,9 @@ export function createBoardRenderer(canvas, stageEl) {
     if (shots.length) animating = true
     for (const fx of targetFx.values()) {
       if (now - fx.hitT < 260 || now - fx.attackT < 320 || now - fx.interruptT < 700 || now - fx.deathT < 550) animating = true
+      // STORY-001: an exit slide is also a function of `now` — keep the loop alive until it
+      // plays out. (The taunt hold needs no extra rule: a fled enemy counts as alive above.)
+      if (now - fx.fleeExitT < FLEE_EXIT_MS) animating = true
     }
     for (const fx of arrowFx.values()) {
       if (now - fx.pinT < 500 || now - fx.unpinT < 550 || now - fx.deniedT < 320) animating = true
@@ -424,6 +473,57 @@ export function createBoardRenderer(canvas, stageEl) {
       const deathP = t.isBoss ? 0 : dying ? clamp01(deathT / 550) : t.dead ? 1 : 0
       if (t.dead && deathP >= 1 && !t.isBoss) return // fully dead regular enemy: slot stays empty
 
+      // STORY-001: scripted flee — taunt once the hit lands (one turn), back slide (next
+      // turn), leave on the following tap, then the slot stays empty. The engine deliberately
+      // keeps the fled enemy "alive" (never dead), so this branch alone owns the visual
+      // disappearance. `fleeT` is stamped by markFled(), `fleeBackT`/`fleeExitT` by
+      // markFledAdvance(). Stale stamps (undo back past the flee) are cleared here because
+      // the engine reads unfled again.
+      const fleeing = !t.isBoss && !!t.fled
+      if (!fleeing && (fx.fleeT >= 0 || fx.fleeBackT >= 0 || fx.fleeExitT >= 0)) {
+        fx.fleeT = -1e9
+        fx.fleeBackT = -1e9
+        fx.fleeExitT = -1e9
+      }
+      // Flee pose + motion are computed up-front (they feed translate/alpha below);
+      // the art itself resolves later in the character-art block via `fleePose`.
+      // fleeStage: null (hit traveling / normal draw) | 'taunt' | 'back' | 'away'.
+      let fleePose = null
+      let fleeSince = 0
+      let fleeStage = null
+      let fleeAlpha = 1
+      let fleeOx = 0
+      let fleeOy = 0
+      if (fleeing) {
+        if (fx.fleeT < 0) fx.fleeT = now // safety: fled without a stamp still plays the beat
+        const effT = now - (fx.fleeT + FLEE_HIT_DELAY_MS)
+        if (effT >= 0) {
+          if (fx.fleeExitT >= 0) {
+            const p = clamp01((now - fx.fleeExitT) / FLEE_EXIT_MS)
+            if (p >= 1) return // fully fled: slot stays empty
+            fleePose = 'back'
+            fleeSince = now - fx.fleeExitT
+            fleeStage = 'away'
+            fleeAlpha = 1 - p
+            fleeOx = DX[t.side] * p * charW * 1.2
+            fleeOy = DY[t.side] * p * charW * 1.2
+          } else if (fx.fleeBackT >= 0) {
+            // Own turn of the moon: slow outward drift (capped), no fade yet.
+            const drift = Math.min((now - fx.fleeBackT) / FLEE_BACK_SLIDE_MS, 1) * FLEE_BACK_DRIFT_PX
+            fleePose = 'back'
+            fleeSince = now - fx.fleeBackT
+            fleeStage = 'back'
+            fleeOx = DX[t.side] * drift
+            fleeOy = DY[t.side] * drift
+          } else {
+            fleePose = 'taunt'
+            fleeSince = effT
+            fleeStage = 'taunt'
+          }
+        }
+        // else: the hit is still traveling — normal draw (the hit flash covers the impact)
+      }
+
       const towardBoard = { x: -DX[t.side], y: -DY[t.side] }
       const ox = towardBoard.x * lunge + (t.side === 0 || t.side === 2 ? shake : 0)
       const oy = towardBoard.y * lunge + (t.side === 1 || t.side === 3 ? shake : 0) + idle
@@ -437,14 +537,16 @@ export function createBoardRenderer(canvas, stageEl) {
       const effLocalY = eff.y - (slot.y + oy)
 
       ctx.save()
-      ctx.globalAlpha = 1 - deathP
-      ctx.translate(slot.x + ox, slot.y + oy)
+      // STORY-001: the flee exit fades + slides outward on top of the regular transform.
+      ctx.globalAlpha = (1 - deathP) * fleeAlpha
+      ctx.translate(slot.x + ox + fleeOx, slot.y + oy + fleeOy)
 
       // Telegraph: a pulsing ground ellipse on the podium surface (urgency color), not a box
       // ring -- the character itself is never framed. CAST and ATTACK stay visually distinct.
       // FIX-021: anchored at effLocalX/Y (the podium's flat top), not the character's own feet,
       // so a wide cast-glow never spills past the podium's front lip into the wall/stairs below.
-      if (Number.isFinite(t.countdown) && !t.dead) {
+      // STORY-001: a fled enemy already left — no telegraph over an empty beat.
+      if (Number.isFinite(t.countdown) && !t.dead && !t.fled) {
         const isCast = t.attackKind === 'cast'
         const urgency = t.countdown <= 1 ? 1 : t.countdown === 2 ? 0.55 : 0.3
         const cyc = (now / (520 - urgency * 260)) % 1
@@ -489,9 +591,14 @@ export function createBoardRenderer(canvas, stageEl) {
       // enemy with no/unknown species, so every existing encounter renders exactly as before.
       const wolfPack = !t.isBoss ? view.wolf?.packsBySpecies?.[t.species] ?? view.wolf?.pack ?? null : null
       const wolfImg = wolfPack ? resolveWolfImage(wolfPack, wolfPose) : null
-      const img = bossImg ?? wolfImg ?? resolveTargetImage(assets, t)
+      // STORY-001: flee art overrides the actor pose — taunt beat first (bounce below), then
+      // the back-turned exit sliding outward + fading. resolveWolfImage degrades pose->idle,
+      // so a species without taunt/back art still plays a readable pause + fade-out.
+      const fleeImg = fleePose && wolfPack ? resolveWolfImage(wolfPack, fleePose) ?? (fleePose === 'back' ? resolveWolfImage(wolfPack, 'taunt') : null) : null
+      const img = bossImg ?? fleeImg ?? wolfImg ?? resolveTargetImage(assets, t)
       const bossSince = t.isBoss && view.boss?.visual ? now - view.boss.visual.startedAt : -1e9
-      const wolfSince = wolfVisual ? now - wolfVisual.startedAt : -1e9
+      const wolfSince = fleePose ? fleeSince : wolfVisual ? now - wolfVisual.startedAt : -1e9
+      const wolfPoseShown = fleePose ?? wolfPose
       const flashWhite = (now - fx.hitT >= 0 && now - fx.hitT < 110) ||
         (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130) ||
         (wolfPose === 'hit' && wolfSince >= 0 && wolfSince < 130)
@@ -507,7 +614,7 @@ export function createBoardRenderer(canvas, stageEl) {
       const artScale = speciesScale(speciesId)
       if (img) {
         if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH, scenePivot, artScale)
-        else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, charW, charH, scenePivot, artScale)
+        else if (wolfImg || fleeImg) drawWolfArt(img, wolfPoseShown, wolfSince, t, charW, charH, scenePivot, artScale)
         if (t.dead && !t.isBoss) {
           // Same alpha-masked tint as the hit-flash below -- a dead sprite darkens, it
           // doesn't grow a translucent box around its transparent edges. FIX: a boss is kept
@@ -559,13 +666,13 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.textBaseline = 'middle'
       const lines = [
         { text: t.label ?? t.id, bold: true, color: col.text },
-        { text: t.dead ? 'повержен' : `HP ${t.hp}/${t.hpMax}`, bold: false, color: t.dead ? col.muted : (t.hp / t.hpMax <= 0.25 ? col.danger : col.text) },
+        { text: t.dead ? 'убит' : t.fled ? (fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!') : `HP ${t.hp}/${t.hpMax}`, bold: false, color: t.dead || t.fled ? col.muted : (t.hp / t.hpMax <= 0.25 ? col.danger : col.text) },
       ]
       const isCast = t.attackKind === 'cast'
-      if (!t.dead && Number.isFinite(t.countdown)) {
+      if (!t.dead && !t.fled && Number.isFinite(t.countdown)) {
         lines.push({ text: isCast ? `CAST IN ${t.countdown}` : `ATTACK IN ${t.countdown}`, bold: true, color: isCast ? col.cast : t.countdown <= 1 ? col.danger : col.text })
       }
-      if (!t.dead && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
+      if (!t.dead && !t.fled && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
         lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
       }
       const lineH = fontPx * 1.15
@@ -786,6 +893,11 @@ export function createBoardRenderer(canvas, stageEl) {
         tr.tx = Math.sin(since / 16) * 3 // shake, decaying with the hold
         tr.ty = DY[t.side] * 6 * Math.max(0, 1 - since / 180) // recoil outward
         tr.tx += DX[t.side] * 6 * Math.max(0, 1 - since / 180)
+      } else if (pose === 'taunt' && since >= 0) {
+        // STORY-001: scripted-flee taunt beat only (never a baseline — ENEMY_POSES is
+        // unchanged, so no actor can hold this outside the flee path). Continuous bounce
+        // for the whole one-turn hold (no decay — the taunt waits for the player's next tap).
+        tr.ty = -Math.abs(Math.sin(since / 300)) * 5
       }
       // defeat: static -- the death fade (globalAlpha 1-deathP) is the terminal hold/fade.
       return tr
@@ -800,7 +912,8 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       for (let d = 0; d < 4; d++) {
-        const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead) : d === s.bossSide
+        // STORY-001: a fled enemy already left the arena — its side stops reading as a target.
+        const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead && !e.fled) : d === s.bossSide
         if (isLive) continue // the target panel itself already shows this side clearly
         // FIX-021/CAL-002: same arena-relative podium anchor an actor on this side would use (not a
         // board-relative radius) -- an empty side still reads its readout from a stable, real
@@ -884,7 +997,8 @@ export function createBoardRenderer(canvas, stageEl) {
       // mechanically untappable -- s.isPinned is the same "playable" overlay rock-spike.js already
       // draws from, kept visually consistent here (rock-brown, dashed) so the two viewers agree.
       const pinned = s.isPinned(a.id)
-      const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead) : arena === s.bossSide
+      // STORY-001: fled enemies are gone — remaining arrows no longer aim at their side.
+      const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead && !e.fled) : arena === s.bossSide
       const pts = a.cells.map((c) => cellCenter(c, shownAngle))
       // FIX-023: perspective-sensitive scale, sampled at the arrowhead's own cell (the most
       // visually prominent point of the arrow) rather than geo.cell's whole-board average --
@@ -1148,7 +1262,7 @@ export function createBoardRenderer(canvas, stageEl) {
   }
 
   return {
-    resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, resetFx, frame,
+    resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markFled, markFledAdvance, resetFx, frame,
     get geo() { return geo },
     collectTargets,
     /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */

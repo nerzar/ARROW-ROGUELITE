@@ -22,7 +22,14 @@ describe('BUILD-027: Square Prologue Campaign', () => {
   })
 
   it('strictly respects center-first enemy placement (side 0 / TOP)', () => {
-    for (let i = 0; i < 3; i++) {
+    // STORY-001: stage 1 carries the scripted Goblin King cameo on TOP plus the real
+    // target on RIGHT; stages 2-3 keep a single TOP enemy.
+    const stage1 = campaignRaw.levels[0]
+    expect(stage1.encounter.enemies).toBeDefined()
+    expect(stage1.encounter.enemies.length).toBe(2)
+    expect(stage1.encounter.enemies[0].side).toBe(0)
+    expect(stage1.encounter.enemies[1].side).toBe(1)
+    for (let i = 1; i < 3; i++) {
       const lvl = campaignRaw.levels[i]
       expect(lvl.encounter.enemies).toBeDefined()
       expect(lvl.encounter.enemies.length).toBe(1)
