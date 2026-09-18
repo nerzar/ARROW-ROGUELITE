@@ -16,6 +16,11 @@ import {
 import {
   backdropCornersPx, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx, screenToCell,
 } from './board-plane.js'
+// BUILD-034: filled-arrow renderer (single closed board-space shape + Muse material pack),
+// projected through this renderer's own calibrated plane. The legacy stroke renderer below is
+// kept intact as a debug/fallback style -- see ARROW_STYLES / setArrowStyle.
+import { buildArrowPath, materialIsAnimated, paintFilledArrow } from './filled-arrow-render.js'
+import { MATERIALS } from './filled-arrow-materials.js'
 
 // STORY-001: scripted-flee presentation beat, shared by every `flee` enemy. Three beats
 // sequenced by gameplay, not wall-clock: taunt (starts once the hit impact lands, holds one
@@ -111,6 +116,12 @@ export function createBoardRenderer(canvas, stageEl) {
   const arrowFx = new Map() // arrow id -> { pinT, unpinT, deniedT }
   let hoverId = -1
   let flash = { blocked: -1, blocker: -1 }
+  // BUILD-034: how arrows are painted. 'filled' = the new single-shape board-space renderer
+  // (default); 'stroke' = the legacy polyline+kite renderer, kept as debug/fallback. The material
+  // only applies to 'filled'. Neither choice touches gameplay: hitTest/ownerAt/canExit are
+  // independent of both.
+  let arrowStyle = 'filled'
+  let arrowMaterial = 'warm-bevel'
 
   function fxFor(key) {
     let fx = targetFx.get(key)
@@ -396,6 +407,10 @@ export function createBoardRenderer(canvas, stageEl) {
     for (const fx of arrowFx.values()) {
       if (now - fx.pinT < 500 || now - fx.unpinT < 550 || now - fx.deniedT < 320) animating = true
     }
+    // BUILD-034: an animated material (sheen/sparks/pulse) needs a live rAF while any arrow is
+    // still on the board.
+    if (arrowStyle === 'filled' && materialIsAnimated(arrowMaterial) &&
+        level.arrows.some((a) => s.board.isAlive(a.id))) animating = true
 
     const dark = typeof matchMedia !== 'undefined' ? matchMedia('(prefers-color-scheme: dark)').matches : true
     const col = palette(dark)
@@ -1012,6 +1027,28 @@ export function createBoardRenderer(canvas, stageEl) {
       const fx = arrowFxFor(a.id)
       const isDenied = now - fx.deniedT >= 0 && now - fx.deniedT < 320
 
+      // BUILD-034: new default -- one closed filled shape (shaft + rounded bends + head) built in
+      // board-space cell units and projected through the SAME plane/rotation as cellToScreen, so
+      // the silhouette can never drift from screenToCell's hitbox. The legacy stroke path below
+      // stays reachable via setArrowStyle('stroke').
+      // `typeof Path2D` guard: the headless node test harness (cal-002-actor-scale.test.ts and
+      // friends) drives frame() against a stub 2D context that has no Path2D. Those tests assert
+      // actor layout, not arrow paint, so outside a browser we simply fall through to the stroke
+      // path instead of shipping a fake Path2D just to satisfy them.
+      if (arrowStyle === 'filled' && typeof Path2D !== 'undefined') {
+        const built = buildArrowPath(a, { plane: geo.plane, fit: geo.fit, cols: geo.w }, shownAngle, DX, DY)
+        paintFilledArrow(ctx, built, {
+          col, materialId: arrowMaterial, localScale, now, seed: a.id,
+          free, pinned, aims, isHover, isBlocked, isBlocker, isHint, isDenied,
+        })
+        // Pin marker/badges keep their old anchor (the head cell's own centre), so the rock cue
+        // sits exactly where the stroke renderer put it.
+        const [phx, phy] = pts[pts.length - 1]
+        const [pdxr, pdyr] = rotateDirPx(a.dir, shownAngle)
+        drawPinFx(col, a, phx, phy, pdxr, pdyr, localScale * 0.42, pinned, s, localScale)
+        return
+      }
+
       // PLAYTEST-002: contrast outline underneath every arrow body -- a dark halo so the body reads
       // against both bright torch-lit stone and dark shadowed stone, independent of free/blocked/
       // pinned state. Solid line always (see below): a dashed round-capped stroke at this line
@@ -1264,6 +1301,12 @@ export function createBoardRenderer(canvas, stageEl) {
   return {
     resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markFled, markFledAdvance, resetFx, frame,
     get geo() { return geo },
+    /** BUILD-034: arrow presentation selector (debug/QA only -- no gameplay effect). */
+    setArrowStyle(style) { if (style === 'filled' || style === 'stroke') arrowStyle = style },
+    getArrowStyle() { return arrowStyle },
+    setArrowMaterial(id) { if (MATERIALS.some((m) => m.id === id)) arrowMaterial = id },
+    getArrowMaterial() { return arrowMaterial },
+    listArrowMaterials() { return MATERIALS.map((m) => ({ id: m.id, name: m.name, vibe: m.vibe, animated: !!m.animated })) },
     collectTargets,
     /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */
     debugLayout() { return layoutInfo },

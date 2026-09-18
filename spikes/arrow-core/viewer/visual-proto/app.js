@@ -29,6 +29,7 @@ const ui = {
   rotCw: $('rotCw'), rotCcw: $('rotCcw'), rotateCharges: $('rotateCharges'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
+  arrowStylePick: $('arrowStylePick'), arrowMatPick: $('arrowMatPick'),
 }
 
 // BUILD-025/CAL-004: canon Prologue sequence -- now shared with calibration-editor.js via
@@ -782,6 +783,37 @@ const queryParams = new URLSearchParams(location.search)
 const hashParams = new URLSearchParams(location.hash.slice(1))
 const mode = queryParams.get('mode') ?? hashParams.get('mode')
 const stageParam = queryParams.get('stage') ?? hashParams.get('stage')
+
+// BUILD-034: arrow presentation selector. Debug/QA only -- it picks how arrows are PAINTED and
+// has no gameplay effect (hit-testing goes through screenToCell/ownerAt either way).
+//   ?arrow=<materialId>   one of renderer.listArrowMaterials() -- default `warm-bevel`
+//   ?arrowStyle=stroke    fall back to the legacy stroke renderer
+// The same two knobs are exposed as dropdowns in the debug panel, and as
+// window.__arrows for console/automation use.
+{
+  const styleParam = queryParams.get('arrowStyle') ?? hashParams.get('arrowStyle')
+  const matParam = queryParams.get('arrow') ?? hashParams.get('arrow')
+  if (styleParam) renderer.setArrowStyle(styleParam)
+  if (matParam) renderer.setArrowMaterial(matParam)
+  if (ui.arrowStylePick) {
+    for (const id of ['filled', 'stroke']) ui.arrowStylePick.append(new Option(id, id))
+    ui.arrowStylePick.value = renderer.getArrowStyle()
+    ui.arrowStylePick.onchange = () => { renderer.setArrowStyle(ui.arrowStylePick.value); kick() }
+  }
+  if (ui.arrowMatPick) {
+    for (const m of renderer.listArrowMaterials()) {
+      ui.arrowMatPick.append(new Option(`${m.name}${m.animated ? ' ✦' : ''} — ${m.vibe}`, m.id))
+    }
+    ui.arrowMatPick.value = renderer.getArrowMaterial()
+    ui.arrowMatPick.onchange = () => { renderer.setArrowMaterial(ui.arrowMatPick.value); kick() }
+  }
+  window.__arrows = {
+    list: () => renderer.listArrowMaterials(),
+    setMaterial: (id) => { renderer.setArrowMaterial(id); if (ui.arrowMatPick) ui.arrowMatPick.value = renderer.getArrowMaterial(); kick(); return renderer.getArrowMaterial() },
+    setStyle: (st) => { renderer.setArrowStyle(st); if (ui.arrowStylePick) ui.arrowStylePick.value = renderer.getArrowStyle(); kick(); return renderer.getArrowStyle() },
+    get: () => ({ style: renderer.getArrowStyle(), material: renderer.getArrowMaterial() }),
+  }
+}
 
 let initialKey = queryParams.get('scene') ?? hashParams.get('scene')
 if (mode === 'authored' && authoredSteps.length > 0) {
