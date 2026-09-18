@@ -7,6 +7,10 @@ export declare const ACTOR_BASE_CELL_FRAC: number
 export declare const BOSS_SLOT_DIST: number
 export declare const SIDE_SLOT_DIST: number
 export declare const HUD_GAP_PX: number
+export declare const HP_BAR_FRAC: number
+export declare const SHADOW_RX_FRAC: number
+export declare const SHADOW_RY_CELL_FRAC: number
+export declare const SHADOW_RY_MIN_PX: number
 export declare function charSize(isBoss: boolean): CharSize
 export declare function slotDist(isBoss: boolean): number
 export interface Pt { x: number; y: number }
@@ -21,9 +25,9 @@ export declare function charBox(slot: Pt, isBoss: boolean, cell: number): Rect
 export declare function groundPoint(char: Rect): Pt
 export declare function faceRect(char: Rect): Rect
 export declare function spriteMirror(isBoss: boolean, side: number): number
-export interface HudInput { slot: Pt; char: Rect; side: number; fontPx: number; lineH: number; lineCount: number; barH: number; maxTextW: number; cell: number; slotAbsX?: number; boardCx?: number; boardHalfPx?: number }
+export interface HudInput { slot: Pt; char: Rect; side: number; fontPx: number; lineH: number; lineCount: number; barH: number; maxTextW: number; cell: number; slotAbsX?: number; boardCx?: number; boardHalfPx?: number; offset?: Pt }
 export interface Badge { x: number; y: number; r: number }
-export interface HudBoxes { bar: Rect; plate: Rect; badge: Badge; lineY: (i: number) => number }
+export interface HudBoxes { bar: Rect; plate: Rect; badge: Badge; lineY: (i: number) => number; lineX: number }
 export declare function hudBoxes(input: HudInput): HudBoxes
 export declare function rectsOverlap(a: Rect, b: Rect): boolean
 export declare function rotatedBoardBox(cx: number, cy: number, wPx: number, hPx: number, angleDeg: number): Rect

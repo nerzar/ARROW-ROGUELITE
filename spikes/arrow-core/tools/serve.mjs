@@ -153,7 +153,8 @@ createServer(async (req, res) => {
   }
 
   // TOOL-001: save one species' pose assignment. Body: { species, sourceFolder,
-  // poses: { <poseName>: <sourceFileName> }, pivot?: {x,y}, scale?: number }. For each assigned
+  // poses: { <poseName>: <sourceFileName> }, pivot?: {x,y}, scale?: number,
+  // hudOffset?: {x,y}, hudScale?: number, shadowOffset?: {x,y} }. For each assigned
   // pose this COPIES the chosen frame from the magicarrowassets source folder into a real
   // project-local file (assets/enemies/<species>/<poseName>.png), same convention every other
   // species' art already uses (see ASSET-002/ASSET-003) -- the manifest never points back at the
@@ -165,7 +166,7 @@ createServer(async (req, res) => {
     req.on('data', (chunk) => { body += chunk })
     req.on('end', async () => {
       try {
-        const { species, sourceFolder, poses, pivot, scale } = JSON.parse(body)
+        const { species, sourceFolder, poses, pivot, scale, hudOffset, hudScale, shadowOffset } = JSON.parse(body)
         if (!safeSegment(species) || !safeSegment(sourceFolder) || !poses || typeof poses !== 'object') {
           throw new Error('invalid payload')
         }
@@ -189,7 +190,12 @@ createServer(async (req, res) => {
         // `sourceFiles` round-trips the original magicarrowassets filenames (poses only holds the
         // resolved project-local path) so the editor can restore which source frame was picked
         // per pose next time this species is opened, without guessing from the destination path.
-        manifest[species] = { poses: savedPoses, sourceFiles: poses, pivot: pivot ?? null, scale: typeof scale === 'number' ? scale : 1 }
+        // CAL-005: hudOffset/shadowOffset are validated the same way species-presentation.js
+        // validates them at runtime (finite x/y) -- malformed values persist as null and read
+        // back as the {0,0} no-op, so old and new entries stay mutually compatible.
+        const xyOrNull = (v) => (v && Number.isFinite(v.x) && Number.isFinite(v.y) ? { x: v.x, y: v.y } : null)
+        const numOr = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fallback)
+        manifest[species] = { poses: savedPoses, sourceFiles: poses, pivot: xyOrNull(pivot), scale: numOr(scale, 1), hudOffset: xyOrNull(hudOffset), hudScale: numOr(hudScale, 1), shadowOffset: xyOrNull(shadowOffset) }
         await writeFile(manifestFile, JSON.stringify(manifest, null, 2), 'utf-8')
         res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
         res.end(JSON.stringify({ ok: true, file: 'viewer/visual-proto/creature-poses.json', entry: manifest[species] }))

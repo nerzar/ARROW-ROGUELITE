@@ -11,22 +11,40 @@
 //   ground point = ANCHOR.offsets[pose]  +  speciesPivotDelta(species)  +  scene spritePivot
 //   drawn size   = fit(image, footprint) *  speciesScale(species)      (footprint itself already
 //                  carries the scene's own actorScale/per-side multiplier -- an independent axis)
+//   HUD plate    = hudBoxes(...)         +  speciesHudOffset(species)  (footprint fractions,
+//                  converted to px against the character footprint; moves HP bar, ATTACK/CAST IN
+//                  lines and badges together -- one anchor for the whole plate)
+//   HUD size     = speciesHudScale(species) (multiplier on the plate's font/bar metrics; the
+//                  E/W board clamp still wins over both size and offset)
+//   shadow       = footprint bottom      +  speciesShadowOffset(species) (footprint fractions;
+//                  independent of the art pivot -- pivoting the sprite never moves the shadow)
 // Addition is order-independent, so the scene calibration value a user tunes in the Campaign
 // Editor is always the final, undiluted adjustment on top of whatever the species default is.
+// (There is no per-scene HUD/shadow parameter, so the species offset is the only layer there.)
 
 // Pose Editor's own no-op default pivot (pose-editor.js's DEFAULT_PIVOT) -- kept in sync
 // deliberately. A species saved at exactly this value contributes a zero delta.
 export const DEFAULT_SPECIES_PIVOT = { x: 0.5, y: 0.92 }
 
-const presentation = {} // species -> { pivot?: {x,y}, scale?: number }
+const presentation = {} // species -> { pivot?: {x,y}, scale?: number, hudOffset?: {x,y}, hudScale?: number, shadowOffset?: {x,y} }
+
+function isXy(v) {
+  return !!v && typeof v.x === 'number' && typeof v.y === 'number'
+    && Number.isFinite(v.x) && Number.isFinite(v.y)
+}
 
 /** Called by assets.js's applyPoseOverrides() for every species in creature-poses.json.
- * Ignores fields that aren't a well-formed pivot/scale rather than clearing a previous value. */
-export function setSpeciesPresentation(species, { pivot, scale } = {}) {
+ * Ignores fields that aren't well-formed rather than clearing a previous value.
+ * hudOffset/shadowOffset are species-level footprint fractions; absent -> {0,0} (no-op),
+ * so entries saved before CAL-005 render exactly as before. */
+export function setSpeciesPresentation(species, { pivot, scale, hudOffset, hudScale, shadowOffset } = {}) {
   if (!species) return
   const entry = { ...presentation[species] }
-  if (pivot && typeof pivot.x === 'number' && typeof pivot.y === 'number') entry.pivot = pivot
+  if (isXy(pivot)) entry.pivot = { x: pivot.x, y: pivot.y }
   if (typeof scale === 'number' && Number.isFinite(scale) && scale > 0) entry.scale = scale
+  if (isXy(hudOffset)) entry.hudOffset = { x: hudOffset.x, y: hudOffset.y }
+  if (typeof hudScale === 'number' && Number.isFinite(hudScale) && hudScale > 0) entry.hudScale = hudScale
+  if (isXy(shadowOffset)) entry.shadowOffset = { x: shadowOffset.x, y: shadowOffset.y }
   if (Object.keys(entry).length === 0) return
   presentation[species] = entry
 }
@@ -43,6 +61,30 @@ export function speciesPivotDelta(species) {
 export function speciesScale(species) {
   const s = presentation[species]?.scale
   return typeof s === 'number' && s > 0 ? s : 1
+}
+
+/** Species-level HUD offset in footprint fractions (dx right, dy down -- same units and sign
+ * as speciesPivotDelta). Shifts the whole HUD plate (HP bar, ATTACK/CAST IN lines, badges)
+ * by one anchor. No saved offset -> {0,0} (no-op). */
+export function speciesHudOffset(species) {
+  const o = presentation[species]?.hudOffset
+  if (!isXy(o)) return { x: 0, y: 0 }
+  return { x: o.x, y: o.y }
+}
+
+/** Species-level HUD size multiplier. Scales the plate's font/bar/badge metrics around
+ * the same anchor the offset moves. No saved value -> 1 (no-op). */
+export function speciesHudScale(species) {
+  const s = presentation[species]?.hudScale
+  return typeof s === 'number' && Number.isFinite(s) && s > 0 ? s : 1
+}
+
+/** Species-level shadow offset in footprint fractions (dx right, dy down). Moves the ground
+ * shadow independently of the art pivot. No saved offset -> {0,0} (no-op). */
+export function speciesShadowOffset(species) {
+  const o = presentation[species]?.shadowOffset
+  if (!isXy(o)) return { x: 0, y: 0 }
+  return { x: o.x, y: o.y }
 }
 
 /** Test/debug helper -- clears all runtime-registered species presentation. */
