@@ -16,6 +16,11 @@ import {
 import {
   backdropCornersPx, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx, screenToCell,
 } from './board-plane.js'
+// BUILD-034: filled-arrow renderer (single closed board-space shape + Muse material pack),
+// projected through this renderer's own calibrated plane. The legacy stroke renderer below is
+// kept intact as a debug/fallback style -- see ARROW_STYLES / setArrowStyle.
+import { ARROW_INSET_PX, ARROW_SCALE, buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow, shapeForCell } from './filled-arrow-render.js'
+import { MATERIALS } from './filled-arrow-materials.js'
 
 // STORY-001: scripted-flee presentation beat, shared by every `flee` enemy. Three beats
 // sequenced by gameplay, not wall-clock: taunt (starts once the hit impact lands, holds one
@@ -111,6 +116,15 @@ export function createBoardRenderer(canvas, stageEl) {
   const arrowFx = new Map() // arrow id -> { pinT, unpinT, deniedT }
   let hoverId = -1
   let flash = { blocked: -1, blocker: -1 }
+  // BUILD-034: how arrows are painted. 'filled' = the new single-shape board-space renderer
+  // (default); 'stroke' = the legacy polyline+kite renderer, kept as debug/fallback. The material
+  // only applies to 'filled'. Neither choice touches gameplay: hitTest/ownerAt/canExit are
+  // independent of both.
+  let arrowStyle = 'filled'
+  let arrowMaterial = 'warm-bevel'
+  // FIX-032: hover is eased 0..1 per arrow instead of snapping. Presentation only -- setHover()
+  // still receives whatever hitTest resolved, and nothing here feeds back into gameplay.
+  const hoverFade = createHoverFade()
 
   function fxFor(key) {
     let fx = targetFx.get(key)
@@ -396,6 +410,13 @@ export function createBoardRenderer(canvas, stageEl) {
     for (const fx of arrowFx.values()) {
       if (now - fx.pinT < 500 || now - fx.unpinT < 550 || now - fx.deniedT < 320) animating = true
     }
+    // BUILD-034: an animated material (sheen/sparks/pulse) needs a live rAF while any arrow is
+    // still on the board.
+    if (arrowStyle === 'filled' && materialIsAnimated(arrowMaterial) &&
+        level.arrows.some((a) => s.board.isAlive(a.id))) animating = true
+    // FIX-032: keep the loop alive for the length of a hover fade-in/out.
+    hoverFade.set(hoverId)
+    if (hoverFade.tick(now)) animating = true
 
     const dark = typeof matchMedia !== 'undefined' ? matchMedia('(prefers-color-scheme: dark)').matches : true
     const col = palette(dark)
@@ -1012,6 +1033,31 @@ export function createBoardRenderer(canvas, stageEl) {
       const fx = arrowFxFor(a.id)
       const isDenied = now - fx.deniedT >= 0 && now - fx.deniedT < 320
 
+      // BUILD-034: new default -- one closed filled shape (shaft + rounded bends + head) built in
+      // board-space cell units and projected through the SAME plane/rotation as cellToScreen, so
+      // the silhouette can never drift from screenToCell's hitbox. The legacy stroke path below
+      // stays reachable via setArrowStyle('stroke').
+      // `typeof Path2D` guard: the headless node test harness (cal-002-actor-scale.test.ts and
+      // friends) drives frame() against a stub 2D context that has no Path2D. Those tests assert
+      // actor layout, not arrow paint, so outside a browser we simply fall through to the stroke
+      // path instead of shipping a fake Path2D just to satisfy them.
+      if (arrowStyle === 'filled' && typeof Path2D !== 'undefined') {
+        // FIX-032b: the tip/tail insets are px, so they are resolved against THIS arrow's own
+        // local cell size (already perspective-aware via localScaleAt) -- the gap to the grid
+        // line reads the same on a near/bottom arrow as on a far/top one.
+        const built = buildArrowPath(a, { plane: geo.plane, fit: geo.fit, cols: geo.w }, shownAngle, DX, DY, shapeForCell(localScale))
+        paintFilledArrow(ctx, built, {
+          col, materialId: arrowMaterial, localScale, now, seed: a.id,
+          free, pinned, aims, hover: hoverFade.amount(a.id), isBlocked, isBlocker, isHint, isDenied,
+        })
+        // Pin marker/badges keep their old anchor (the head cell's own centre), so the rock cue
+        // sits exactly where the stroke renderer put it.
+        const [phx, phy] = pts[pts.length - 1]
+        const [pdxr, pdyr] = rotateDirPx(a.dir, shownAngle)
+        drawPinFx(col, a, phx, phy, pdxr, pdyr, localScale * 0.42, pinned, s, localScale)
+        return
+      }
+
       // PLAYTEST-002: contrast outline underneath every arrow body -- a dark halo so the body reads
       // against both bright torch-lit stone and dark shadowed stone, independent of free/blocked/
       // pinned state. Solid line always (see below): a dashed round-capped stroke at this line
@@ -1241,6 +1287,8 @@ export function createBoardRenderer(canvas, stageEl) {
       arrow: dark ? '#f3ecd9' : '#2c2013', arrowDim: dark ? '#c9c4b4' : '#5a4d3a', aim: dark ? '#ffd76a' : '#b8791a',
       arrowOutline: 'rgba(12,9,6,0.75)',
       aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',
+      // FIX-032: warm neutral so the hover halo reads on top of any material's own palette.
+      hoverGlow: dark ? 'rgba(255,241,206,0.9)' : 'rgba(255,246,222,0.95)',
       text: dark ? '#eee' : '#20180f', muted: dark ? '#999' : '#777',
       bossA: dark ? '#5b4a63' : '#8d7a96', bossB: dark ? '#332a3a' : '#5c4d63', bossGlow: dark ? 'rgba(180,120,220,0.5)' : 'rgba(120,70,150,0.4)',
       enemyA: dark ? '#4a5563' : '#7c8ea0', enemyB: dark ? '#2b323c' : '#54606e', enemyGlow: dark ? 'rgba(120,170,220,0.45)' : 'rgba(70,100,140,0.35)',
@@ -1264,6 +1312,28 @@ export function createBoardRenderer(canvas, stageEl) {
   return {
     resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markFled, markFledAdvance, resetFx, frame,
     get geo() { return geo },
+    /** BUILD-034: arrow presentation selector (debug/QA only -- no gameplay effect). */
+    setArrowStyle(style) { if (style === 'filled' || style === 'stroke') arrowStyle = style },
+    getArrowStyle() { return arrowStyle },
+    setArrowMaterial(id) { if (MATERIALS.some((m) => m.id === id)) arrowMaterial = id },
+    /** FIX-032b: what geometry the arrows are ACTUALLY drawn with right now -- the resolved
+     * cell-unit shape plus the px inset it came from, so "did that setting apply in the real
+     * game?" is answerable without reading the source. */
+    arrowGeometry() {
+      if (!geo) return null
+      const cellPx = geo.cell
+      const shape = shapeForCell(cellPx)
+      return {
+        cellPx: Math.round(cellPx),
+        scale: ARROW_SCALE,
+        insetPx: { ...ARROW_INSET_PX },
+        resolved: shape,
+        tipGapPx: +((0.5 - shape.tipReach) * cellPx).toFixed(1),
+        tailBackPx: +(shape.tailExtend * cellPx).toFixed(1),
+      }
+    },
+    getArrowMaterial() { return arrowMaterial },
+    listArrowMaterials() { return MATERIALS.map((m) => ({ id: m.id, name: m.name, vibe: m.vibe, animated: !!m.animated })) },
     collectTargets,
     /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */
     debugLayout() { return layoutInfo },
