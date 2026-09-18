@@ -239,6 +239,10 @@ export type TapResult =
       /** Direction the projectile flies in the arena (board-local dir + rotation). */
       arenaDir: Dir
       hit: boolean
+      /** VFX-002: HP actually removed from the hit target by this tap (0 on a miss). Derived from
+       * the real before/after HP delta, not a fixed "1 hit-unit" assumption baked into a caller —
+       * the presentation layer (damage-number popup) reads this instead of computing its own guess. */
+      hitDamage: number
       /** Boss mode only; always 0 in `enemies` mode (no phases to change). */
       phaseBefore: number
       phaseAfter: number
@@ -814,7 +818,9 @@ export class EncounterState {
     const arenaDir = this.arenaDir(id)
     const targetIdx = this.targetIndexAt(arenaDir)
     const hit = targetIdx >= 0
+    const hpBefore = hit ? this.enemyHp[targetIdx] : 0
     if (hit) this.enemyHp[targetIdx] = Math.max(0, this.enemyHp[targetIdx] - 1)
+    const hitDamage = hit ? hpBefore - this.enemyHp[targetIdx] : 0
     this.log.push({ kind: 'tap', id, hit, timerBefore })
     // STORY-001: a hit target could never have been fled before this tap (targetIndexAt skips
     // fled), so a fled check right after the decrement is exactly "fled this turn".
@@ -842,7 +848,7 @@ export class EncounterState {
       pinnedThisTurn = pinRes.pinnedThisTurn
     }
     return {
-      ok: true, arenaDir, hit, phaseBefore: 0, phaseAfter: 0, granted: 0,
+      ok: true, arenaDir, hit, hitDamage, phaseBefore: 0, phaseAfter: 0, granted: 0,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
       pinExpired, pinnedThisTurn, fled,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
@@ -854,7 +860,9 @@ export class EncounterState {
     const arenaDir = this.arenaDir(id)
     const phaseBefore = this.phaseIndex
     const hit = arenaDir === this.bossSide
+    const hpBefore = this.hp
     if (hit) this.hitCount++
+    const hitDamage = hit ? hpBefore - this.hp : 0
     this.log.push({ kind: 'tap', id, hit, timerBefore })
     const phaseAfter = this.phaseIndex
     const granted = phaseAfter !== phaseBefore ? this.grantedUpToPhase(phaseAfter) - this.grantedUpToPhase(phaseBefore) : 0
@@ -876,7 +884,7 @@ export class EncounterState {
       enemyDamage = res.damage
     }
     return {
-      ok: true, arenaDir, hit, phaseBefore, phaseAfter, granted,
+      ok: true, arenaDir, hit, hitDamage, phaseBefore, phaseAfter, granted,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
