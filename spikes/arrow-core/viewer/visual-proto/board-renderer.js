@@ -308,7 +308,14 @@ export function createBoardRenderer(canvas, stageEl) {
         isBoss: false,
       }))
     }
-    const side = s.bossSide
+    // FIX: encounter.ts's `bossSide` returns -1 the instant the winning hit lands (phaseIndex
+    // advances past the last phase) -- the previous code took that as "no target" and returned []
+    // entirely, so the boss vanished (art AND its HP plate) the very next frame, before the defeat
+    // pose/fade this file draws ever had a chance to be seen. `phaseIndex` only ever runs past the
+    // phase array when `s.won` (see encounter.ts's phaseAt), so falling back to the last real
+    // phase's side in that case is exact, not a guess -- it's the phase the winning hit was on.
+    const rawSide = s.bossSide
+    const side = rawSide >= 0 ? rawSide : s.won ? def.boss.phases[def.boss.phases.length - 1].side : -1
     if (side < 0) return []
     const phase = def.boss.phases[Math.min(s.phaseIndex, def.boss.phases.length - 1)]
     return [{
@@ -501,9 +508,13 @@ export function createBoardRenderer(canvas, stageEl) {
       if (img) {
         if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH, scenePivot, artScale)
         else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, charW, charH, scenePivot, artScale)
-        if (t.dead) {
+        if (t.dead && !t.isBoss) {
           // Same alpha-masked tint as the hit-flash below -- a dead sprite darkens, it
-          // doesn't grow a translucent box around its transparent edges.
+          // doesn't grow a translucent box around its transparent edges. FIX: a boss is kept
+          // fully opaque/undarkened now (see the deathP note above) -- this 55%-black tint,
+          // applied forever (not just during the fade), made its defeat pose nearly
+          // indistinguishable from the arena's own dark background. Its defeat pose art already
+          // reads as "defeated" without an extra tint.
           ctx.save()
           ctx.globalCompositeOperation = 'source-atop'
           ctx.fillStyle = col.deadOverlay

@@ -781,6 +781,10 @@ if (ui.bakedArenaPick && ui.bakedArenaLoadBtn) {
 window.visualDebug = {
   run: () => run,
   state: () => run.encounter,
+  // Same convention as calibration-editor.js's calibrationEditorDebug.getLayout() -- the
+  // renderer's own view of what it's drawing, for automated checks (VS-001/VIS-007's
+  // "player + boss/enemies -> layout rect" contract, same idea as debugLayout()).
+  debugTargets: () => renderer.collectTargets(run.encounter, def),
   authoredSteps: () => authoredSteps,
   tap,
   rotate,
