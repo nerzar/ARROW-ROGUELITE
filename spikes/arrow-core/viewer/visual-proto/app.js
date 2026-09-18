@@ -19,7 +19,7 @@ import {
   appearEnemyVisual, baselinePose as enemyBaseline, ENEMY_POSES, manualEnemyPose,
   onEnemyGameplayEvent, readEnemySnapshot, tickEnemyVisual,
 } from './enemy-visual-state.js'
-import { ARROW_STYLES, normalizeArrowStyle } from './arrow-style.js'
+import { ARROW_STYLES, DEFAULT_EFFECT_INTENSITY, normalizeArrowStyle, normalizeEffectIntensity } from './arrow-style.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
@@ -30,6 +30,7 @@ const ui = {
   rotCw: $('rotCw'), rotCcw: $('rotCcw'), rotateCharges: $('rotateCharges'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
+  effectIntensityRange: $('effectIntensityRange'), effectIntensityValue: $('effectIntensityValue'),
 }
 
 // BUILD-025/CAL-004: canon Prologue sequence -- now shared with calibration-editor.js via
@@ -98,6 +99,10 @@ let authoredSteps = []
 // VIS-013: live arrow reference style. Presentation-only; gameplay never reads this.
 // Initialized from the URL further below (query/hash `arrowStyle`), switchable live.
 let arrowStyle = normalizeArrowStyle(null)
+// VIS-014: live effect-intensity control (0..1) for fantasy-effect's halo/highlight/spark
+// overlay. Presentation-only, same "URL query -> live control -> visualDebug" contract as
+// arrowStyle above. Initialized from the URL further below (query/hash `fx`).
+let effectIntensity = DEFAULT_EFFECT_INTENSITY
 
 /** Expire timed holds and re-sync baselines (e.g. a newly armed attackReady telegraph).
  * Presentation only; never touches engine state. */
@@ -569,6 +574,8 @@ function frame(now) {
     wolf: wolfVisuals ? { pack: wolfPack, packsBySpecies: enemyPacksBySpecies, visuals: wolfVisuals } : null,
     // VIS-013: live arrow reference style (query param / debug control / visualDebug).
     arrowStyle,
+    // VIS-014: live effect-intensity control (query param / debug slider / visualDebug).
+    effectIntensity,
     // BUILD-022: board alignment dots/outline are debug-only -- a normal playthrough shows only
     // puzzle content (arrows/glow/selection/shots) directly on the arena's own stone surface.
     debug: !ui.debugPanel.classList.contains('hidden'),
@@ -596,6 +603,8 @@ function renderPanel() {
     `board ${board.preset} seed ${board.seed} (${level.width}x${level.height}, ${level.arrows.length} стрел)`,
     // VIS-013: spike-only readout so screenshots always show which variant is on screen.
     `arrow style: ${arrowStyle} (spike)`,
+    // VIS-014: spike-only readout for the live effect-intensity control.
+    `effect intensity: ${effectIntensity.toFixed(2)} (spike)`,
     `состояние: ${s.playerDead ? 'ПОРАЖЕНИЕ' : s.won ? 'ЦЕЛЬ ВЫПОЛНЕНА' : 'бой'}`,
     `HP целей: ${s.hp}/${s.totalHp}`,
   ]
@@ -784,6 +793,34 @@ function setArrowStyle(style) {
   return arrowStyle
 }
 
+// VIS-014: live effect-intensity init + switch. Query/hash `fx` picks the first paint; the
+// debug-panel slider adjusts it live afterwards (no reload) and persists into the URL via
+// replaceState, same contract as arrowStyle above.
+effectIntensity = normalizeEffectIntensity(queryParams.get('fx') ?? hashParams.get('fx'))
+syncEffectIntensityUi()
+
+function setEffectIntensity(v) {
+  effectIntensity = normalizeEffectIntensity(v)
+  syncEffectIntensityUi()
+  renderPanel()
+  kick()
+  try {
+    const url = new URL(location.href)
+    url.searchParams.set('fx', effectIntensity)
+    history.replaceState(null, '', url)
+  } catch { /* file:// or exotic embed: intensity still applies, just not persisted */ }
+  return effectIntensity
+}
+
+function syncEffectIntensityUi() {
+  if (ui.effectIntensityRange) ui.effectIntensityRange.value = String(effectIntensity)
+  if (ui.effectIntensityValue) ui.effectIntensityValue.textContent = effectIntensity.toFixed(2)
+}
+
+if (ui.effectIntensityRange) {
+  ui.effectIntensityRange.oninput = () => setEffectIntensity(ui.effectIntensityRange.value)
+}
+
 // VIS-013: prototype-only style switch (same debug-only contract as the pose buttons).
 function buildArrowStyleButtons() {
   const row = $('arrowStyleRow')
@@ -863,6 +900,8 @@ window.visualDebug = {
   wolf: () => wolfVisuals ? Object.fromEntries([...wolfVisuals].map(([id, w]) => [id, w.pose])) : null, // VIS-006: per-actor poses (null in boss mode)
   arrowStyle: () => arrowStyle, // VIS-013: current live arrow variant
   setArrowStyle: (style) => setArrowStyle(style), // VIS-013: live switch without reload
+  effectIntensity: () => effectIntensity, // VIS-014: current live magic-effect intensity (0..1)
+  setEffectIntensity: (v) => setEffectIntensity(v), // VIS-014: live switch without reload
   setWolfPose: (id, pose) => { // VIS-006: manual debug override per actor
     if (wolfVisuals?.has(id)) {
       wolfVisuals.set(id, manualEnemyPose(wolfVisuals.get(id), pose, performance.now()))

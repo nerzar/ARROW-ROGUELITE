@@ -13,7 +13,9 @@ import {
   clampBendRadius,
   cornerTrim,
   DEFAULT_ARROW_STYLE,
+  DEFAULT_EFFECT_INTENSITY,
   normalizeArrowStyle,
+  normalizeEffectIntensity,
   SPARK_PERIOD_MS,
   sparkParams,
 } from '../viewer/visual-proto/arrow-style.js'
@@ -68,6 +70,29 @@ describe('VIS-013 arrow styles', () => {
     expect(fx.halo).not.toBeNull()
     expect(fx.highlight).not.toBeNull()
     expect(fx.spark).not.toBeNull()
+  })
+})
+
+describe('VIS-014 effect intensity', () => {
+  it('falls back to the default on unset (missing query param), never coerces to 0', () => {
+    // Number(null) === 0 and Number('') === 0 -- both are real, valid intensity values
+    // elsewhere, so "unset" must be special-cased or a missing query param would silently
+    // default the live effect to invisible instead of DEFAULT_EFFECT_INTENSITY.
+    expect(normalizeEffectIntensity(null)).toBe(DEFAULT_EFFECT_INTENSITY)
+    expect(normalizeEffectIntensity(undefined)).toBe(DEFAULT_EFFECT_INTENSITY)
+    expect(normalizeEffectIntensity('')).toBe(DEFAULT_EFFECT_INTENSITY)
+    expect(DEFAULT_EFFECT_INTENSITY).toBeGreaterThan(0)
+    expect(DEFAULT_EFFECT_INTENSITY).toBeLessThanOrEqual(1)
+  })
+
+  it('falls back to the default on garbage, clamps real numbers to [0,1]', () => {
+    expect(normalizeEffectIntensity('not-a-number')).toBe(DEFAULT_EFFECT_INTENSITY)
+    expect(normalizeEffectIntensity(NaN)).toBe(DEFAULT_EFFECT_INTENSITY)
+    expect(normalizeEffectIntensity(0)).toBe(0) // explicit 0 ("off") is a real, honored value
+    expect(normalizeEffectIntensity('0')).toBe(0)
+    expect(normalizeEffectIntensity(0.6)).toBe(0.6)
+    expect(normalizeEffectIntensity(-3)).toBe(0)
+    expect(normalizeEffectIntensity(3)).toBe(1)
   })
 })
 

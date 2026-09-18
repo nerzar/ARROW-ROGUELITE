@@ -42,6 +42,8 @@ export interface ArrowFocusInput {
   blocked?: boolean
 }
 export declare function arrowFocus(input?: ArrowFocusInput): ArrowFocus
+export declare const DEFAULT_EFFECT_INTENSITY: number
+export declare function normalizeEffectIntensity(v: unknown): number
 export declare const SPARK_PERIOD_MS: number
 export interface SparkSlot {
   u: number

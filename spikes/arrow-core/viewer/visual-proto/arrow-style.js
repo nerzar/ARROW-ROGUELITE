@@ -59,8 +59,11 @@ export const ARROW_PALETTES = {
     glowAimed: 'rgba(255,190,80,0.42)',
     bevel: '#7c4f16',
     rune: '#f5c86e',
-    halo: 'rgba(255,178,70,0.30)',
-    highlight: '#fff3d0',
+    halo: 'rgba(255,178,70,0.22)',
+    // VIS-014: champagne/gold, not white -- the previous #fff3d0 read as a bright white dashed
+    // tube rather than warm magic. This is the intensity=1 ceiling; the live effect-intensity
+    // control (see DEFAULT_EFFECT_INTENSITY below) scales actual on-screen alpha well below it.
+    highlight: '#f0cd8c',
     spark: '#ffd98a',
   },
 }
@@ -127,6 +130,22 @@ export function arrowFocus({ hover = false, hint = false, aimed = false, free = 
 // Pure function of wall-clock + arrow id: same inputs always give the same slots
 // (no Math.random anywhere — no flicker between frames), different ids phase apart.
 export const SPARK_PERIOD_MS = 2600
+
+// VIS-014: live, developer-tunable effect strength (halo/highlight/spark alpha together) for
+// fantasy-effect's magic overlay -- see board-renderer.js's `effectIntensity` and app.js's
+// query param / debug slider / visualDebug hook. The palette's own alpha (halo/highlight/spark
+// above) is the intensity=1 ceiling; this multiplies it down, restrained by default.
+export const DEFAULT_EFFECT_INTENSITY = 0.25
+
+export function normalizeEffectIntensity(v) {
+  // Unset (missing query param -> null/undefined, or an empty string) must fall back to the
+  // default, NOT coerce to 0 -- Number(null) and Number('') are both 0, which is a real,
+  // deliberately-chosen "effect off" value elsewhere, so treating "unset" the same way would
+  // silently default the live effect to invisible instead of its intended restrained default.
+  if (v === null || v === undefined || v === '') return DEFAULT_EFFECT_INTENSITY
+  const n = Number(v)
+  return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : DEFAULT_EFFECT_INTENSITY
+}
 
 export function sparkParams(nowMs, arrowId, slotCount = 3) {
   const out = []

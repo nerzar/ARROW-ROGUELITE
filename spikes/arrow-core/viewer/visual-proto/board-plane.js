@@ -177,6 +177,37 @@ export function cellToScreen(plane, fit, col, row, angleDeg) {
   return project(plane.H, u, v)
 }
 
+/** VIS-014: fracs-table lookup generalized to a continuous (possibly fractional, possibly
+ * outside [0,n]) cell-index position `t` -- integer k means fracsArr[k] (a grid-LINE position),
+ * so t=k+0.5 reproduces cellToScreen's own "average of the two bounding line-fracs" cell-center
+ * formula exactly. Linearly interpolates within range and extrapolates past either end using
+ * that boundary segment's own slope, so a small step just beyond the last cell still projects
+ * sanely instead of clamping flat. */
+function fracAt(fracsArr, t) {
+  const n = fracsArr.length - 1
+  let k = Math.floor(t)
+  if (k < 0) k = 0
+  else if (k >= n) k = n - 1
+  const seg = fracsArr[k + 1] - fracsArr[k]
+  return fracsArr[k] + seg * (t - k)
+}
+
+/** VIS-014: cellToScreen generalized to an arbitrary real-valued (col,row) in the same cell-index
+ * units (a cell's own center sits at col+0.5,row+0.5) -- used to find the ACTUAL projected
+ * tangent direction at a path's end under the board's homography (perspective + rotation), by
+ * projecting a small virtual step beyond the final logical cell and diffing screen points,
+ * rather than rotating a flat screen-space DX/DY vector that drifts from the drawn shaft under
+ * perspective. Falls back to plain linear interpolation/extrapolation outside the grid via
+ * fracAt -- exact for the small (<1 cell) steps this is meant for. */
+export function cellPointToScreen(plane, fit, col, row, angleDeg) {
+  const cu = fracAt(fit.colFracs, col)
+  const cv = fracAt(fit.rowFracs, row)
+  const lu = fit.u0 + cu * fit.gridU
+  const lv = fit.v0 + cv * fit.gridV
+  const { u, v } = rotateUV(lu, lv, angleDeg)
+  return project(plane.H, u, v)
+}
+
 /** Logical grid-LINE intersection (col,row) -- a cell boundary, not cellToScreen's cell center.
  * col ranges 0..cols, row ranges 0..rows (cols+1 / rows+1 distinct lines each way). FIX-023: the
  * debug grid-line overlay draws exactly these points/lines against the baked art so alignment can

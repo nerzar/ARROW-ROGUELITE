@@ -5,7 +5,9 @@
 // by EncounterState; this module only plays back the *result* of a tap/rotate as animation.
 import { DX, DY } from '../../dist/src/index.js'
 import { resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets.js'
-import { arrowFocus, arrowPalette, BEND_RADIUS_FAC, cornerTrim, normalizeArrowStyle, sparkParams } from './arrow-style.js'
+import {
+  arrowFocus, arrowPalette, BEND_RADIUS_FAC, cornerTrim, normalizeArrowStyle, normalizeEffectIntensity, sparkParams,
+} from './arrow-style.js'
 import { BOSS_ANCHOR } from './boss-visual-state.js'
 import { ENEMY_ANCHOR } from './enemy-visual-state.js'
 import {
@@ -14,7 +16,8 @@ import {
   hudBoxes, podiumSlot, spriteMirror,
 } from './arena-layout.js'
 import {
-  backdropCornersPx, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx, screenToCell,
+  backdropCornersPx, cellPointToScreen, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx,
+  screenToCell,
 } from './board-plane.js'
 
 // FIX-023: an ARENA_CALIBRATIONS entry's {top,left,right} anchor group (either `anchors` or
@@ -213,6 +216,26 @@ export function createBoardRenderer(canvas, stageEl) {
     return Math.max(6, (local.u + local.v) / 2)
   }
 
+  /** VIS-014: the true projected tangent direction at an arrow's end, following the board's own
+   * homography (perspective + rotation) instead of a flat screen-space rotated DX/DY vector --
+   * the earlier VIS-013 head used the latter and drifted from the drawn (curved-under-perspective)
+   * shaft near the board's far/top edges and off-square rotations. Projects the final logical
+   * cell's own center plus a small virtual step further along `dir` (both through the exact same
+   * board-plane pipeline cellCenter uses) and returns the normalized direction between them. */
+  function headTangent(cells, dir, angleDeg) {
+    const last = cells[cells.length - 1]
+    const x = last % geo.w
+    const col = x
+    const row = (last - x) / geo.w
+    const STEP = 0.22 // small fraction of a cell: a local derivative, not a long extrapolation
+    const here = cellPointToScreen(geo.plane, geo.fit, col + 0.5, row + 0.5, angleDeg)
+    const ahead = cellPointToScreen(geo.plane, geo.fit, col + 0.5 + DX[dir] * STEP, row + 0.5 + DY[dir] * STEP, angleDeg)
+    const dx = ahead.x - here.x
+    const dy = ahead.y - here.y
+    const l = Math.hypot(dx, dy) || 1
+    return [dx / l, dy / l]
+  }
+
   function hitTest(clientX, clientY, s, level) {
     if (!geo || rotAnim) return -1
     const r = canvas.getBoundingClientRect()
@@ -322,6 +345,9 @@ export function createBoardRenderer(canvas, stageEl) {
     // VIS-013: live arrow style (query param / debug control / visualDebug). Normalized here
     // too so a stray value can never break the draw path — it just falls back to flat.
     const arrowStyle = normalizeArrowStyle(view.arrowStyle)
+    // VIS-014: live effect-intensity control (query param / debug slider / visualDebug), same
+    // per-frame normalize-and-close-over pattern as arrowStyle above.
+    const effectIntensity = normalizeEffectIntensity(view.effectIntensity)
     if (!geo) resize(level)
     let animating = false
 
@@ -882,6 +908,25 @@ export function createBoardRenderer(canvas, stageEl) {
       const focus = arrowFocus({ hover: isHover, hint: isHint, aimed: aims, free, pinned, blocked })
       const runEffect = arrowStyle === 'fantasy-effect' && focus === 'effect' && free && !pinned
 
+      // VIS-014: arrowhead geometry, computed up front (before the shaft path) so the shaft can
+      // be trimmed to the head's own base -- see traceShaft below. Direction comes from the
+      // ACTUAL projected tangent (headTangent), not a flat screen-space rotated DX/DY vector, so
+      // the head stays aligned with the drawn shaft under the board's perspective/rotation.
+      const [hx, hy] = pts[pts.length - 1]
+      const d = a.dir
+      const rot = shownAngle
+      const [dxr, dyr] = headTangent(a.cells, d, rot)
+      // Slightly smaller/narrower than the original VIS-013 head, so it reads as one clean piece
+      // with the shaft rather than a clumsy bolt-on.
+      const sz = localScale * 0.38
+      const headLen = sz * 1.15
+      const headHalfW = lw * 0.78 + sz * 0.26
+      const headBack = sz * 0.42
+      const tipX = hx + dxr * headLen
+      const tipY = hy + dyr * headLen
+      const baseX = hx - dxr * headBack
+      const baseY = hy - dyr * headBack
+
       // VIS-013: rounded shaft path. Each interior bend is trimmed to tangent points and
       // drawn through a quadratic (never a raw lineTo kink), so thickness stays stable through
       // corners. Geometry only — hit-testing still uses logical cells, never these pixels.
@@ -898,8 +943,11 @@ export function createBoardRenderer(canvas, stageEl) {
           ctx.lineTo(trim.a[0], trim.a[1])
           ctx.quadraticCurveTo(pts[i][0], pts[i][1], trim.b[0], trim.b[1])
         }
-        const last = pts[pts.length - 1]
-        ctx.lineTo(last[0], last[1])
+        // VIS-014: stop at the arrowhead's own base, not the logical cell center -- the head kite
+        // (drawn on top afterward) covers base..tip, so the shaft's rounded line-cap can never
+        // peek out past/through it, even on a blocked/pinned arrow whose head fill isn't fully
+        // opaque. Previously this reached hx/hy (inside the head), which is what exposed it.
+        ctx.lineTo(baseX, baseY)
       }
 
       // PLAYTEST-002: contrast outline underneath every arrow body -- a dark halo so the body reads
@@ -988,7 +1036,12 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.restore()
       }
 
-      if (isHover || isBlocked || isBlocker || isHint || isDenied) {
+      // VIS-014: fantasy-effect drops the old thick muted/grey hover ring -- on that style, hover
+      // alone only enables the subtle magical overlay below (runEffect). The red/orange/amber/
+      // green rings stay everywhere: they're real gameplay feedback (mistake/blocker/pin-denied/
+      // hint), never decoration.
+      const heavyHoverRing = isHover && !isBlocked && !isBlocker && !isHint && !isDenied && arrowStyle === 'fantasy-effect'
+      if ((isHover || isBlocked || isBlocker || isHint || isDenied) && !heavyHoverRing) {
         ctx.save()
         // Denied (tapped while pinned) gets its own amber ring, deliberately NOT the blocked-tap
         // red -- this never costs HP, so it must not look like a damaging mistake.
@@ -1002,21 +1055,11 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.restore()
       }
 
-      // VIS-013: integrated arrowhead. The kite's base overlaps the shaft end (headBack), so
-      // head and shaft paint as one shape in the same outline/fill language — no detached or
-      // kinked head. It points along the drawn (rotated) segment, like before.
-      const [hx, hy] = pts[pts.length - 1]
-      const d = a.dir
-      const rot = shownAngle
-      const [dxr, dyr] = rotateDirPx(d, rot)
-      const sz = localScale * 0.42
-      const headLen = sz * 1.25
-      const headHalfW = lw * 0.85 + sz * 0.3
-      const headBack = sz * 0.4
-      const tipX = hx + dxr * headLen
-      const tipY = hy + dyr * headLen
-      const baseX = hx - dxr * headBack
-      const baseY = hy - dyr * headBack
+      // VIS-014: integrated arrowhead. The kite's base overlaps the shaft end (headBack), so head
+      // and shaft paint as one shape in the same outline/fill language — no detached or kinked
+      // head. Geometry (hx/hy/d/dxr/dyr/sz/headLen/headHalfW/headBack/tipX/tipY/baseX/baseY) is
+      // computed earlier, alongside the shaft path it trims against -- see the VIS-014 comment
+      // above traceShaft.
       const headFill = pinned ? col.rock : blocked ? pal.bodyBlocked : aims ? pal.bodyAimed : pal.bodyFree
       const kite = (pad) => {
         ctx.beginPath()
@@ -1054,36 +1097,20 @@ export function createBoardRenderer(canvas, stageEl) {
       }
       ctx.restore()
 
-      // VIS-013: the focused-only magic treatment (fantasy-effect + hover/hint). Everything
-      // here is driven by wall-clock + arrow id — deterministic, no Math.random, no flicker.
-      // At most a hovered and a hinted arrow ever run this path (see `runEffect` above).
-      if (runEffect && pal.halo && pal.highlight && pal.spark) {
-        // Warm halo pooled at the head.
-        const haloR = Math.max(10, lw * 2.6)
-        const halo = ctx.createRadialGradient(hx, hy, 1, hx, hy, haloR)
-        halo.addColorStop(0, pal.halo)
-        halo.addColorStop(1, 'rgba(255,178,70,0)')
-        ctx.save()
-        ctx.globalCompositeOperation = 'lighter'
-        ctx.fillStyle = halo
-        ctx.beginPath()
-        ctx.arc(hx, hy, haloR, 0, Math.PI * 2)
-        ctx.fill()
-        // Traveling highlight along the shaft: a dashed pass with an animated offset.
-        ctx.globalAlpha = 0.85
-        ctx.strokeStyle = pal.highlight
-        ctx.lineWidth = Math.max(1.5, lw * 0.42)
-        ctx.lineCap = 'round'
-        ctx.setLineDash([lw * 2.4, lw * 3.6])
-        ctx.lineDashOffset = -((now / 26 + a.id * 41) % (lw * 6))
-        traceShaft()
-        ctx.stroke()
-        ctx.setLineDash([])
-        // Resting sparks gliding along the shaft.
+      // VIS-014: the focused-only magic treatment (fantasy-effect + hover/hint). Everything here
+      // is driven by wall-clock + arrow id — deterministic, no Math.random, no flicker. At most a
+      // hovered and a hinted arrow ever run this path (see `runEffect` above). `effectIntensity`
+      // (live: query param / debug-panel slider / visualDebug.setEffectIntensity) scales halo,
+      // highlight and spark alpha together — the palette's own alpha is the intensity=1 ceiling,
+      // so the default (~0.25) reads as a restrained warm shimmer, not the old white glare.
+      if (runEffect && pal.halo && pal.highlight && pal.spark && effectIntensity > 0) {
+        // Path for the highlight/sparks: same base->baseX/baseY trim as the shaft strokes, so the
+        // magic effect stays on the shaft and never runs under/through the head.
+        const shaftPts = [...pts.slice(0, -1), [baseX, baseY]]
         const segLens = []
         let pathLen = 0
-        for (let i = 1; i < pts.length; i++) {
-          const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])
+        for (let i = 1; i < shaftPts.length; i++) {
+          const L = Math.hypot(shaftPts[i][0] - shaftPts[i - 1][0], shaftPts[i][1] - shaftPts[i - 1][1])
           segLens.push(L)
           pathLen += L
         }
@@ -1092,18 +1119,52 @@ export function createBoardRenderer(canvas, stageEl) {
           for (let i = 0; i < segLens.length; i++) {
             if (target <= segLens[i] || i === segLens.length - 1) {
               const t = segLens[i] > 0 ? target / segLens[i] : 0
-              return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t]
+              return [shaftPts[i][0] + (shaftPts[i + 1][0] - shaftPts[i][0]) * t, shaftPts[i][1] + (shaftPts[i + 1][1] - shaftPts[i][1]) * t]
             }
             target -= segLens[i]
           }
-          return pts[pts.length - 1]
+          return shaftPts[shaftPts.length - 1]
         }
+
+        // Warm halo pooled at the head — soft, low-alpha, no hard edge.
+        const haloR = Math.max(8, lw * 2.0)
+        const halo = ctx.createRadialGradient(hx, hy, 1, hx, hy, haloR)
+        halo.addColorStop(0, pal.halo)
+        halo.addColorStop(1, 'rgba(255,178,70,0)')
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.globalAlpha = effectIntensity
+        ctx.fillStyle = halo
+        ctx.beginPath()
+        ctx.arc(hx, hy, haloR, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Traveling highlight: ONE short, near-transparent warm segment gliding the length of the
+        // shaft and looping off the end — never repeated dashes/beads. The dash pattern is
+        // [segment, gap>=full shaft length], so at most one segment is ever visible on the finite
+        // path at a time; rounded caps keep it soft, not a toothpaste tube.
+        if (pathLen > 0) {
+          const hlLen = Math.max(lw * 1.6, pathLen * 0.2)
+          const period = 2400
+          const u = ((now / period) + a.id * 0.371) % 1
+          ctx.globalAlpha = effectIntensity * 0.65
+          ctx.strokeStyle = pal.highlight
+          ctx.lineWidth = Math.max(1.2, lw * 0.36)
+          ctx.lineCap = 'round'
+          ctx.setLineDash([hlLen, pathLen])
+          ctx.lineDashOffset = -u * (hlLen + pathLen)
+          traceShaft()
+          ctx.stroke()
+          ctx.setLineDash([])
+        }
+
+        // Resting sparks gliding along the shaft — one or two quiet motes, not a shower.
         ctx.fillStyle = pal.spark
-        for (const sp of sparkParams(now, a.id)) {
+        for (const sp of sparkParams(now, a.id, 2)) {
           const [sx, sy] = at(sp.u)
-          ctx.globalAlpha = sp.alpha
+          ctx.globalAlpha = sp.alpha * effectIntensity * 0.8
           ctx.beginPath()
-          ctx.arc(sx, sy, Math.max(1.2, lw * 0.16 * sp.size), 0, Math.PI * 2)
+          ctx.arc(sx, sy, Math.max(1, lw * 0.14 * sp.size), 0, Math.PI * 2)
           ctx.fill()
         }
         ctx.restore()
