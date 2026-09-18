@@ -1,6 +1,6 @@
 # TASK: CAL-005 — Creature Presentation Anchors
 
-STATUS: READY
+STATUS: DONE
 TYPE: TOOL/FIX
 SIZE: M
 BASE_BRANCH: main
@@ -74,3 +74,62 @@ START_SHA: a0de83d74c001cd5f98a9f556b9ca227622419a7
 сохранить и увидеть то же положение в реальной игре.
 
 В конце коротко: RESULT / VERIFY / FOUND. Не merge в main.
+
+## RESULT
+
+SHA: (заполняется при сдаче, см. ниже)
+
+Сделано в `spikes/arrow-core`, только presentation-слой, gameplay/arrow renderer не тронуты:
+
+1. Species-level HUD offset X/Y (`species-presentation.js`: `speciesHudOffset`, дефолт `{0,0}`).
+   Один anchor двигает всю plate: HP bar, name/HP/ATTACK IN/CAST IN/THROW IN строки и оба badge —
+   через новый опциональный `offset` в `hudBoxes()` (`arena-layout.js`) + `lineX`.
+2. Species-level shadow offset X/Y (`speciesShadowOffset`, дефолт `{0,0}`) — без рефакторинга
+   renderer: `+2` строки в `drawTarget` (`board-renderer.js`). Тень уже была независима от pivot,
+   offset добавляется поверх.
+3. Pivot parity editor/runtime: Pose Editor preview переведён на точную runtime-формулу
+   (contain-fit в footprint + per-pose `ANCHOR.offsets` + `(pivot - DEFAULT)` delta + scale);
+   pivot-dot теперь в image fractions (липнет к арту), `DEFAULT_PIVOT` берётся из
+   `species-presentation.js` (был второй рассинхронизированной копией). HUD/shadow моки в preview
+   используют настоящий `hudBoxes` / footprint fractions.
+4. Save/reload: `serve.mjs` валидирует и хранит `hudOffset`/`shadowOffset` рядом с pivot/scale;
+   `applyPoseOverrides` прокидывает их в runtime. Старые записи без ключей читаются как `{0,0}`.
+5. Per-scene `spritePivot` остаётся финальным override для арта (прибавляется последним, как раньше).
+   Per-scene HUD/shadow параметра не существует — species offset единственный слой.
+6. `layoutInfo` отдаёт `shadow` (canvas coords) для авточеков.
+
+Не использовано/не потеряно: BUILD-034 WIP (stash-коммит `9eb4d40`, `creature-poses.json` diff +
+`dire-wolf/idle.png` + `campaign.json`) оставлен как есть; тестовые save в браузере откачены
+(`creature-poses.json` в дифф не входит, PNG побайтово идентичны). Контентных значений не шиплю —
+только возможность настраивать.
+
+## VERIFY
+
+- `npm run typecheck` — OK; `npm run build` — OK; `npm run test` — 27 файлов / 320 тестов OK,
+  включая новый `test/cal-005-creature-anchors.test.ts` (10 тестов: дефолты, merge, malformed,
+  pre-CAL-005 shape, сдвиг bar/plate/badge/lines одним offset, S-side).
+- Browser (Playwright/Chromium, свой сервер на :5178; :5177 занят сервером MAIN — не трогал):
+  Pose Editor — shaman 7/7 поз, wolf 5/5, taunter пустое состояние без ошибок (нет authored entry,
+  галерея 10 файлов); overlays laid out; save persist + reload restore offsets;
+  playable cp-e4 — plate сдвинулась ровно на offset*footprint (d=(20.1,-32.4) vs exp (20.1,-32.2)),
+  badge тем же anchor, тень только на shadowOffset (d=(8.1,24.0) vs exp (8.1,24.2)),
+  char box неизменен (w/h точно, y в пределах idle bob);
+  defeat pose — shaman, goblin-taunter (через `showBossPack`), wolf — все видимы;
+  смена поз в editor; реальный tap в playable (alive 10→9, без ошибок);
+  calibration editor грузится чисто; pageerrors — 0.
+- Скриншоты: `C:\Users\nerza\AppData\Local\Temp\opencode\cal005\` (pose-editor-shaman, shaman-defeat,
+  king-defeat, wolf-defeat, playable-after-tap).
+
+## FOUND
+
+1. `assets/boss-goblin-shaman.png`, `assets/boss-goblin-taunter.png` (+ ещё один legacy-слот)
+   отсутствуют в репо — 404 и в MAIN без моих изменений (предсуществующее, не регрессия).
+   Runtime их gracefully деградирует до pose-паков, но записи стоит почистить отдельной задачей.
+2. `CAST INTERRUPTED` burst рисуется отдельным anchor (`-charH/2-10`), не едет с HUD offset.
+   Если нужно чтобы и он двигался — отдельное решение (сейчас осознанно не тронут).
+3. E/W clamp в `hudBoxes` может частично отыграть HUD offset в сторону борда (защита от
+   перекрытия борда имеет приоритет). Для N/top — чистое 1:1.
+4. Старые сохранённые pivot (авторство в stage fractions) в новом preview могут показать dot
+   не на арте до первого перетаскивания; runtime-рендер этих записей не изменился (формула та же).
+5. Goblin-taunter не имеет authored entry в `creature-poses.json` — в Pose Editor preview пуст
+   (runtime при этом рисует его из `assets/bosses/goblin-taunter/`).
