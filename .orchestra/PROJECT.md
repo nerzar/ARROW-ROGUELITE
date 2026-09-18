@@ -178,17 +178,28 @@ AGREED FOR NOW / текущий gameplay canon:
 - обычный hit по умолчанию не сбрасывает enemy timer;
 - `CAST -> hit during cast -> interrupt cancels cast -> enemy switches to normal attack`;
 - Stone Pin pinned-tap: без HP damage, без world turn, timers не двигаются;
-- после boss пролога игрок получает shared Rotate reward;
+- после boss пролога игрок получает **2 shared Rotate charges**;
 - shared Rotate pool переносится дальше и не восстанавливается самовольно между encounters;
 - Act I развивает multi-side combat и ведёт к boss reward Ricochet;
 - позже run должен раскрыть Serpent Form;
 - ещё позже — Chain;
 - позднее допускается управляемый power-gating: не каждый encounter обязан проходиться базовым набором без run/meta-power или помощи.
 
+## Act I / content authoring — принятый рабочий подход
+
+AGREED FOR NOW:
+
+- Act I строим не через ранний «универсальный» генератор контента, а через ручной выбор интересных seed'ов;
+- для seed'ов смотрим direction/turn timeline и реальные branch points;
+- enemy encounters поверх выбранных board'ов можно скриптовать вручную;
+- generic direction quotas / infinite-generation rules — будущая работа, не текущий блокер;
+- визуальное производство не откладывать до самого конца: gameplay/content и нужные для playtest арты/VFX могут развиваться параллельно;
+- финальный визуальный выбор всё равно делает пользователь после просмотра.
+
 ## Зафиксированные персонажи/визуальные роли
 
 - Goblin Shaman = boss пролога.
-- Goblin Taunter / Goblin King = будущий boss первого акта; не подменять им boss пролога.
+- Goblin Taunter / Goblin King = будущий boss первого акта; не подменять им boss пролога. В раннем сюжетном encounter он получает 2 попадания, показывает back/taunt и уходит во flee; это не смерть.
 - Dire Wolf = ordinary enemy visual/pipeline, не boss.
 - Generic encounter IDs не объявлять конкретным видом врага без решения пользователя.
 
