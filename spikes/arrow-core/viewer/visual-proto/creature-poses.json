@@ -19,10 +19,10 @@
       "back": "back.png"
     },
     "pivot": {
-      "x": 0.4992568492749892,
-      "y": 0.7886699656941619
+      "x": 0.4932753210638104,
+      "y": 0.8990681477675218
     },
-    "scale": 0.6
+    "scale": 0.8
   },
   "skeleton-child": {
     "poses": {
@@ -43,7 +43,7 @@
       "x": 0.5,
       "y": 0.92
     },
-    "scale": 1
+    "scale": 0.5
   },
   "dire-wolf": {
     "poses": {
@@ -54,15 +54,15 @@
       "defeat": "assets/enemies/dire-wolf/defeat.png"
     },
     "sourceFiles": {
-      "idle": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (3).png",
+      "idle": "ChatGPT Image Sep 17, 2026, 11_10_59 AM (2).png",
       "attackReady": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (3).png",
       "attack": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (4).png",
       "hit": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (5).png",
       "defeat": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (6).png"
     },
     "pivot": {
-      "x": 0.5,
-      "y": 0.92
+      "x": 0.49802214437771875,
+      "y": 0.961341227466034
     },
     "scale": 1
   }
