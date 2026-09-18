@@ -159,7 +159,7 @@
       "board": {
         "preset": "square-6",
         "size": 6,
-        "seed": 7
+        "seed": 15
       },
       "presentation": {
         "arena": "6x6-5",
@@ -176,14 +176,14 @@
               "side": 0,
               "hpUnits": 3,
               "attackTimer": {
-                "interval": 4,
+                "interval": 5,
                 "damage": 2
               },
               "label": "Phase 1: Center/TOP (North)"
             },
             {
               "side": 1,
-              "hpUnits": 4,
+              "hpUnits": 2,
               "grantRotate": 1,
               "attackTimer": {
                 "interval": 3,
@@ -209,7 +209,7 @@
         },
         "blockedTapDamage": 1,
         "winRotateReward": 2,
-        "notes": "Stage 5: Goblin Shaman boss. Board 6x6 seed 7. Starts center/TOP (side 0, 3 HP, IN 4 dmg 2). Phase 2 moves East (side 1, 4 HP, CAST IN 3 dmg 2, grants +1 Rotate). Rotate CCW turns board to hit East, interrupting CAST and defeating boss with 0 damage. Win awards +2 Rotate."
+        "notes": "Stage 5: Goblin Shaman boss. Board 6x6 seed 15. Starts center/TOP (side 0, 3 HP, IN 5 dmg 2). Phase 2 moves East (side 1, 2 HP, CAST IN 3 dmg 2, grants +1 Rotate). Rotate CCW turns South-facing arrows to East, interrupting CAST and defeating boss with true 0-damage kill. Win awards +2 Rotate."
       }
     }
   ]
