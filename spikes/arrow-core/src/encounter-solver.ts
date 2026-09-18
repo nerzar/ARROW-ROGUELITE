@@ -1,5 +1,6 @@
 import { DIR_NAMES } from './dir.js'
 import {
+  type AttackTimer,
   type EncounterAction,
   type EncounterDef,
   EncounterState,
@@ -24,6 +25,13 @@ import { BoardTopology } from './topology.js'
  * ammo-based upper-bound prune was removed: it assumed "can't reach the target enough times" implied
  * death, which the board-clear-alive win path made unsound. Search is plain memoized DFS now —
  * still correct, just slower; budget exhaustion still degrades to UNKNOWN rather than a false answer.
+ *
+ * EXP-013: every place this file used to iterate `s.board.freeArrows()` (geometric truth) now
+ * iterates `s.playableArrows()` instead (free AND not currently pinned by an enemy ability). Calling
+ * `s.tap(id)` for a pinned `id` would return the EXP-013 `'pinned'` rejection without logging
+ * anything, which would silently desync this file's `s.undo()` bookkeeping — `playableArrows()` keeps
+ * the invariant "every id this file taps is a real, undoable, logged action" intact. `s.key()` and
+ * `s.wouldHit()` already account for pin state on their own, so no other change was needed here.
  */
 
 export interface WinQuery {
@@ -44,6 +52,22 @@ export interface WinResult {
 
 const DEFAULT_BUDGET = 2_000_000
 
+/** EXP-011: human-readable description of an `AttackTimer` for reports/CLI — `ATTACK IN N` for
+ * `kind: 'normal'` (default), `CAST IN N` for `kind: 'cast'`, noting interruptibility and what it
+ * switches to when interrupted. */
+function describeAttackTimer(at: AttackTimer): string {
+  const kind = at.kind ?? 'normal'
+  const label = kind === 'cast' ? 'CAST IN' : 'ATTACK IN'
+  let text = `${label} ${at.interval} (dmg ${at.damage}`
+  if (kind === 'cast') {
+    text += at.interruptible ? ', interruptible -> normal on hit' : ', not interruptible'
+  }
+  if (at.interruptOnHit) text += `, interrupt ${at.interruptHits ?? 1} hit(s)`
+  text += ')'
+  if (at.interruptedAttack) text += ` then ${describeAttackTimer(at.interruptedAttack)}`
+  return text
+}
+
 /** Searches for a win starting from `start` (not modified). */
 export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
   const s = start.clone()
@@ -63,7 +87,7 @@ export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
     }
     const key = s.key()
     if (failed.has(key)) return false
-    const free = s.board.freeArrows()
+    const free = s.playableArrows()
     const tryTap = (id: number) => {
       s.tap(id)
       if (visit()) return true
@@ -122,7 +146,7 @@ export function maxHits(start: EncounterState, q: WinQuery = {}): { hits: number
     if (cached !== undefined) return cached
     let best = 0
     const cap = Math.min(s.totalHp - s.hits, s.board.remaining)
-    for (const id of s.board.freeArrows()) {
+    for (const id of s.playableArrows()) {
       const hit = s.wouldHit(id)
       s.tap(id)
       best = Math.max(best, (hit ? 1 : 0) + visit())
@@ -187,7 +211,7 @@ export function minDamageToWin(start: EncounterState, q: WinQuery = {}): MinDama
     if (cached !== undefined) return cached
     let best = Infinity
     let bestAction: EncounterAction | null = null
-    for (const id of s.board.freeArrows()) {
+    for (const id of s.playableArrows()) {
       const hpBefore = s.playerHp
       s.tap(id)
       const dmg = hpBefore - s.playerHp
@@ -281,12 +305,13 @@ export function validateEncounter(
     ? def.boss.phases.map(
         (p, i) =>
           `${i + 1}: side ${DIR_NAMES[p.side]}, ${p.hpUnits} hp${p.grantRotate ? `, grants Rotate ×${p.grantRotate}` : ''}` +
-          (p.attackTimer ? `, ATTACK IN ${p.attackTimer.interval} (dmg ${p.attackTimer.damage}, interrupt ${p.attackTimer.interruptHits ?? 1} hit(s))` : ''),
+          (p.attackTimer ? `, ${describeAttackTimer(p.attackTimer)}` : ''),
       )
     : (def.enemies ?? []).map(
         (e, i) =>
           `${i + 1}: ${e.id}, side ${DIR_NAMES[e.side]}, ${e.hp} hp${e.mandatory === false ? ' (optional)' : ''}` +
-          (e.attackTimer ? `, ATTACK IN ${e.attackTimer.interval} (dmg ${e.attackTimer.damage}, interrupt ${e.attackTimer.interruptHits ?? 1} hit(s))` : ''),
+          (e.attackTimer ? `, ${describeAttackTimer(e.attackTimer)}` : '') +
+          (e.ability ? `, THROW IN ${e.ability.interval} (${e.ability.targetPolicy}, pin ${e.ability.pinDuration} turns)` : ''),
       )
   return {
     totalHp: start.totalHp,
@@ -320,15 +345,23 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
     const r = s.tap(a.id)
     if (!r.ok) {
       const dmg = r.reason === 'blocked' ? `  -${r.damage} hp (player ${r.playerHp})` : ''
-      lines.push(`${n}. ${formatAction(a)}  !! ${r.reason}${dmg}`)
+      const pin = r.reason === 'pinned' ? `  PINNED / BLOCKED BY ROCK (${r.pinTurnsLeft} turn(s) left)` : ''
+      lines.push(`${n}. ${formatAction(a)}  !! ${r.reason}${dmg}${pin}`)
       return
     }
     let text = `${n}. ${formatAction(a).padEnd(8)} ${local}->${DIR_NAMES[r.arenaDir]}  ${r.hit ? 'HIT ' : 'miss'}  hp ${s.hp}/${s.totalHp}`
-    if (r.interrupted) text += '  interrupt (attack timer reset)'
+    if (r.castInterrupted) text += '  CAST INTERRUPTED -> next attack: normal'
+    else if (r.interrupted) text += '  interrupt (attack timer reset)'
     if (r.enemyAttacks && r.enemyAttacks.length) {
       text += `  ENEMY ATTACK: ${r.enemyAttacks.map((e) => `${e.id} -${e.damage}`).join(', ')} (player ${r.playerHp})`
     } else if (r.enemyAttacked) {
       text += `  ENEMY ATTACK -${r.enemyDamage} hp (player ${r.playerHp})`
+    }
+    if (r.pinnedThisTurn && r.pinnedThisTurn.length) {
+      text += `  ROCK THROWN: #${r.pinnedThisTurn.map((p) => `${p.id} (${p.turnsLeft}t)`).join(', #')}`
+    }
+    if (r.pinExpired && r.pinExpired.length) {
+      text += `  UNPINNED: #${r.pinExpired.join(', #')}`
     }
     if (r.phaseAfter !== r.phaseBefore) {
       text += r.won ? '  => WIN' : `  => phase ${r.phaseAfter + 1}, boss on ${DIR_NAMES[s.bossSide as number]}`
@@ -417,7 +450,7 @@ export function probePhase2(level: Level, def: EncounterDef, policy: PlayPolicy,
         }
         rotateSupply += best
       }
-      const free = s.board.freeArrows()
+      const free = s.playableArrows()
       if (policy === 'sloppy' && s.phaseIndex === 0) {
         s.tap(pick(free))
         continue

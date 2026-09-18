@@ -1,6 +1,10 @@
 {
   "format": "arrow-core-encounter",
   "v": 1,
+  "presentation": {
+    "arena": "prologue-5",
+    "calibration": "prologue-5"
+  },
   "board": {
     "preset": "medium",
     "seed": 1571,
@@ -13,11 +17,12 @@
       "id": "miniboss_placeholder",
       "phases": [
         { "side": "E", "hpUnits": 4, "attackTimer": { "interval": 6, "damage": 1 }, "label": "familiar side" },
-        { "side": "N", "hpUnits": 5, "grantRotate": 1, "attackTimer": { "interval": 3, "damage": 1 }, "label": "moved: direction becomes a resource, fresh attack window" }
+        { "side": "N", "hpUnits": 5, "grantRotate": 1, "attackTimer": { "interval": 3, "damage": 1, "kind": "cast", "interruptible": true, "interruptedAttack": { "interval": 4, "damage": 1, "kind": "normal" } }, "label": "moved: direction becomes a resource, fresh attack window, opens with an interruptible cast" }
       ]
     },
     "rotate": { "allow": ["cw", "ccw"], "advancesTurn": false },
     "blockedTapDamage": 1,
-    "notes": "EXP-010 provisional, not user-approved. Same board/phases/seed as EXP-009's mini-boss (medium 1571, E 4hp -> N 5hp +1 Rotate), now with player HP and attack timers layered on per docs/COMBAT-RULES.md 10 encounter 5. attackTimer numbers are a first-pass tuning, deliberately gentle in phase 1 (interval 6, dmg 1: 4 phase-1 hits take exactly 4 turns, so 0 unavoidable phase-1 damage) and tighter in phase 2 (interval 3, dmg 1, fresh window on phase change). rotate.advancesTurn=false is Gemini's suggestion (relayed by the user), not a settled design decision -- flip it to see the alternative. Verified (see spikes/arrow-core/EXP-010-REPORT.md) at the entry HP the intended prologue chain actually produces (10 max HP - 6 unavoidable from cp-e4 = 4): under natural (hit-first) phase-1 play, Rotate cw is a dead end that empties the board with the player dead (0 HP) before the boss is finished; Rotate ccw wins with 3 HP to spare. minDamageToWin proves the true minimum unavoidable damage on any winning path is 1. This cw/ccw asymmetry is entry-HP dependent: from ~5+ HP entering, cw stops being fatal (the board still clears alive, which is now also a valid win per docs/COMBAT-RULES.md 8) -- the 'wrong Rotate loses' moment specifically depends on the player having already spent HP earlier in the chain, which is intentional given the chain's numbers, but fragile and worth a human playtest."
+    "winRotateReward": 2,
+    "notes": "EXP-010/EXP-010b provisional, not user-approved. Same board/phases/seed as EXP-009's mini-boss (medium 1571, E 4hp -> N 5hp +1 Rotate). Phase 1 unchanged since EXP-010 (interval 6, dmg 1: 4 phase-1 hits take exactly 4 turns, 0 unavoidable phase-1 damage). rotate.advancesTurn=false is Gemini's suggestion (relayed by the user), not a settled design decision. EXP-011 TUNING: phase 2 now opens in an interruptible CAST (interval 3, dmg 1) instead of a plain ATTACK timer of the same shape — EXP-010b's FOUND (spikes/arrow-core/EXP-010b-REPORT.md §6) proved that plain timer forced exactly 1 unavoidable point of damage on this board (phase-2's fresh window only gave 2 hits before interval 3 fired). With the cast model, a hit landed while the cast is armed cancels it outright (no damage) and the boss's next attack becomes a normal one: interval 4, dmg 1 (`interruptedAttack`). Both numbers (cast interval 3/dmg 1, post-interrupt normal interval 4/dmg 1) are minimally-adjusted provisional values, not a balance decision — interval 4 was the first value tried that lets minDamageToWin prove a 0-damage path exists (verified exhaustively, proven not budget-limited, at player HP 4/9/10). Verified: `npm run cli -- encounter encounters/cp-e5.json --player-hp 10` now reports 'no-damage path exists: YES', and the reported minimum-damage sequence still uses the granted Rotate (ccw) to get enough N-side supply before the interrupting hit — Rotate is not mechanically required for *a* win (a Rotate-free board-clear-alive win already existed pre-EXP-011, just not damage-free), but it is still what the proven clean path uses."
   }
 }

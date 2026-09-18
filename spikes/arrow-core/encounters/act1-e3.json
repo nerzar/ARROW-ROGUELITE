@@ -1,0 +1,52 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 25,
+    "levelHash": "1d1342bc"
+  },
+  "encounter": {
+    "id": "act1_e3",
+    "title": "Act I Encounter 3 — Caster Awakens (seed 25)",
+    "enemies": [
+      {
+        "id": "caster_n",
+        "side": "N",
+        "hp": 3,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 4,
+          "kind": "cast",
+          "interruptible": true,
+          "interruptedAttack": {
+            "interval": 3,
+            "damage": 2,
+            "kind": "normal"
+          }
+        },
+        "label": "caster"
+      },
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 4,
+          "damage": 2
+        },
+        "label": "grunt"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "ACT-I-001 playtest content (docs/ACT-I-FIRST-3-SHORTLIST.md §4). easy 6x7 seed 25 (10 arrows: N4 E2 S2 W2). Caster + Grunt. Caster N (hp 3, CAST IN 3 dmg 4, interruptible -> switches to ATTACK IN 3 dmg 2); Grunt E (hp 2, ATTACK IN 4, dmg 2). Shared RunState Rotate pool. Proven clean path without Rotate: 0 damage in 5 taps (tap #3 -> tap #0 -> tap #2 -> tap #4 -> tap #5)."
+  }
+}

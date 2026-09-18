@@ -1,0 +1,585 @@
+{
+  "format": "arrow-campaign",
+  "v": 1,
+  "id": "square-prologue",
+  "title": "Квадратный Пролог (5 этапов)",
+  "levels": [
+    {
+      "id": "prologue-stage-1",
+      "title": "Этап 1 · 5x5 Чистый выстрел",
+      "board": {
+        "preset": "square-5",
+        "size": 5,
+        "seed": 1107
+      },
+      "presentation": {
+        "arena": "prologue-5x5-good",
+        "background": "assets/arenas/prologue-act1/5x5-good.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/prologue-act1/5x5-good.png",
+          "boardSizeLocked": 5,
+          "boardPlaneFrac": {
+            "tl": [
+              0.37,
+              0.45
+            ],
+            "tr": [
+              0.63,
+              0.45
+            ],
+            "br": [
+              0.655,
+              0.818
+            ],
+            "bl": [
+              0.348,
+              0.82
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.49881327153684796,
+              "y": 0.3373860201443302
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.83,
+              "y": 0.62
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.49248419390468123,
+              "y": 0.33881641229167103
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.83,
+              "y": 0.62
+            }
+          },
+          "actorScale": {
+            "top": 0.55,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "enc_stage_1",
+        "title": "Этап 1 · Goblin King сбегает",
+        "enemies": [
+          {
+            "id": "goblin_king",
+            "species": "goblin-taunter",
+            "label": "Goblin King",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": null,
+            "flee": {
+              "afterHits": 2,
+              "label": "taunt-flee"
+            }
+          },
+          {
+            "id": "mob_right",
+            "species": "skeleton-child",
+            "label": "Skeleton Child (Enemy)",
+            "side": 1,
+            "hp": 1,
+            "attackTimer": null
+          }
+        ],
+        "rotate": {
+          "allow": []
+        },
+        "blockedTapDamage": 0,
+        "notes": "Stage 1 (STORY-001): first story beat. Goblin King (goblin-taunter art) holds center/TOP (side 0), 3 HP, passive, flee.afterHits 2 — unkillable by construction (only two N arrows exist on this board). After the 2nd hit he taunts and flees; the fight does NOT end — the player finishes the puzzle (kill the 1 HP Skeleton Child on RIGHT with arrow #3, clear the board) for a board-clear win. Board 5x5 seed 1107. 5 arrows: #0 (N, free) hits King, #2 (N) triggers flee, #4/#3/#1 clear. 0 damage."
+      }
+    },
+    {
+      "id": "prologue-stage-2",
+      "title": "Этап 2 · 5x5 Ошибка стоит HP",
+      "board": {
+        "preset": "square-5",
+        "size": 5,
+        "seed": 1
+      },
+      "presentation": {
+        "arena": "prologue-5x5-good",
+        "background": "assets/arenas/prologue-act1/5x5-good.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/prologue-act1/5x5-good.png",
+          "boardSizeLocked": 5,
+          "boardPlaneFrac": {
+            "tl": [
+              0.37,
+              0.45
+            ],
+            "tr": [
+              0.63,
+              0.45
+            ],
+            "br": [
+              0.655,
+              0.818
+            ],
+            "bl": [
+              0.348,
+              0.82
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.35741107369605146
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.83,
+              "y": 0.62
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5,
+              "y": 0.37
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.83,
+              "y": 0.62
+            }
+          },
+          "actorScale": {
+            "top": 0.55,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "enc_stage_2",
+        "title": "Этап 2 · Цена ошибки",
+        "enemies": [
+          {
+            "id": "mob_top",
+            "species": "dire-wolf",
+            "label": "Dire Wolf (Target)",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": []
+        },
+        "blockedTapDamage": 1,
+        "notes": "Stage 2: Mistake cost & unlock order. Board 5x5 seed 1. 5 arrows. Target at center/TOP (side 0), 2 HP. Free arrows peel blocker so target can be defeated safely without blocked tap penalties. 0 damage."
+      }
+    },
+    {
+      "id": "prologue-stage-3",
+      "title": "Этап 3 · 5x5 Время имеет цену",
+      "board": {
+        "preset": "square-5",
+        "size": 5,
+        "seed": 4
+      },
+      "presentation": {
+        "arena": "prologue-5x5-good",
+        "background": "assets/arenas/prologue-act1/5x5-good.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/prologue-act1/5x5-good.png",
+          "boardSizeLocked": 5,
+          "boardPlaneFrac": {
+            "tl": [
+              0.37,
+              0.45
+            ],
+            "tr": [
+              0.63,
+              0.45
+            ],
+            "br": [
+              0.655,
+              0.818
+            ],
+            "bl": [
+              0.348,
+              0.82
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5011867133733687,
+              "y": 0.358841411279511
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.83,
+              "y": 0.62
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5,
+              "y": 0.37
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.83,
+              "y": 0.62
+            }
+          },
+          "actorScale": {
+            "top": 0.55,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "enc_stage_3",
+        "title": "Этап 3 · Давление таймера",
+        "enemies": [
+          {
+            "id": "mob_top",
+            "species": "dire-wolf",
+            "label": "Dire Wolf (Aggressive)",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": []
+        },
+        "blockedTapDamage": 1,
+        "notes": "Stage 3: Timer pressure. Board 5x5 seed 4. 7 arrows. Target at center/TOP (side 0), 3 HP, ATTACK IN 4 dmg 2. Clean 4-turn solve kills mob on turn 4 before retaliation. 0 damage."
+      }
+    },
+    {
+      "id": "prologue-stage-4",
+      "title": "Этап 4 · 6x6 Приоритет целей",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 282
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 5,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3500791021530646,
+              0.40318258569721344
+            ],
+            "tr": [
+              0.648338598259327,
+              0.40318258569721344
+            ],
+            "br": [
+              0.6894778744845104,
+              0.8094046251183081
+            ],
+            "bl": [
+              0.3113132979439687,
+              0.8094046251183081
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 0.5,
+            "left": 1,
+            "right": 0.5
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "enc_stage_4",
+        "title": "Этап 4 · Два врага одновременно",
+        "enemies": [
+          {
+            "id": "grunt_top",
+            "species": "small-goblin",
+            "label": "Small Goblin (Enemy)",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 2
+            }
+          },
+          {
+            "id": "grunt_right",
+            "species": "small-goblin",
+            "label": "Small Goblin (Enemy)",
+            "side": 1,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": []
+        },
+        "blockedTapDamage": 1,
+        "notes": "Stage 4: Multi-enemy priority. Board 6x6 seed 282. Primary slow enemy center/TOP (side 0, IN 5), secondary urgent enemy RIGHT (side 1, IN 3). Focusing East first kills urgent enemy on turn 2 (0 damage). Wrong path (focusing North) results in East attacking for 2 damage."
+      }
+    },
+    {
+      "id": "prologue-stage-5",
+      "title": "Этап 5 · 6x6 Goblin Shaman",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 15
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 5,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3532436711487146,
+              0.4146254500565336
+            ],
+            "tr": [
+              0.647547471100198,
+              0.41033438274227374
+            ],
+            "br": [
+              0.6878955598071188,
+              0.8122654094129897
+            ],
+            "bl": [
+              0.31052214060527294,
+              0.8079742875348486
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5003955862142395,
+              "y": 0.3102092241114299
+            },
+            "left": {
+              "x": 0.14359177494541875,
+              "y": 0.4460933679675751
+            },
+            "right": {
+              "x": 0.8484968478348063,
+              "y": 0.43178977387745454
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.49881327153684796,
+              "y": 0.3102092241114299
+            },
+            "left": {
+              "x": 0.14042722103955207,
+              "y": 0.44752370555103466
+            },
+            "right": {
+              "x": 0.8524525439895854,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 0.63,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0.07
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "enc_stage_5",
+        "title": "Этап 5 · Босс Goblin Shaman",
+        "boss": {
+          "id": "goblin-shaman",
+          "phases": [
+            {
+              "side": 0,
+              "hpUnits": 3,
+              "attackTimer": {
+                "interval": 5,
+                "damage": 2
+              },
+              "label": "Phase 1: Center/TOP (North)"
+            },
+            {
+              "side": 1,
+              "hpUnits": 2,
+              "grantRotate": 1,
+              "attackTimer": {
+                "interval": 3,
+                "damage": 2,
+                "kind": "cast",
+                "interruptible": true,
+                "interruptedAttack": {
+                  "interval": 4,
+                  "damage": 2,
+                  "kind": "normal"
+                }
+              },
+              "label": "Phase 2: Moves East, CAST interrupt & Rotate grant"
+            }
+          ]
+        },
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false
+        },
+        "blockedTapDamage": 1,
+        "winRotateReward": 2,
+        "notes": "Stage 5: Goblin Shaman boss. Board 6x6 seed 15. Starts center/TOP (side 0, 3 HP, IN 5 dmg 2). Phase 2 moves East (side 1, 2 HP, CAST IN 3 dmg 2, grants +1 Rotate). Rotate CCW turns South-facing arrows to East, interrupting CAST and defeating boss with true 0-damage kill. Win awards +2 Rotate."
+      }
+    }
+  ],
+  "customArenas": [
+    {
+      "id": "imported-goblinas-na-approved-1789716079863",
+      "label": "Imported: goblinas-na-approved.png",
+      "path": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+      "suggestedSize": 6,
+      "calibrationId": null
+    }
+  ]
+}

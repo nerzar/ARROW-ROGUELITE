@@ -187,9 +187,17 @@ describe('EXP-010 prologue encounter files', () => {
     expect(md).toMatchObject({ win: true, proven: true, minDamage: 0 })
   })
 
-  it('cp-e5: winnable via the intended Rotate (ccw) path at the HP the prologue chain produces', () => {
+  it('cp-e5: winnable via either Rotate at the HP the old (pre-EXP-011) prologue chain produced; ccw still leaves more margin', () => {
+    // EXP-011 update: this test's entryHp=4 premise is a leftover from EXP-010's original chain math
+    // (10 max HP - 6 unavoidable from cp-e4's *old* single-target design) -- already stale once
+    // EXP-010b made cp-e4 itself 0-damage, kept only as a fixed low-HP stress scenario. Before
+    // EXP-011, cw (the "wrong" Rotate) was a proven loss at this HP (see EXP-010-REPORT.md); EXP-011's
+    // cast-interrupt on phase 2 (removing the 1-damage floor, see EXP-010b-REPORT.md §6) makes phase 2
+    // generally more forgiving, so a greedy cw playthrough now survives too -- just with much less
+    // margin (1 hp vs. ccw's 3), which still demonstrates ccw as the better-informed choice on this
+    // board without cw being an outright trap.
     const { file: enc, level: lvl } = encounterFromJson(load('cp-e5.json'))
-    const entryHp = 4 // 10 max HP - 6 unavoidable from cp-e4's proven minimum, see EXP-010-REPORT.md
+    const entryHp = 4
     const s = EncounterState.fromLevel(lvl, enc.encounter, entryHp)
     while (s.phaseIndex === 0 && !s.over) {
       const free = s.board.freeArrows()
@@ -204,7 +212,7 @@ describe('EXP-010 prologue encounter files', () => {
       ccw.tap(free.find((id) => ccw.wouldHit(id)) ?? free[0])
     }
     expect(ccw.won).toBe(true)
-    expect(ccw.playerHp).toBeGreaterThan(0)
+    expect(ccw.playerHp).toBe(3)
 
     const cw = s.clone()
     cw.rotate(1)
@@ -213,6 +221,7 @@ describe('EXP-010 prologue encounter files', () => {
       if (free.length === 0) break
       cw.tap(free.find((id) => cw.wouldHit(id)) ?? free[0])
     }
-    expect(cw.lost).toBe(true) // the wrong Rotate is a losing choice at this entry HP
+    expect(cw.won).toBe(true)
+    expect(cw.playerHp).toBe(1) // survives, but with far less margin than ccw
   })
 })

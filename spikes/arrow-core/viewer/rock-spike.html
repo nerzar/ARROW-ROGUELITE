@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EXP-013 debug — Stone Throw</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f4f4f2; --fg: #1d1d1b; --muted: #777; --panel: #fff; --line: #ccc; --good: #1a7f37; --bad: #c62828; --hp: #c62828; --rock: #8d6e63; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #19191b; --fg: #e8e8e6; --muted: #999; --panel: #242427; --line: #444; --good: #5cc475; --bad: #ef6b6b; --hp: #ef6b6b; --rock: #c49a7c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header a { color: inherit; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #wrap { position: relative; background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; padding: 8px; transition: box-shadow 0.15s ease; }
+  #wrap.hit { box-shadow: inset 0 0 0 6px var(--hp); }
+  canvas { max-width: 100%; touch-action: manipulation; transition: opacity 0.4s ease; }
+  aside { background: var(--panel); border: 1px solid var(--line); padding: 10px; overflow: auto; }
+  pre { margin: 0; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
+  .row { display: flex; gap: 6px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  button { padding: 5px 10px; font: inherit; }
+  #msg { min-height: 1.6em; font-weight: 600; font-size: 14px; }
+  .muted { color: var(--muted); }
+  .bad { color: var(--bad); }
+  .rock { color: var(--rock); }
+  h3 { margin: 12px 0 4px; font-size: 13px; }
+  details summary { cursor: pointer; margin: 8px 0 4px; font-weight: 600; }
+  .hp { display: inline-flex; gap: 5px; align-items: center; font-weight: 700; }
+  .hp .pips { display: inline-flex; gap: 2px; }
+  .hp .pip { width: 10px; height: 14px; border: 1px solid var(--hp); border-radius: 2px; }
+  .hp .pip.full { background: var(--hp); }
+</style>
+</head>
+<body>
+<header>
+  <strong>EXP-013 debug — Stone Throw / rock-spike.json</strong>
+  <span class="hp">HP <span id="hpText"></span> <span class="pips" id="hpPips"></span></span>
+  <button id="restart">restart</button>
+  <button id="undo" title="Z / Backspace">undo</button>
+  <button id="hint" title="H">hint</button>
+  <label><input id="liveCheck" checked type="checkbox"> проверять достижимость победы</label>
+  <a href="./cp-prologue.html">combat prologue</a>
+</header>
+<main>
+  <div>
+    <div id="wrap">
+      <canvas id="arena"></canvas>
+    </div>
+    <div id="msg"></div>
+    <div class="muted">Клик по стрелке — выпустить её. Серая стрелка с меткой <span class="rock">камня</span> — PINNED, её нельзя тапнуть, пока не истекут ходы (число рядом). Клавиши: Z — undo, H — hint.</div>
+  </div>
+  <aside>
+    <pre id="status"></pre>
+    <h3>Ходы</h3>
+    <pre id="log"></pre>
+    <details open>
+      <summary>Про этот spike</summary>
+      <pre id="why"></pre>
+    </details>
+    <details>
+      <summary>Validator (EncounterSolver)</summary>
+      <pre id="report"></pre>
+    </details>
+  </aside>
+</main>
+<script type="module" src="./rock-spike.js"></script>
+</body>
+</html>

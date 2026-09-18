@@ -1,0 +1,45 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 112,
+    "levelHash": "6a5e4f2c"
+  },
+  "encounter": {
+    "id": "act1_e2",
+    "title": "Act I Encounter 2 — The Cross-Lock (seed 112)",
+    "enemies": [
+      {
+        "id": "grunt_e",
+        "side": "E",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 3,
+          "damage": 2
+        },
+        "label": "urgent"
+      },
+      {
+        "id": "grunt_n",
+        "side": "N",
+        "hp": 2,
+        "attackTimer": {
+          "interval": 4,
+          "damage": 2
+        },
+        "label": "slow"
+      }
+    ],
+    "rotate": {
+      "allow": [
+        "cw",
+        "ccw"
+      ],
+      "advancesTurn": false,
+      "useRunPool": true
+    },
+    "blockedTapDamage": 1,
+    "notes": "ACT-I-001 playtest content (docs/ACT-I-FIRST-3-SHORTLIST.md §3). easy 6x7 seed 112 (9 arrows: N2 E3 S1 W3). Cross-Lock pattern: N#3 unlocks E#2, E#0 unlocks N#4. Grunt E (hp 2, ATTACK IN 3, dmg 2); Grunt N (hp 2, ATTACK IN 4, dmg 2). Shared RunState Rotate pool. Proven clean path without Rotate: 0 damage in 4 taps (tap #0 -> tap #3 -> tap #2 -> tap #4)."
+  }
+}

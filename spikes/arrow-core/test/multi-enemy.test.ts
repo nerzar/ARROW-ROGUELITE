@@ -190,17 +190,17 @@ describe('prologue encounters 1-5: minDamageToWin at full (10) entry HP', () => 
   })
 
   /**
-   * FOUND (see EXP-010-REPORT.md / task FOUND section): E5 (seed 1571) does NOT have a proven
-   * 0-damage path even under the corrected win/lose model and the new 0-damage E4 — minDamageToWin
-   * proves the true minimum is 1 (phase 2's ATTACK IN 3 is tighter than the 5 hits it needs). This
-   * was already true before EXP-010b (same number, same board) and is independent of chain entry HP
-   * once HP is enough to survive it; not rebalanced here per the brief ("не начинай сам
-   * балансировать его до победного" — no boss rebalance without user approval).
+   * EXP-011: E5 (seed 1571) used to be a documented FOUND — EXP-010b proved phase 2's plain
+   * `ATTACK IN 3` forced exactly 1 unavoidable point of damage (its fresh window only allows 2 hits
+   * before the timer fires; see EXP-010b-REPORT.md §6). EXP-011 fixes this not by touching HP/seed/
+   * timer-bonus tricks, but by giving phase 2 an interruptible `kind: 'cast'` attack: a hit landed
+   * while it is armed cancels it (no damage) and switches the boss to a normal attack with its own
+   * (more generous) interval. This is now a proven 0-damage path, not a FOUND.
    */
-  it('E5 (mini-boss) is proven to require exactly 1 unavoidable damage, not 0 -- documented FOUND, not fixed', () => {
+  it('E5 (mini-boss) now has a proven 0-damage path via the EXP-011 cast-interrupt on phase 2', () => {
     const { file: enc, level: lvl } = encounterFromJson(load('cp-e5.json'))
     const start = EncounterState.fromLevel(lvl, enc.encounter, 10)
     const md = minDamageToWin(start, { nodeBudget: 500_000 })
-    expect(md).toMatchObject({ win: true, proven: true, minDamage: 1 })
+    expect(md).toMatchObject({ win: true, proven: true, minDamage: 0 })
   })
 })

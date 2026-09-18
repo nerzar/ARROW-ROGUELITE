@@ -1,6 +1,10 @@
 {
   "format": "arrow-core-encounter",
   "v": 1,
+  "presentation": {
+    "arena": "prologue-4",
+    "calibration": "prologue-4"
+  },
   "board": {
     "preset": "easy",
     "seed": 10,
