@@ -44,7 +44,7 @@ let shownAngle = 0 // no rotation in this demo; homography tilt covers the proje
 let magicT0 = performance.now()
 
 const params = {
-  material: 'solid', // solid | bevel | magic
+  material: 'bevel', // default: warm-bevel (accepted)
   shaftFull: 0.35,   // full shaft width, in cell units (open question default)
   bend: 0.30,        // corner-cut radius, in cell units
   bendStyle: 'arc',  // arc (fantasy) | chamfer
@@ -423,6 +423,6 @@ ui.shaft.value = String(params.shaftFull)
 ui.bend.value = String(params.bend)
 ui.tilt.value = String(params.tilt)
 syncLabels()
-setMaterial('solid')
+setMaterial('bevel')
 start()
 
