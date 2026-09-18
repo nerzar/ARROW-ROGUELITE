@@ -21,6 +21,8 @@ import {
 // kept intact as a debug/fallback style -- see ARROW_STYLES / setArrowStyle.
 import { ARROW_INSET_PX, ARROW_SCALE, buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow, shapeForCell } from './filled-arrow-render.js'
 import { MATERIALS } from './filled-arrow-materials.js'
+// BUILD-035: projectile flight trajectory (exit dir, then steer to the hit-anchor).
+import { FLIGHT_MS, flightPoint, straightLen } from './projectile-flight.js'
 
 // STORY-001: scripted-flee presentation beat, shared by every `flee` enemy. Three beats
 // sequenced by gameplay, not wall-clock: taunt (starts once the hit impact lands, holds one
@@ -167,6 +169,10 @@ export function createBoardRenderer(canvas, stageEl) {
   // VIS-007: per-frame debug layout (canvas coords) for automated checks. Reset on every
   // frame; drawTarget appends one entry per live target (key/side/char/face/plate/badge/board).
   let layoutInfo = []
+  // BUILD-035: last rendered body-center anchor per target (canvas coords), for projectile
+  // flight. Rebuilt every frame alongside layoutInfo, so a shot always steers to where its
+  // target visibly is -- never to a stale position. Presentation only.
+  let targetAnchors = new Map()
   let boardBBox = { x: 0, y: 0, w: 0, h: 0 }
 
   // FIX-023: `calibration` is an optional ARENA_CALIBRATIONS entry (arena-calibration.js) for a
@@ -261,18 +267,22 @@ export function createBoardRenderer(canvas, stageEl) {
   function onTapResult(level, id, r, targetsBefore) {
     const now = performance.now()
     const local = level.arrows[id].dir
-    shots.push({ cells: level.arrows[id].cells, dir: local, arenaDir: r.arenaDir, hit: r.hit, t0: now })
+    // BUILD-035: resolve the hit-anchor at event time (last rendered frame -- fresh to one
+    // frame). A miss (or no anchor yet) flies straight and fades, exactly like before.
+    let target = null
     if (r.hit) {
       const hitTarget = targetsBefore.find((t) => t.side === r.arenaDir)
       if (hitTarget) {
+        target = targetAnchors.get(targetKey(hitTarget)) ?? null
         const fx = fxFor(targetKey(hitTarget))
-        fx.hitT = now + 220 // shots already carry a ~220ms travel delay before impact
+        fx.hitT = now + FLIGHT_MS // impact flash syncs with the projectile's arrival, not the tap
         // EXP-011/VS-001: only a genuine cast-interrupt gets the "CAST INTERRUPTED" burst -- the
         // legacy EXP-010 interruptOnHit reset (r.interrupted without r.castInterrupted) is unused
         // by any current content and isn't a cast, so it gets no burst text.
-        if (r.castInterrupted) fx.interruptT = now + 220
+        if (r.castInterrupted) fx.interruptT = now + FLIGHT_MS
       }
     }
+    shots.push({ cells: level.arrows[id].cells, dir: local, arenaDir: r.arenaDir, hit: r.hit, target, t0: now })
     if (r.enemyAttacks && r.enemyAttacks.length) {
       for (const a of r.enemyAttacks) fxFor(a.id).attackT = now
     } else if (r.enemyAttacked) {
@@ -399,7 +409,7 @@ export function createBoardRenderer(canvas, stageEl) {
     } else {
       shownAngle = s.rotation * 90
     }
-    shots = shots.filter((sh) => now - sh.t0 < 420)
+      shots = shots.filter((sh) => now - sh.t0 < FLIGHT_MS)
     if (shots.length) animating = true
     for (const fx of targetFx.values()) {
       if (now - fx.hitT < 260 || now - fx.attackT < 320 || now - fx.interruptT < 700 || now - fx.deathT < 550) animating = true
@@ -457,6 +467,7 @@ export function createBoardRenderer(canvas, stageEl) {
     drawBoardSurface(col, backdrop)
     drawSideReadouts(col, s, def)
     layoutInfo = []
+    targetAnchors = new Map()
     for (const t of targets) drawTarget(col, t, now)
     for (const a of level.arrows) drawArrow(col, s, def, a, hint)
     for (const sh of shots) drawShot(col, sh, now)
@@ -799,6 +810,8 @@ export function createBoardRenderer(canvas, stageEl) {
       const ax = slot.x + ox
       const ay = slot.y + oy
       const charR = { x: ax - charW / 2, y: ay - charH / 2, w: charW, h: charH }
+      // BUILD-035: body-center hit-anchor for projectile flight (canvas coords).
+      targetAnchors.set(key, { x: ax, y: ay })
       layoutInfo.push({
         key, side: t.side, isBoss: t.isBoss,
         char: charR,
@@ -1225,27 +1238,62 @@ export function createBoardRenderer(canvas, stageEl) {
     }
 
     function drawShot(col, sh, now) {
-      const t = clamp01((now - sh.t0) / 300)
+      const t = clamp01((now - sh.t0) / FLIGHT_MS)
       const [hx, hy] = cellCenter(sh.cells[sh.cells.length - 1], shownAngle)
       const [dxr, dyr] = rotateDirPx(sh.dir, shownAngle)
       // FIX-023: stroke thickness/tail length are perspective-sensitive (localScale, sampled at
       // the exit cell); overall travel distance stays geo.cell-based -- it's an off-board flight
       // path to the podium, not a piece of the stone grid, so it doesn't need perspective scale.
       const localScale = localScaleAt(sh.cells[sh.cells.length - 1], shownAngle)
-      const dist = (Math.max(geo.w, geo.h) + 3.5) * geo.cell * t
-      const x = hx + dxr * dist
-      const y = hy + dyr * dist
+      // BUILD-035: exit along the freed direction, then steer into the hit-anchor.
+      const from = { x: hx, y: hy }
+      const dir = { x: dxr, y: dyr } // rotateDirPx preserves unit length
+      const leg = sh.target
+        ? straightLen(from, sh.target)
+        : (Math.max(geo.w, geo.h) + 3.5) * geo.cell
+      const p = flightPoint(t, { from, dir, target: sh.target, straightLen: leg })
+      // Projectile figure: glow trail + shaft + filled kite head, oriented along the
+      // instantaneous heading so the steering reads mid-flight. Deliberately chunkier
+      // than a board arrow -- this is the hero moment of the tap, it must read at a glance.
+      const sz = Math.max(4, localScale * 0.3)
+      const headL = sz * 2.6
+      const tailL = sz * 4.5
+      const fade = t > 0.8 ? 1 - (t - 0.8) / 0.2 : 1
+      // BUILD-035: a hitting projectile is emissive -- fixed vivid amber in both themes so
+      // the flight reads on bright day-stone and night-stone alike. A miss stays the quiet
+      // theme-aware gray (it must not blaze -- nothing happened).
+      const body = sh.hit ? '#ffd76a' : col.arrowDim
+      const glow = sh.hit ? 'rgba(255,190,80,0.9)' : col.mutedGlow
       ctx.save()
-      ctx.shadowBlur = 10
-      ctx.shadowColor = sh.hit ? col.aimGlow : col.mutedGlow
-      ctx.strokeStyle = sh.hit ? col.aim : col.arrowDim
-      ctx.lineWidth = Math.max(3, localScale * 0.22)
+      ctx.translate(p.x, p.y)
+      ctx.rotate(p.angle)
+      ctx.globalAlpha = (sh.hit ? 1 : 0.7) * fade
+      ctx.shadowBlur = 12
+      ctx.shadowColor = glow
+      const grad = ctx.createLinearGradient(-tailL, 0, 0, 0)
+      grad.addColorStop(0, 'rgba(0,0,0,0)')
+      grad.addColorStop(1, body)
+      ctx.strokeStyle = grad
+      ctx.lineWidth = sz * 0.9
       ctx.lineCap = 'round'
-      ctx.globalAlpha = 1 - t * 0.5
       ctx.beginPath()
-      ctx.moveTo(x - dxr * localScale * 1.1, y - dyr * localScale * 1.1)
-      ctx.lineTo(x, y)
+      ctx.moveTo(-tailL, 0)
+      ctx.lineTo(0, 0)
       ctx.stroke()
+      ctx.strokeStyle = body
+      ctx.lineWidth = sz
+      ctx.beginPath()
+      ctx.moveTo(-headL * 0.9, 0)
+      ctx.lineTo(headL * 0.35, 0)
+      ctx.stroke()
+      ctx.fillStyle = body
+      ctx.beginPath()
+      ctx.moveTo(headL, 0)
+      ctx.lineTo(0, -sz)
+      ctx.lineTo(headL * 0.35, 0)
+      ctx.lineTo(0, sz)
+      ctx.closePath()
+      ctx.fill()
       ctx.restore()
     }
   }
@@ -1317,6 +1365,9 @@ export function createBoardRenderer(canvas, stageEl) {
   return {
     resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markFled, markFledAdvance, resetFx, frame,
     get geo() { return geo },
+    /** BUILD-035: live shots + last-frame hit-anchors (debug/QA only -- no gameplay effect). */
+    debugShots() { return shots.map((sh) => ({ ...sh })) },
+    debugAnchors() { return Object.fromEntries(targetAnchors) },
     /** BUILD-034: arrow presentation selector (debug/QA only -- no gameplay effect). */
     setArrowStyle(style) { if (style === 'filled' || style === 'stroke') arrowStyle = style },
     getArrowStyle() { return arrowStyle },

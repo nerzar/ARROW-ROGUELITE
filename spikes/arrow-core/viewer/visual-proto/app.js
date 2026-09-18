@@ -915,6 +915,9 @@ window.visualDebug = {
     return wolfVisuals?.get(id) ?? null
   },
   layout: () => renderer.debugLayout(), // VIS-007: per-frame arena layout (canvas coords)
+  // BUILD-035: live projectile shots + hit-anchors (debug/QA only -- no gameplay effect).
+  shots: () => renderer.debugShots(),
+  anchors: () => renderer.debugAnchors(),
   // FIX-021: board-plane projection debug API -- corners/logical fit + point projection, so
   // browser checks can verify click mapping and plane geometry without eyeballing pixels.
   boardPlane: () => renderer.boardPlane(),
