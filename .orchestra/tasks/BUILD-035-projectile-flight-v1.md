@@ -59,6 +59,7 @@ Commit + push. Не merge в main.
 - `board-renderer.js`: `targetAnchors` (body-center, пересборка каждый кадр), `onTapResult` резолвит anchor + синкает `hitT/interruptT` на `FLIGHT_MS=520` (было захардкожено 220); `drawShot` рисует снаряд (glow trail + shaft + filled kite) вдоль heading; кулл шотов `420 -> FLIGHT_MS` (снаряд гас на подлёте — баг).
 - Снаряд самосветящийся в обеих темах (hit — vivid amber, miss — тихий gray).
 - Engine, damage, filled-arrow board renderer не тронуты. Debug hooks `debugShots/debugAnchors` + `visualDebug.shots/anchors` (QA-only, как `debugLayout`).
+- Round 2 (accepted): разгон после вылета (phase A t^2.2, phase B fast-start/soft-landing вместо smootherstep — был stall на стыке), speed-based squash/stretch фигуры (speed в px/ms из модуля, thin до 0.45 / stretch до 1.8).
 
 ## VERIFY
 

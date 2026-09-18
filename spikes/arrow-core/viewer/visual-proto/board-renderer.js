@@ -1267,6 +1267,11 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.save()
       ctx.translate(p.x, p.y)
       ctx.rotate(p.angle)
+      // BUILD-035: speed squeeze -- the faster the leg, the thinner and longer the figure;
+      // it relaxes back into full shape as it settles into the hit. Trail stretches with it.
+      const thin = Math.min(1, Math.max(0.45, 1 / (1 + 0.45 * p.speed)))
+      const stretch = Math.min(1.8, Math.max(1, 1 + 0.3 * p.speed))
+      ctx.scale(stretch, thin)
       ctx.globalAlpha = (sh.hit ? 1 : 0.7) * fade
       ctx.shadowBlur = 12
       ctx.shadowColor = glow

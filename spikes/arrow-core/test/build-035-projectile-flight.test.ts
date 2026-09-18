@@ -42,6 +42,7 @@ describe('BUILD-035 hit leg', () => {
     expect(p.x).toBeCloseTo(FROM.x, 9)
     expect(p.y).toBeCloseTo(FROM.y, 9)
     expect(p.angle).toBeCloseTo(0, 9) // +x
+    expect(p.speed).toBeGreaterThanOrEqual(0)
   })
   it('t=1 lands exactly on the hit-anchor', () => {
     const p = flightPoint(1, spec())
@@ -49,7 +50,7 @@ describe('BUILD-035 hit leg', () => {
     expect(p.y).toBeCloseTo(TARGET.y, 6)
   })
   it('the straight phase is exactly collinear with the exit ray', () => {
-    for (const t of [0.05, 0.15, STRAIGHT_FRAC]) {
+    for (const t of [0.05, 0.15, 0.3]) {
       const p = flightPoint(t, spec())
       expect(p.y).toBeCloseTo(FROM.y, 9)
       expect(p.x).toBeGreaterThan(FROM.x)
@@ -60,9 +61,32 @@ describe('BUILD-035 hit leg', () => {
     const e = 0.002
     const a = flightPoint(STRAIGHT_FRAC - e, spec())
     const b = flightPoint(STRAIGHT_FRAC + e, spec())
-    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeLessThan(2)
+    // Window is 2e of unit time; the accelerating leg covers a few px there (no teleport).
+    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeLessThan(4)
     // Heading just after the junction still follows the exit ray (bezier control sits on it).
     expect(Math.abs(b.angle)).toBeLessThan(0.15)
+  })
+  it('speed ramps up after launch (acceleration, not cruise)', () => {
+    const s = spec()
+    const vEarly = flightPoint(0.05, s).speed
+    const vLate = flightPoint(0.3, s).speed
+    expect(vEarly).toBeGreaterThanOrEqual(0)
+    expect(vLate).toBeGreaterThan(vEarly)
+  })
+  it('speed settles softly into the hit (no full-speed slam)', () => {
+    const s = spec()
+    const vCruise = flightPoint(0.6, s).speed
+    const vEnd = flightPoint(0.99, s).speed
+    expect(vEnd).toBeLessThan(vCruise)
+    expect(vEnd).toBeGreaterThanOrEqual(0)
+  })
+  it('speed stays finite everywhere, including the junction and degenerate legs', () => {
+    const s = spec()
+    for (const t of [0, STRAIGHT_FRAC - 0.002, STRAIGHT_FRAC, STRAIGHT_FRAC + 0.002, 0.7, 1]) {
+      const v = flightPoint(t, s).speed
+      expect(Number.isFinite(v)).toBe(true)
+      expect(v).toBeGreaterThanOrEqual(0)
+    }
   })
   it('the steered phase actually bends toward the target', () => {
     const mid = flightPoint(0.65, spec())
@@ -90,12 +114,15 @@ describe('BUILD-035 hit leg', () => {
 })
 
 describe('BUILD-035 miss leg', () => {
-  it('a miss flies straight along the exit ray at every t', () => {
+  it('a miss flies straight along the exit ray, accelerating away', () => {
     const s = { from: FROM, dir: EAST, target: null, straightLen: 300 }
+    let prevX = FROM.x
     for (const t of [0, 0.2, 0.5, 0.8, 1]) {
       const p = flightPoint(t, s)
       expect(p.y).toBeCloseTo(FROM.y, 9)
-      expect(p.x).toBeCloseTo(FROM.x + 300 * t, 6)
+      expect(p.x).toBeCloseTo(FROM.x + 300 * Math.pow(t, 1.6), 6)
+      expect(p.x).toBeGreaterThanOrEqual(prevX)
+      prevX = p.x
       expect(p.angle).toBeCloseTo(0, 9)
     }
   })
