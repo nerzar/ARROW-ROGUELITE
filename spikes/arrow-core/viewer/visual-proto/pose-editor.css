@@ -1,0 +1,53 @@
+/* TOOL-001: page-specific styles only -- shared tokens/topbar/handle styles come from
+   calibration-editor.css (deliberately reused, not duplicated). */
+
+/* User feedback after manual review: the source-frame gallery was cramped/scrolling
+   horizontally in the default 340px side-panel width, with thumbnails squished almost out of
+   view. Widen the panel on this page only (calibration-editor.html doesn't load this file, so
+   its own layout is untouched) and shrink the stage-col preview to compensate. */
+.side-panel { width: 460px; }
+
+.preview-img {
+  position: absolute; left: 50%; bottom: 12%; max-width: 55%; max-height: 70%;
+  transform: translate(-50%, 0) scale(var(--preview-scale, 1)); transform-origin: 50% 100%;
+  image-rendering: -webkit-optimize-contrast;
+  filter: drop-shadow(0 10px 14px rgba(0,0,0,0.45));
+}
+.preview-img.empty { display: none; }
+
+/* Pose slots moved from the side panel to a horizontal strip under the big preview (same
+   feedback round) so the side panel is dedicated entirely to the source-frame gallery. */
+.pose-slot-section { width: min(720px, 96%); margin: 10px auto 0; }
+.pose-slot-strip { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
+.pose-slot {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px;
+  width: 84px; border-radius: 6px; position: relative;
+  border: 1px solid var(--panel-border); background: rgba(0,0,0,0.18); cursor: pointer;
+}
+.pose-slot:hover { border-color: var(--selected); }
+.pose-slot.active { border-color: var(--actor); box-shadow: 0 0 0 1px var(--actor); }
+.pose-slot .pose-thumb {
+  width: 100%; aspect-ratio: 1; border-radius: 4px; background: rgba(127,127,127,0.15);
+  object-fit: contain;
+}
+.pose-slot .pose-name { font-weight: 700; font-size: 11px; }
+.pose-slot .pose-file {
+  font-size: 9.5px; color: var(--ink-dim); width: 100%; text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pose-slot .pose-clear {
+  position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.55); border: none;
+  color: #ff7777; cursor: pointer; font-size: 10px; line-height: 1; padding: 2px 4px; border-radius: 3px;
+}
+.pose-slot .pose-clear:hover { color: #ff4444; }
+
+.source-gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; max-height: 62vh; overflow-y: auto; }
+.source-thumb {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px; min-width: 0;
+  border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.15); cursor: pointer;
+}
+.source-thumb:hover { border-color: var(--selected); }
+.source-thumb.assigned { border-color: var(--actor); box-shadow: 0 0 0 1px var(--actor); }
+.source-thumb img { width: 100%; aspect-ratio: 1; object-fit: contain; background: rgba(127,127,127,0.1); border-radius: 4px; }
+.source-thumb .source-thumb-label { font-size: 9.5px; color: var(--ink-dim); text-align: center; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

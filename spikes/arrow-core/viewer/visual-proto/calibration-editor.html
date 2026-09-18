@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BUILD-026 Campaign & Level Authoring Tool</title>
+<link rel="stylesheet" href="./calibration-editor.css">
+</head>
+<body>
+<div class="editor-shell">
+  <header class="topbar">
+    <strong>BUILD-026</strong> Campaign Authoring
+    <label>Level <select id="stagePick"></select></label>
+    <button id="newLevelBtn" title="Create a new square level with default center-first enemy">+ Level</button>
+    <button id="saveStorageBtn" class="primary-btn" title="Save authored campaign to real project file & browser storage">💾 Save</button>
+    <span id="saveBadge" class="save-badge">Ready</span>
+    <button id="playLevelBtn" class="play-btn" title="Play current level in game">▶ Play Level</button>
+    <button id="playCampaignBtn" class="play-btn" title="Play full campaign sequence">▶ Play Campaign</button>
+    <label>arena <select id="bgPick"></select></label>
+    <button id="saveArenaDefaultBtn" class="default-btn" title="Save current calibration as default for this arena">★ Arena Default</button>
+    <button id="importArenaBtn" title="Import a local image file as a new arena for this level">📥 Import Arena</button>
+    <input type="file" id="importArenaInput" accept="image/png,image/jpeg,image/webp" style="display:none">
+    <label title="Legacy debug preview" style="display:none">debug <select id="arenaPick"><option value="">— none —</option></select></label>
+    <label style="display:none">grid <select id="gridSizePick"></select></label>
+    <label class="chk"><input type="checkbox" id="toggleGrid" checked> grid</label>
+    <label class="chk"><input type="checkbox" id="toggleArrows" checked> arrows</label>
+    <label class="chk"><input type="checkbox" id="toggleSprites" checked> sprites</label>
+    <label class="chk"><input type="checkbox" id="toggleEffect" checked> effects</label>
+    <span class="grow"></span>
+    <button id="resetBtn" title="Revert every field to this level's last saved values">Reset</button>
+    <button id="clearStorageBtn" title="Clear browser override and reload from file">Reload file</button>
+    <button id="copyBtn" title="Copy the exported calibration object">Copy calib</button>
+    <button id="downloadBtn" title="Download campaign JSON file">Download JSON</button>
+    <a href="./pose-editor.html" style="color:inherit; font-weight:600; text-decoration:none; margin-left:6px" title="TOOL-001: assign per-pose images per creature">🎭 Pose Editor →</a>
+    <a href="./index.html" style="color:inherit; font-weight:600; text-decoration:none; margin-left:6px" title="Back to playable game">← Playable game</a>
+  </header>
+  <div id="importArenaStatus" class="import-status"></div>
+
+  <div class="body">
+    <div class="stage-col">
+      <div class="stage" id="stage">
+        <div class="bg-layer" id="bgLayer"></div>
+        <canvas id="arena"></canvas>
+        <div class="handles-layer" id="handlesLayer"></div>
+      </div>
+      <p class="hint">
+        Drag a handle with the mouse, or click/tab to it and use the arrow keys — 1px per press,
+        Shift+arrow = 10px. Cyan = board corners (TL/TR/BR/BL), amber = actor anchors (feet),
+        violet = effect anchors (VFX/telegraph ground point).
+      </p>
+    </div>
+
+    <aside class="side-panel">
+      <section>
+        <h3>Level Authoring</h3>
+        <div class="form-group">
+          <label for="authorLevelTitle">Title</label>
+          <input type="text" id="authorLevelTitle" placeholder="Level Title">
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="authorBoardSize">Square Size</label>
+            <select id="authorBoardSize">
+              <option value="5">5x5</option>
+              <option value="6">6x6</option>
+              <option value="7">7x7</option>
+              <option value="8">8x8</option>
+              <option value="9">9x9</option>
+              <option value="10">10x10</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="authorBoardSeed">Seed <button id="rollSeedBtn" type="button" style="font-size:10px;padding:0 3px;margin-left:4px;cursor:pointer">🎲 Roll</button></label>
+            <input type="number" id="authorBoardSeed" value="1000">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="authorBlockedTap">Blocked Tap Rule</label>
+          <select id="authorBlockedTap">
+            <option value="1">1 damage (mistake costs HP)</option>
+            <option value="0">0 damage (safe peeling)</option>
+          </select>
+        </div>
+        <div class="author-btn-row">
+          <button id="btnDupLevel" type="button" title="Duplicate current level">Duplicate</button>
+          <button id="btnDelLevel" type="button" title="Delete current level">Delete</button>
+          <button id="btnMoveUp" type="button" title="Move level earlier in campaign sequence">▲ Up</button>
+          <button id="btnMoveDown" type="button" title="Move level later in campaign sequence">▼ Down</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>Enemies (Center-first)</h3>
+        <div id="authorEnemiesList"></div>
+        <button id="authorAddEnemyBtn" type="button" style="width:100%;padding:5px;cursor:pointer;border-radius:4px;border:1px dashed var(--panel-border);background:rgba(127,127,127,0.1);color:var(--ink);">+ Add Enemy</button>
+      </section>
+
+      <section>
+        <h3>Selected handle</h3>
+        <div id="selectedInfo" class="selected-info">— click or tab to a handle —</div>
+      </section>
+
+      <section>
+        <h3>All values</h3>
+        <table class="values-table" id="valuesTable"></table>
+      </section>
+
+      <section class="scale-section">
+        <h3>Actor scale</h3>
+        <div class="scale-controls">
+          <div class="scale-row">
+            <label for="scaleTop">TOP</label>
+            <input type="range" id="scaleTop" min="0.1" max="2.0" step="0.01" value="1.0">
+            <input type="number" id="scaleTopNum" min="0.1" max="2.0" step="0.01" value="1.00">
+          </div>
+          <div class="scale-row">
+            <label for="scaleLeft">LEFT</label>
+            <input type="range" id="scaleLeft" min="0.1" max="2.0" step="0.01" value="1.0">
+            <input type="number" id="scaleLeftNum" min="0.1" max="2.0" step="0.01" value="1.00">
+          </div>
+          <div class="scale-row">
+            <label for="scaleRight">RIGHT</label>
+            <input type="range" id="scaleRight" min="0.1" max="2.0" step="0.01" value="1.0">
+            <input type="number" id="scaleRightNum" min="0.1" max="2.0" step="0.01" value="1.00">
+          </div>
+          <div class="scale-link-row">
+            <label class="chk"><input type="checkbox" id="linkSideScale"> Link LEFT + RIGHT</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="scale-section">
+        <h3>Sprite pivot / foot offset</h3>
+        <p class="muted small">
+          Corrects a sprite whose art doesn't reach the bottom of its own image (the character
+          looks like it's floating above its shadow). Moves the drawn image only -- the ground
+          anchor/shadow above stays put. dy &gt; 0 moves the art DOWN (toward the ground).
+        </p>
+        <div class="scale-controls">
+          <div class="scale-row">
+            <label for="pivotTopX">TOP dx</label>
+            <input type="range" id="pivotTopX" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotTopXNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotTopY">TOP dy</label>
+            <input type="range" id="pivotTopY" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotTopYNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotLeftX">LEFT dx</label>
+            <input type="range" id="pivotLeftX" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotLeftXNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotLeftY">LEFT dy</label>
+            <input type="range" id="pivotLeftY" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotLeftYNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotRightX">RIGHT dx</label>
+            <input type="range" id="pivotRightX" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotRightXNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+          <div class="scale-row">
+            <label for="pivotRightY">RIGHT dy</label>
+            <input type="range" id="pivotRightY" min="-0.3" max="0.3" step="0.005" value="0">
+            <input type="number" id="pivotRightYNum" min="-0.3" max="0.3" step="0.005" value="0.000">
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3>Export</h3>
+        <textarea id="exportText" readonly spellcheck="false"></textarea>
+        <div id="copyStatus" class="copy-status"></div>
+      </section>
+
+      <section>
+        <h3>Notes</h3>
+        <p class="muted small">
+          Sprite/arrow preview uses the real production render path
+          (<code>board-renderer.js</code> → <code>board-plane.js</code>'s
+          project/unproject + <code>arena-layout.js</code>'s podium/effect-ground math).
+          <strong>Prologue stage</strong> loads that step's own real board/seed and def, exactly as
+          the playable game (<code>prologue-steps.js</code>) — the same mob/boss appears here as
+          in a real playthrough, on whichever sides it actually uses; an unused side's handle is
+          still draggable but shows no sprite. <strong>Debug arena</strong> instead loads a
+          throwaway 3-side preview encounter (TOP/LEFT/RIGHT, Dire Wolf sprite) on a freshly
+          generated board of the chosen grid size, for calibrating a non-Prologue arena that has no
+          real encounter of its own yet.
+        </p>
+      </section>
+    </aside>
+  </div>
+</div>
+<script type="module" src="./calibration-editor.js"></script>
+</body>
+</html>

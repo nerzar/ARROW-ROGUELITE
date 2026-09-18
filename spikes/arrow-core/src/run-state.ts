@@ -1,4 +1,4 @@
-import { type EncounterDef, EncounterState } from './encounter.js'
+import { type EncounterDef, EncounterState, type RotatePool } from './encounter.js'
 import type { Level } from './level.js'
 
 /**
@@ -7,6 +7,14 @@ import type { Level } from './level.js'
  * RunState owns nothing about combat rules itself — it only tracks *which* step is active, the HP
  * snapshot each step started with (for a debug restart), and swaps in a fresh EncounterState with
  * that snapshot when a step is (re)started or completed.
+ *
+ * RUN-001: RunState additionally owns the shared Rotate pool (`rotateCharges`, minimum
+ * `playerHp`/`rotateCharges` per the task — no other run resources yet, and charges are never
+ * duplicated into the presentation layer). The pool starts at 0 (pre-boss prologue has no global
+ * charges), grows only via a completed step's `def.winRotateReward` (prologue boss: +2, claimed
+ * exactly once by `advance()`), and is spent 1-per-Rotate by pool-backed encounters
+ * (`rotate.useRunPool`). Tutorial/local boss Rotate stays encounter-local and never touches this
+ * pool. Refill beyond win rewards is UNKNOWN (no regeneration here).
  */
 
 export interface RunStep {
@@ -20,6 +28,8 @@ export interface RunStep {
 export interface RunConfig {
   /** Data-driven, provisional (see docs/GAME-CONCEPT.md / COMBAT-RULES.md: exact numbers are OPEN). */
   playerMaxHp: number
+  /** RUN-001 / ACT-I-001: starting shared Rotate charges (default 0). For runs starting post-prologue directly. */
+  initialRotateCharges?: number
 }
 
 export class RunState {
@@ -28,6 +38,10 @@ export class RunState {
   private idx = 0
   /** HP the player had when the *current* step began; what `restartStep()` returns to. */
   private entryHp: number
+  /** Shared Rotate charges the run had when the *current* step began; what `restartStep()` returns to. */
+  private entryRotate = 0
+  /** The live shared Rotate pool. Passed by handle (not by value) into pool-backed encounters. */
+  private readonly rotatePool: RotatePool = { charges: 0 }
   private encounterState: EncounterState
 
   constructor(config: RunConfig, steps: readonly RunStep[]) {
@@ -35,12 +49,14 @@ export class RunState {
     this.config = config
     this.steps = steps
     this.entryHp = config.playerMaxHp
+    this.entryRotate = config.initialRotateCharges ?? 0
+    this.rotatePool.charges = this.entryRotate
     this.encounterState = this.buildEncounterState()
   }
 
   private buildEncounterState(): EncounterState {
     const step = this.steps[this.idx]
-    return EncounterState.fromLevel(step.level, step.def, this.entryHp)
+    return EncounterState.fromLevel(step.level, step.def, this.entryHp, this.rotatePool)
   }
 
   get stepIndex(): number {
@@ -56,6 +72,14 @@ export class RunState {
   /** HP snapshot the current step started with (what a restart of this step returns to). */
   get hpAtEntry(): number {
     return this.entryHp
+  }
+  /** Shared Rotate charges right now (the run pool). Pre-boss prologue: 0. */
+  get rotateCharges(): number {
+    return this.rotatePool.charges
+  }
+  /** Shared Rotate charges the current step started with (what a restart of this step returns to). */
+  get rotateChargesAtEntry(): number {
+    return this.entryRotate
   }
   get maxHp(): number {
     return this.config.playerMaxHp
@@ -77,33 +101,45 @@ export class RunState {
 
   /**
    * Moves on to the next step, carrying over the HP the player finished the current step with.
-   * Returns false (no-op) if the current step is not won yet, or it was the last step.
+   * Also claims the completed step's `winRotateReward` (e.g. prologue boss +2) into the shared
+   * pool exactly once — `advance()` is a one-way gate (no-op unless the current step is won),
+   * so a reward can never be granted twice. Returns false (no-op) if the current step is not
+   * won yet, or it was the last step.
    */
   advance(): boolean {
     if (!this.encounterState.won || this.isLastStep) return false
+    this.rotatePool.charges += this.steps[this.idx].def.winRotateReward ?? 0
     this.entryHp = this.encounterState.playerHp
+    this.entryRotate = this.rotatePool.charges
     this.idx++
     this.encounterState = this.buildEncounterState()
     return true
   }
 
-  /** Restarts only the active step, HP reset to the snapshot it began with. */
+  /** Restarts only the active step, HP and shared Rotate charges reset to the snapshots it began with. */
   restartStep(): void {
+    this.rotatePool.charges = this.entryRotate
     this.encounterState = this.buildEncounterState()
   }
 
-  /** Restarts the whole run: back to step 0 with full max HP. */
+  /** Restarts the whole run: back to step 0 with full max HP and starting Rotate pool. */
   restartRun(): void {
     this.idx = 0
     this.entryHp = this.config.playerMaxHp
+    this.entryRotate = this.config.initialRotateCharges ?? 0
+    this.rotatePool.charges = this.entryRotate
     this.encounterState = this.buildEncounterState()
   }
 
   /** Jumps to an arbitrary step for debugging, HP reset to max. Not part of a normal playthrough. */
-  debugJumpTo(stepIndex: number): void {
+  debugJumpTo(stepIndex: number, rotateCharges?: number): void {
     if (stepIndex < 0 || stepIndex >= this.steps.length) throw new Error(`bad step index ${stepIndex}`)
     this.idx = stepIndex
     this.entryHp = this.config.playerMaxHp
+    if (rotateCharges !== undefined) {
+      this.rotatePool.charges = rotateCharges
+    }
+    this.entryRotate = this.rotatePool.charges
     this.encounterState = this.buildEncounterState()
   }
 }

@@ -47,7 +47,52 @@ export const PRESETS = {
     targetFill: 0.95, minFill: 0.9, maxInitialFreeRatio: 0.15, minArrows: 18,
     blockSeeking: 1, attempts: 40,
   },
+  /** Square-first policy presets (BUILD-024 / LD-005): 5x5 board. */
+  square5: {
+    width: 5, height: 5, minLength: 2, maxLength: 4, turnChance: 0.12,
+    targetFill: 0.75, minFill: 0.60, maxInitialFreeRatio: 0.65, minArrows: 4,
+    blockSeeking: 0.65, attempts: 40,
+  },
+  // BUILD-026: square6..square10 -- same shape/tuning knobs as square5 (this task does not tune a
+  // per-size difficulty curve, see that task's FOUND), `minArrows` scaled by board area using the
+  // same `max(4, round(n*n*0.12))` formula already used by the calibration editor's own square
+  // preview boards (calibration-editor.js's `levelForSize`, app.js's `loadSquareDebug`) -- verified
+  // (100/100 seeds 1..30 across every size) to generate reliably. Authored campaign levels pick one
+  // of these by board size; `encounterFromJson` requires a known PRESETS key, so the campaign
+  // authoring tool never invents ad-hoc width/height combos outside this fixed square ladder.
+  square6: {
+    width: 6, height: 6, minLength: 2, maxLength: 4, turnChance: 0.12,
+    targetFill: 0.75, minFill: 0.60, maxInitialFreeRatio: 0.65, minArrows: 4,
+    blockSeeking: 0.65, attempts: 40,
+  },
+  square7: {
+    width: 7, height: 7, minLength: 2, maxLength: 4, turnChance: 0.12,
+    targetFill: 0.75, minFill: 0.60, maxInitialFreeRatio: 0.65, minArrows: 6,
+    blockSeeking: 0.65, attempts: 40,
+  },
+  square8: {
+    width: 8, height: 8, minLength: 2, maxLength: 4, turnChance: 0.12,
+    targetFill: 0.75, minFill: 0.60, maxInitialFreeRatio: 0.65, minArrows: 8,
+    blockSeeking: 0.65, attempts: 40,
+  },
+  square9: {
+    width: 9, height: 9, minLength: 2, maxLength: 4, turnChance: 0.12,
+    targetFill: 0.75, minFill: 0.60, maxInitialFreeRatio: 0.65, minArrows: 10,
+    blockSeeking: 0.65, attempts: 40,
+  },
+  square10: {
+    width: 10, height: 10, minLength: 2, maxLength: 4, turnChance: 0.12,
+    targetFill: 0.75, minFill: 0.60, maxInitialFreeRatio: 0.65, minArrows: 12,
+    blockSeeking: 0.65, attempts: 40,
+  },
 } satisfies Record<string, GeneratorParams>
 
 export type PresetName = keyof typeof PRESETS
 export const PRESET_NAMES = Object.keys(PRESETS) as PresetName[]
+
+/** BUILD-026: the square-board ladder authored campaign levels pick from (5..10 -- matches the
+ * calibration editor's own grid-size range). `squarePresetName(6) === 'square6'`. */
+export const SQUARE_BOARD_SIZES = [5, 6, 7, 8, 9, 10] as const
+export function squarePresetName(n: number): PresetName {
+  return `square${n}` as PresetName
+}

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arrow-Roguelite · Prologue Playtest</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="bg-layer" id="bgLayer"></div>
+
+  <header class="topbar">
+    <strong>Prologue Playtest</strong>
+    <label>scene <select id="scenePick"></select></label>
+    <span id="sceneTitle" class="muted"></span>
+    <button id="restartBtn" title="R">restart</button>
+    <button id="hintBtn" title="H">hint</button>
+    <button id="debugToggle" title="D">debug</button>
+    <label>FIX-023 baked arena <select id="bakedArenaPick"></select></label>
+    <button id="bakedArenaLoadBtn" title="Load baked-grid debug arena">load</button>
+    <a href="../cp-prologue.html" style="color:inherit">gray debug viewer →</a>
+    <a href="./calibration-editor.html" style="color:#7be08a; font-weight:700">🎨 Campaign Editor →</a>
+  </header>
+
+  <div class="hint-line" id="msgLine"></div>
+
+  <div class="arena-wrap">
+    <div class="board-frame" id="boardFrame">
+      <canvas id="arena"></canvas>
+    </div>
+  </div>
+
+  <div class="hud hud-left">
+    <div class="player-card" id="playerCard">
+      <div class="name">Игрок</div>
+      <div class="hp-bar"><div class="hp-fill" id="playerHpFill"></div></div>
+      <div class="hp-text" id="playerHpText">—</div>
+    </div>
+  </div>
+
+  <div class="rotate-controls">
+    <button id="rotCcw" class="rotate-btn" title="Q">⟲</button>
+    <div class="rotate-charges" id="rotateCharges"></div>
+    <button id="rotCw" class="rotate-btn" title="E">⟳</button>
+  </div>
+
+  <aside class="debug-panel hidden" id="debugPanel">
+    <h4>Status</h4>
+    <pre id="status"></pre>
+    <h4>Boss pose (debug)</h4>
+    <div id="bossPoseRow" class="boss-pose-row"></div>
+    <h4>Wolf pose (debug)</h4>
+    <div id="wolfPoseRow" class="boss-pose-row"></div>
+    <h4>Log</h4>
+    <pre id="log"></pre>
+    <h4>Validator</h4>
+    <pre id="report"></pre>
+  </aside>
+
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <h2 id="overlayTitle"></h2>
+      <div id="overlayBody" class="muted"></div>
+      <div class="overlay-buttons" id="overlayButtons">
+        <button id="overlayNext"></button>
+        <button id="overlayRestartAll" class="secondary-btn" style="display:none"></button>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
