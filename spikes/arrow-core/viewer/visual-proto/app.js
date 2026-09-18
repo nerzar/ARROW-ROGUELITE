@@ -275,7 +275,7 @@ function loadActiveStep() {
   // any enemy carrying `flee` announces itself, so the next such event needs no new code.
   const fleeGuests = (def.enemies ?? []).filter((e) => e.flee)
   const fleeIntro = fleeGuests.length
-    ? ` 👑 ${fleeGuests.map((e) => e.label ?? e.id).join(', ')} нельзя убить: после ${fleeGuests[0].flee.afterHits} попаданий он сбежит, но бой продолжится — чисти board до конца.`
+    ? ` 👑 ${fleeGuests.map((e) => e.label ?? e.id).join(', ')} нельзя убить: после ${fleeGuests[0].flee.afterHits} попаданий он дразнит, а через ход сбежит — бой продолжится, чисти board до конца.`
     : ''
   ui.msgLine.textContent = def.enemies
     ? `Враги одновременно: ${run.encounter.enemies.map((e) => e.label ?? e.id).join(', ')}.` +
@@ -342,7 +342,9 @@ function tap(id) {
   renderer.onTapResult(level, id, r, before)
   const after = renderer.collectTargets(s, def)
   renderer.markDeaths(before, after)
-  // STORY-001: stamp the scripted-flee presentation beat (taunt-then-exit) for whoever fled.
+  // STORY-001: exits for previously-fled enemies first (their taunt turn is over), then
+  // stamp new flees — a fresh flee always gets its full one-turn taunt after the hit lands.
+  const fledAway = renderer.markFledAdvance(after)
   renderer.markFled(before, after)
   targetsBefore = after
   // VIS-006: gameplay -> per-actor presentation. Priority per actor: defeated > attack
@@ -390,10 +392,17 @@ function tap(id) {
   if (r.pinExpired && r.pinExpired.length) text += ` · UNPINNED: #${r.pinExpired.join(', #')}`
   if (r.won) text = `Цель выполнена. ${text}`
   else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
-  // STORY-001: scripted flee — the beat the encounter was building toward. The fight goes on:
-  // the engine keeps the fled enemy "alive", so only a later kill / full board clear wins.
+  // STORY-001: scripted flee in two beats. This tap's flee only taunts (the pose holds
+  // one turn); whoever fled on an earlier tap leaves now. The engine keeps fled enemies
+  // "alive", so only a later kill / full board clear wins either way.
   if (r.fled && r.fled.length) {
-    for (const f of r.fled) text += ` · 👑 ${f.label ?? f.id} дразнит и убегает! Бой продолжается — чисти board до конца.`
+    for (const f of r.fled) text += ` · 👑 ${f.label ?? f.id} дразнит! Сбежит через ход.`
+  }
+  if (fledAway.length) {
+    for (const id of fledAway) {
+      const e = s.enemies.find((x) => x.id === id)
+      text += ` · 👑 ${e?.label ?? id} сбежал! Бой продолжается — чисти board до конца.`
+    }
   }
   setMsg(text, r.playerDead)
   pushLog(
@@ -401,6 +410,7 @@ function tap(id) {
       (r.enemyAttacked ? `  ENEMY (player ${r.playerHp})` : '') +
       (r.castInterrupted ? '  CAST INTERRUPTED' : '') +
       (r.fled && r.fled.length ? `  FLED: ${r.fled.map((f) => f.id).join(', ')}` : '') +
+      (fledAway.length ? `  FLED-AWAY: ${fledAway.join(', ')}` : '') +
       (r.pinnedThisTurn && r.pinnedThisTurn.length ? `  ROCK THROWN: #${r.pinnedThisTurn.map((p) => `${p.id}(${p.turnsLeft}t)`).join(', #')}` : '') +
       (r.pinExpired && r.pinExpired.length ? `  UNPINNED: #${r.pinExpired.join(', #')}` : ''),
   )
