@@ -757,6 +757,12 @@ if (!initialKey) initialKey = 'prologue-5x5'
 ui.scenePick.value = initialKey
 await loadScene(initialKey)
 
+// FIX-030: hover/targeting magic-accent variant, same query/hash + live-debug convention as the
+// VIS-013/VIS-014 spike's arrowStyle -- 0 (default) quiet edge-light, 1 traveling highlight along
+// the thread, 2 accent moved off the body onto the head for "aimed at a live target".
+const arrowFxParam = queryParams.get('arrowFx') ?? hashParams.get('arrowFx')
+renderer.setArrowFx(Number(arrowFxParam ?? 0))
+
 // FIX-023: one-click UI for loadBakedArenaDebug (previously console-only) -- picks a calibration
 // id from arena-calibration.js and loads it with cp-e4's def (E+W side targets, so LEFT/RIGHT
 // anchors are visible alongside TOP), auto-opening the debug panel so the grid-mesh overlay shows
@@ -827,6 +833,10 @@ window.visualDebug = {
     }
     return wolfVisuals?.get(id) ?? null
   },
+  // FIX-030: live switch for the hover/targeting magic-accent variant (0/1/2, see setArrowFx's
+  // own comment) -- no reload needed, mirrors ?arrowFx= at init.
+  setArrowFx: (v) => { renderer.setArrowFx(Number(v)); kick(); return renderer.getArrowFx() },
+  arrowFx: () => renderer.getArrowFx(),
   layout: () => renderer.debugLayout(), // VIS-007: per-frame arena layout (canvas coords)
   // FIX-021: board-plane projection debug API -- corners/logical fit + point projection, so
   // browser checks can verify click mapping and plane geometry without eyeballing pixels.

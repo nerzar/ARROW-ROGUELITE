@@ -98,6 +98,12 @@ export function createBoardRenderer(canvas, stageEl) {
   const arrowFx = new Map() // arrow id -> { pinT, unpinT, deniedT }
   let hoverId = -1
   let flash = { blocked: -1, blocker: -1 }
+  // FIX-030: hover/targeting magic-accent variant, live-switchable for browser comparison
+  // (window.visualDebug.setArrowFx / ?arrowFx= query param) -- 0 quiet edge-light (default,
+  // normal play), 1 adds a slow traveling highlight along the thread, 2 restrains the accent to
+  // just the head when the arrow is aimed at a live target. All three stay restrained (no neon,
+  // no thick black ring) -- strong pulse is reserved for the existing hint (green) cue, not this.
+  let arrowFxVariant = 0
 
   function fxFor(key) {
     let fx = targetFx.get(key)
@@ -872,52 +878,48 @@ export function createBoardRenderer(canvas, stageEl) {
       const fx = arrowFxFor(a.id)
       const isDenied = now - fx.deniedT >= 0 && now - fx.deniedT < 320
 
-      // PLAYTEST-002: contrast outline underneath every arrow body -- a dark halo so the body reads
-      // against both bright torch-lit stone and dark shadowed stone, independent of free/blocked/
-      // pinned state. Solid line always (see below): a dashed round-capped stroke at this line
-      // width visually degenerates into a chain of beads ("caterpillar" effect) -- reported
-      // unreadable/ugly in playtest. Blocked/pinned status is conveyed by color+opacity only now.
+      // FIX-030 (Ember Groove base): the path reads as a channel carved into the stone, not a
+      // ribbon glued on top of it -- recess shadow + groove wall replace the old flat-black
+      // `arrowOutline` halo (PLAYTEST-002) everywhere it was drawn under the body/head. No
+      // shadowBlur, no white `lighter`-composite core (both were the reported "glow noodle").
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.globalAlpha = free ? 0.6 : 0.45
-      ctx.strokeStyle = col.arrowOutline
-      ctx.lineWidth = lw + Math.max(2.5, lw * 0.55)
+      ctx.globalAlpha = 0.55
+      ctx.strokeStyle = col.grooveShadow
+      ctx.lineWidth = lw + Math.max(3, lw * 0.7)
       polyline(pts)
       ctx.restore()
 
-      // Body: strong + colored for a free/aimed arrow, rock-brown for a pinned one, dimmer (but
-      // still clearly visible, never invisible) for a geometrically blocked one. Always a solid
-      // line -- see the outline comment above for why dashing was removed.
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.shadowBlur = pinned ? 10 : free ? (aims ? 16 : 9) : (aims ? 7 : 4)
-      ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : free ? col.freeGlow : col.mutedGlow
-      ctx.strokeStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
-      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
-      ctx.lineWidth = lw
+      ctx.strokeStyle = pinned ? col.rockGroove : col.groove
+      ctx.globalAlpha = pinned ? 0.95 : 1
+      ctx.lineWidth = lw + Math.max(1.5, lw * 0.35)
       polyline(pts)
       ctx.restore()
 
-      // Inner highlight: a thin near-white core along the same path for a glossy look (free, unpinned only).
+      // Thread: thin warm line down the centre of the channel, lit only when free and unpinned --
+      // blocked is just the empty dark groove above, no separate blocked-body color needed.
       if (free && !pinned) {
         ctx.save()
-        ctx.globalCompositeOperation = 'lighter'
-        ctx.globalAlpha = 0.22
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = Math.max(1, lw * 0.32)
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
+        ctx.strokeStyle = aims ? col.aim : col.arrow
+        ctx.globalAlpha = 0.9
+        ctx.lineWidth = Math.max(1.4, lw * 0.24)
         polyline(pts)
         ctx.restore()
       }
 
-      if (isHover || isBlocked || isBlocker || isHint || isDenied) {
+      // Functional feedback rings (mistake/blocker/denied/hint) are gameplay cues, never mixed
+      // with the hover/targeting magic accent below and never recoloring the body itself.
+      if (isBlocked || isBlocker || isHint || isDenied) {
         ctx.save()
         // Denied (tapped while pinned) gets its own amber ring, deliberately NOT the blocked-tap
         // red -- this never costs HP, so it must not look like a damaging mistake.
-        ctx.strokeStyle = isBlocked ? '#e53935' : isBlocker ? '#fb8c00' : isDenied ? col.rock : isHint ? '#43a047' : col.muted
+        ctx.strokeStyle = isBlocked ? '#e53935' : isBlocker ? '#fb8c00' : isDenied ? col.rock : '#43a047'
         ctx.lineWidth = lw + 6
         ctx.globalAlpha = 0.55
         ctx.lineCap = 'round'
@@ -926,36 +928,87 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.restore()
       }
 
-      // Arrowhead: a filled kite with a small highlight edge.
+      // FIX-030: restrained hover/targeting magic accent (toned-down fantasy-effect direction) --
+      // a thin warm edge-light, never a thick ring or a full glow blob, and quieter for "aimed at
+      // a live target" (ambient) than for an actual hover (direct attention). Normal play never
+      // lights every arrow at once; a stronger pulse belongs to the hint cue above, not here.
+      // arrowFxVariant 2 moves the "aimed" accent off the body entirely onto the head (below).
+      const magicHover = isHover && !isBlocked && !isBlocker
+      const magicTargetBody = free && aims && !pinned && !isHover && !isBlocked && !isBlocker && arrowFxVariant !== 2
+      const magicTargetHead = free && aims && !pinned && !isBlocked && !isBlocker && arrowFxVariant === 2
+      if (magicHover || magicTargetBody) {
+        ctx.save()
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.strokeStyle = col.magicEdge
+        ctx.globalAlpha = magicHover ? 0.24 : 0.14
+        ctx.lineWidth = lw + 5
+        polyline(pts)
+        ctx.restore()
+
+        if (arrowFxVariant === 1) {
+          const p = pointAtFraction(pts, ((now / 900) % 1 + 1) % 1)
+          if (p) {
+            ctx.save()
+            ctx.globalAlpha = magicHover ? 0.5 : 0.32
+            ctx.fillStyle = col.magicSpark
+            ctx.beginPath()
+            ctx.arc(p.x, p.y, Math.max(1.5, lw * 0.3), 0, Math.PI * 2)
+            ctx.fill()
+            ctx.restore()
+          }
+        }
+      }
+
+      // Arrowhead: a flush kite carved into the stone -- a dark keyline stroke instead of the old
+      // black halo blob, no shadowBlur. Blocked heads use `headBlocked` (dull warm iron/stone)
+      // instead of reusing the flat beige `arrowDim`, which read as an "ugly grey" dead spot.
       const [hx, hy] = pts[pts.length - 1]
       const d = a.dir
       const rot = shownAngle
       const [dxr, dyr] = rotateDirPx(d, rot)
-      const sz = localScale * 0.42
+      const sz = localScale * 0.48
+      const headFill = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.headBlocked
       ctx.save()
-      ctx.fillStyle = col.arrowOutline
-      ctx.globalAlpha = free ? 0.6 : 0.45
-      const headOutlinePad = sz * 0.22
-      ctx.beginPath()
-      ctx.moveTo(hx + dxr * (sz + headOutlinePad), hy + dyr * (sz + headOutlinePad))
-      ctx.lineTo(hx + dyr * (sz * 0.82 + headOutlinePad), hy - dxr * (sz * 0.82 + headOutlinePad))
-      ctx.lineTo(hx - dyr * (sz * 0.82 + headOutlinePad), hy + dxr * (sz * 0.82 + headOutlinePad))
-      ctx.closePath()
-      ctx.fill()
-      ctx.restore()
-
-      ctx.save()
-      ctx.shadowBlur = pinned ? 6 : free ? 10 : 0
-      ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : col.freeGlow
-      ctx.fillStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
-      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
+      ctx.lineJoin = 'round'
+      ctx.strokeStyle = col.grooveShadow
+      ctx.lineWidth = Math.max(1.5, sz * 0.16)
+      ctx.globalAlpha = 0.85
       ctx.beginPath()
       ctx.moveTo(hx + dxr * sz, hy + dyr * sz)
       ctx.lineTo(hx + dyr * sz * 0.82, hy - dxr * sz * 0.82)
       ctx.lineTo(hx - dyr * sz * 0.82, hy + dxr * sz * 0.82)
       ctx.closePath()
+      ctx.stroke()
+      ctx.fillStyle = headFill
+      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.8
       ctx.fill()
       ctx.restore()
+
+      // Thin bright ridge line for shine -- free/unpinned only, never on a blocked head.
+      if (free && !pinned) {
+        ctx.save()
+        ctx.strokeStyle = col.magicSpark
+        ctx.globalAlpha = 0.35
+        ctx.lineWidth = Math.max(1, sz * 0.12)
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(hx + dxr * sz * 0.85, hy + dyr * sz * 0.85)
+        ctx.lineTo(hx - dxr * sz * 0.15, hy - dyr * sz * 0.15)
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      if (magicTargetHead) {
+        ctx.save()
+        ctx.strokeStyle = col.magicEdge
+        ctx.globalAlpha = 0.35
+        ctx.lineWidth = Math.max(1.5, sz * 0.22)
+        ctx.beginPath()
+        ctx.arc(hx, hy, sz * 1.15, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.restore()
+      }
 
       drawPinFx(col, a, hx, hy, dxr, dyr, sz, pinned, s, localScale)
     }
@@ -1045,7 +1098,9 @@ export function createBoardRenderer(canvas, stageEl) {
       const x = hx + dxr * dist
       const y = hy + dyr * dist
       ctx.save()
-      ctx.shadowBlur = 10
+      // FIX-030: restrained -- this is the one place VIS-010 allows a brief warm flash (<=300ms
+      // flight), toned down from 10 so it reads as a quick discharge, not a neon trail.
+      ctx.shadowBlur = 6
       ctx.shadowColor = sh.hit ? col.aimGlow : col.mutedGlow
       ctx.strokeStyle = sh.hit ? col.aim : col.arrowDim
       ctx.lineWidth = Math.max(3, localScale * 0.22)
@@ -1064,6 +1119,33 @@ export function createBoardRenderer(canvas, stageEl) {
     ctx.moveTo(pts[0][0], pts[0][1])
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1])
     ctx.stroke()
+  }
+
+  /** FIX-030: point at arc-length fraction t (0..1) along a polyline -- used for the optional
+   * `arrowFxVariant === 1` traveling highlight. Degenerates to the first point for a zero-length
+   * path (shouldn't happen for a real arrow, kept defensive). */
+  function pointAtFraction(pts, t) {
+    if (!pts || pts.length < 2) return pts && pts[0] ? { x: pts[0][0], y: pts[0][1] } : null
+    const segLens = []
+    let total = 0
+    for (let i = 1; i < pts.length; i++) {
+      const len = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])
+      segLens.push(len)
+      total += len
+    }
+    if (total <= 0) return { x: pts[0][0], y: pts[0][1] }
+    let target = clamp01(t) * total
+    for (let i = 0; i < segLens.length; i++) {
+      const segLen = segLens[i]
+      if (target <= segLen || i === segLens.length - 1) {
+        const f = segLen > 0 ? clamp01(target / segLen) : 0
+        const [x0, y0] = pts[i]
+        const [x1, y1] = pts[i + 1]
+        return { x: x0 + (x1 - x0) * f, y: y0 + (y1 - y0) * f }
+      }
+      target -= segLen
+    }
+    return { x: pts[pts.length - 1][0], y: pts[pts.length - 1][1] }
   }
 
   function quadPath(q) {
@@ -1101,6 +1183,18 @@ export function createBoardRenderer(canvas, stageEl) {
       arrow: dark ? '#f3ecd9' : '#2c2013', arrowDim: dark ? '#c9c4b4' : '#5a4d3a', aim: dark ? '#ffd76a' : '#b8791a',
       arrowOutline: 'rgba(12,9,6,0.75)',
       aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',
+      // FIX-030: Ember Groove base -- the path reads as a channel carved into the stone (dark
+      // recess + walls), not an object glued on top of it. `groove`/`grooveShadow` replace the old
+      // flat-black `arrowOutline` halo everywhere it was used for arrow bodies/heads. `headBlocked`
+      // replaces reusing beige `arrowDim` on the head -- blocked heads read as dull warm iron/stone
+      // instead of a flat "ugly grey" fill. `magicEdge` is the toned-down hover/targeting accent
+      // (fantasy-effect direction, restrained: no neon, no thick black ring).
+      groove: dark ? '#241a12' : '#453521', grooveWall: dark ? '#382a1a' : '#5c4a30',
+      grooveShadow: 'rgba(10,7,4,0.6)',
+      rockGroove: dark ? '#4a3a2c' : '#5c4a36',
+      headBlocked: dark ? '#8a7a63' : '#6b5c46',
+      magicEdge: dark ? 'rgba(255,205,140,0.95)' : 'rgba(196,132,54,0.9)',
+      magicSpark: dark ? '#fff3d6' : '#fff0d0',
       text: dark ? '#eee' : '#20180f', muted: dark ? '#999' : '#777',
       bossA: dark ? '#5b4a63' : '#8d7a96', bossB: dark ? '#332a3a' : '#5c4d63', bossGlow: dark ? 'rgba(180,120,220,0.5)' : 'rgba(120,70,150,0.4)',
       enemyA: dark ? '#4a5563' : '#7c8ea0', enemyB: dark ? '#2b323c' : '#54606e', enemyGlow: dark ? 'rgba(120,170,220,0.45)' : 'rgba(70,100,140,0.35)',
@@ -1125,6 +1219,10 @@ export function createBoardRenderer(canvas, stageEl) {
     resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, resetFx, frame,
     get geo() { return geo },
     collectTargets,
+    /** FIX-030: live hover/targeting magic-accent variant (0 quiet edge-light, 1 traveling
+     * highlight, 2 head-only ember on aimed arrows) -- see arrowFxVariant's own comment. */
+    setArrowFx(v) { arrowFxVariant = [0, 1, 2].includes(v) ? v : 0 },
+    getArrowFx() { return arrowFxVariant },
     /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */
     debugLayout() { return layoutInfo },
     /** FIX-021: board-plane debug API (corners/logical size/fit + point projection). */
