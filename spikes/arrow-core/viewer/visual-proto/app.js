@@ -19,6 +19,7 @@ import {
   appearEnemyVisual, baselinePose as enemyBaseline, ENEMY_POSES, manualEnemyPose,
   onEnemyGameplayEvent, readEnemySnapshot, tickEnemyVisual,
 } from './enemy-visual-state.js'
+import { ARROW_STYLES, normalizeArrowStyle } from './arrow-style.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
@@ -94,6 +95,9 @@ let wolfVisuals = null
 // null on every normal/flexible-arena/rectangular-regression scene -- see loadBakedArenaDebug.
 let activeCalibration = null
 let authoredSteps = []
+// VIS-013: live arrow reference style. Presentation-only; gameplay never reads this.
+// Initialized from the URL further below (query/hash `arrowStyle`), switchable live.
+let arrowStyle = normalizeArrowStyle(null)
 
 /** Expire timed holds and re-sync baselines (e.g. a newly armed attackReady telegraph).
  * Presentation only; never touches engine state. */
@@ -563,6 +567,8 @@ function frame(now) {
     s: run.encounter, def, level, assets, hint,
     boss: bossVisual ? { pack: bossPack, visual: bossVisual } : null,
     wolf: wolfVisuals ? { pack: wolfPack, packsBySpecies: enemyPacksBySpecies, visuals: wolfVisuals } : null,
+    // VIS-013: live arrow reference style (query param / debug control / visualDebug).
+    arrowStyle,
     // BUILD-022: board alignment dots/outline are debug-only -- a normal playthrough shows only
     // puzzle content (arrows/glow/selection/shots) directly on the arena's own stone surface.
     debug: !ui.debugPanel.classList.contains('hidden'),
@@ -588,6 +594,8 @@ function renderPanel() {
   const statusLines = [
     `${def.title ?? def.id}`,
     `board ${board.preset} seed ${board.seed} (${level.width}x${level.height}, ${level.arrows.length} стрел)`,
+    // VIS-013: spike-only readout so screenshots always show which variant is on screen.
+    `arrow style: ${arrowStyle} (spike)`,
     `состояние: ${s.playerDead ? 'ПОРАЖЕНИЕ' : s.won ? 'ЦЕЛЬ ВЫПОЛНЕНА' : 'бой'}`,
     `HP целей: ${s.hp}/${s.totalHp}`,
   ]
@@ -757,6 +765,40 @@ if (!initialKey) initialKey = 'prologue-5x5'
 ui.scenePick.value = initialKey
 await loadScene(initialKey)
 
+// VIS-013: live arrow style init + switch. Query/hash `arrowStyle` picks the first paint
+// (no rebuild/restart); the debug-panel buttons switch live afterwards and persist the
+// choice into the URL via replaceState so a refresh keeps judging the same variant.
+arrowStyle = normalizeArrowStyle(queryParams.get('arrowStyle') ?? hashParams.get('arrowStyle'))
+buildArrowStyleButtons()
+
+function setArrowStyle(style) {
+  arrowStyle = normalizeArrowStyle(style)
+  buildArrowStyleButtons()
+  renderPanel()
+  kick()
+  try {
+    const url = new URL(location.href)
+    url.searchParams.set('arrowStyle', arrowStyle)
+    history.replaceState(null, '', url)
+  } catch { /* file:// or exotic embed: style still applies, just not persisted */ }
+  return arrowStyle
+}
+
+// VIS-013: prototype-only style switch (same debug-only contract as the pose buttons).
+function buildArrowStyleButtons() {
+  const row = $('arrowStyleRow')
+  if (!row) return
+  row.replaceChildren()
+  for (const style of ARROW_STYLES) {
+    const b = document.createElement('button')
+    b.textContent = style
+    b.title = `spike: render arrows as ${style}`
+    b.disabled = style === arrowStyle
+    b.onclick = () => setArrowStyle(style)
+    row.append(b)
+  }
+}
+
 // FIX-023: one-click UI for loadBakedArenaDebug (previously console-only) -- picks a calibration
 // id from arena-calibration.js and loads it with cp-e4's def (E+W side targets, so LEFT/RIGHT
 // anchors are visible alongside TOP), auto-opening the debug panel so the grid-mesh overlay shows
@@ -819,6 +861,8 @@ window.visualDebug = {
     return bossSpecies
   },
   wolf: () => wolfVisuals ? Object.fromEntries([...wolfVisuals].map(([id, w]) => [id, w.pose])) : null, // VIS-006: per-actor poses (null in boss mode)
+  arrowStyle: () => arrowStyle, // VIS-013: current live arrow variant
+  setArrowStyle: (style) => setArrowStyle(style), // VIS-013: live switch without reload
   setWolfPose: (id, pose) => { // VIS-006: manual debug override per actor
     if (wolfVisuals?.has(id)) {
       wolfVisuals.set(id, manualEnemyPose(wolfVisuals.get(id), pose, performance.now()))

@@ -1,6 +1,6 @@
 # TASK: VIS-013 — Live Arrow Renderer Reference Spike
 
-STATUS: READY
+STATUS: DONE
 TYPE: SPIKE / VISUAL IMPLEMENTATION
 SIZE: S/M
 AGENT: free implementation agent
@@ -125,3 +125,47 @@ Short RESULT / VERIFY / FOUND.
 Do NOT merge.
 Do NOT declare a winning style.
 User will choose after opening the branch.
+
+## RESULT
+
+Live spike on `viewer/visual-proto` (branch only, no merge). Three switchable variants,
+no rebuild/restart: `?arrowStyle=fantasy-flat|fantasy-inlaid|fantasy-effect`, debug-panel
+buttons (`#arrowStyleRow`, persisted via replaceState), `visualDebug.setArrowStyle()`.
+
+- New pure module `arrow-style.js` (+ `.d.ts`): warm palettes, bend math (`clampBendRadius`,
+  `cornerTrim`), focus gate (`arrowFocus`: only hover/hint run magic), deterministic
+  `sparkParams` (no random, no flicker).
+- `board-renderer.js` `drawArrow`: rounded bends (trim + quadratic, stable thickness),
+  integrated head (kite base overlaps shaft, shared keyline/fill + emboss chevron), inlaid
+  bronze band + static rune diamonds on bends, effect extras (halo at head, traveling
+  highlight dash, gliding sparks) only on hover/hint; blocked stays quiet ivory/stone,
+  pinned keeps its rock feedback; static arrows use layered strokes, no shadowBlur (perf).
+- `app.js`/`index.html`: style state, live switch, status readout (`arrow style: X (spike)`).
+- Gameplay untouched: cells/direction/hit-testing/canExit/combat/rotation rules unchanged;
+  projection/perspective code paths unchanged.
+- Open for the user at: `/viewer/visual-proto/?mode=authored&stage=0&arrowStyle=fantasy-effect`
+  (Stage 1), `&stage=4` (Stage 5 boss), `?scene=act1-e1` (rotate). No winning style declared.
+
+## VERIFY
+
+- `npm run typecheck` — чисто.
+- `npm test` — 300/300 PASS (288 старых + 12 новых `test/vis-013-arrow-style.test.ts`:
+  3 варианта + warm-invariant r>=g>=b + bend-math + focus-gate + spark-determinism).
+- `npm run build` — чисто.
+- Browser (serve.mjs + headless Chromium/Playwright, все ассерты зелёные, page/console
+  errors none): Stage 1 во всех 3 вариантах; live-переключение без перезагрузки
+  (кнопки + setArrowStyle + param); hint (H) показывает magic-эффект только на
+  подсказанной стрелке; Stage 5 рендерится; rotate 0→1 на act1-e1 рисует повёрнутую
+  геометрию; скриншоты `vis013-{1-flat,2-inlaid,3-effect-hint,4-effect-param,5-stage5-inlaid,
+  6-rotated}.png` (в Temp, не в репо).
+- Hover не двигает геометрию/хитбокс кодом: hover только выставляет hoverId, путь
+  строится из тех же pts, hitTest (`screenToCell`) не тронут — ручной клик-проверки не
+  делал, это за пользователем вместе с визуальным выбором.
+
+## FOUND
+
+- В TEMP-скрипте чинил только свои опечатки; продакшен-код правился только по делу.
+- `Stop-Process -Name node` для остановки serve-сервера мог задеть чужие node-процессы
+  на машине — в следующий раз останавливать по PID.
+- Нотиса: эффект на hint-стрелке в статичном скриншоте читается сдержанно (хайлайт виден,
+  halo/sparks — мгновения анимации); живьём в браузере смотрится полнее — судить пользователю.

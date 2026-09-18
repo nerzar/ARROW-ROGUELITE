@@ -5,6 +5,7 @@
 // by EncounterState; this module only plays back the *result* of a tap/rotate as animation.
 import { DX, DY } from '../../dist/src/index.js'
 import { resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets.js'
+import { arrowFocus, arrowPalette, BEND_RADIUS_FAC, cornerTrim, normalizeArrowStyle, sparkParams } from './arrow-style.js'
 import { BOSS_ANCHOR } from './boss-visual-state.js'
 import { ENEMY_ANCHOR } from './enemy-visual-state.js'
 import {
@@ -318,6 +319,9 @@ export function createBoardRenderer(canvas, stageEl) {
 
   function frame(now, view) {
     const { s, def, level, assets, hint, debug } = view
+    // VIS-013: live arrow style (query param / debug control / visualDebug). Normalized here
+    // too so a stray value can never break the draw path — it just falls back to flat.
+    const arrowStyle = normalizeArrowStyle(view.arrowStyle)
     if (!geo) resize(level)
     let animating = false
 
@@ -871,45 +875,116 @@ export function createBoardRenderer(canvas, stageEl) {
       const isBlocker = a.id === flash.blocker
       const fx = arrowFxFor(a.id)
       const isDenied = now - fx.deniedT >= 0 && now - fx.deniedT < 320
+      // VIS-013: live reference styles. `pal` carries the warm fantasy metal roles; `focus`
+      // gates the animated magic so it only ever runs on hover/hint (never the whole board).
+      const pal = arrowPalette(arrowStyle)
+      const blocked = !free && !pinned
+      const focus = arrowFocus({ hover: isHover, hint: isHint, aimed: aims, free, pinned, blocked })
+      const runEffect = arrowStyle === 'fantasy-effect' && focus === 'effect' && free && !pinned
+
+      // VIS-013: rounded shaft path. Each interior bend is trimmed to tangent points and
+      // drawn through a quadratic (never a raw lineTo kink), so thickness stays stable through
+      // corners. Geometry only — hit-testing still uses logical cells, never these pixels.
+      const bendR = lw * BEND_RADIUS_FAC
+      const traceShaft = () => {
+        ctx.beginPath()
+        ctx.moveTo(pts[0][0], pts[0][1])
+        for (let i = 1; i < pts.length - 1; i++) {
+          const trim = cornerTrim(pts[i - 1], pts[i], pts[i + 1], bendR)
+          if (!trim) {
+            ctx.lineTo(pts[i][0], pts[i][1])
+            continue
+          }
+          ctx.lineTo(trim.a[0], trim.a[1])
+          ctx.quadraticCurveTo(pts[i][0], pts[i][1], trim.b[0], trim.b[1])
+        }
+        const last = pts[pts.length - 1]
+        ctx.lineTo(last[0], last[1])
+      }
 
       // PLAYTEST-002: contrast outline underneath every arrow body -- a dark halo so the body reads
       // against both bright torch-lit stone and dark shadowed stone, independent of free/blocked/
       // pinned state. Solid line always (see below): a dashed round-capped stroke at this line
       // width visually degenerates into a chain of beads ("caterpillar" effect) -- reported
       // unreadable/ugly in playtest. Blocked/pinned status is conveyed by color+opacity only now.
+      // VIS-013: the keyline is now the style's warm dark brown, drawn over the same rounded path.
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.globalAlpha = free ? 0.6 : 0.45
-      ctx.strokeStyle = col.arrowOutline
+      ctx.globalAlpha = free ? 0.85 : 0.6
+      ctx.strokeStyle = pal.keyline
       ctx.lineWidth = lw + Math.max(2.5, lw * 0.55)
-      polyline(pts)
+      traceShaft()
+      ctx.stroke()
       ctx.restore()
 
       // Body: strong + colored for a free/aimed arrow, rock-brown for a pinned one, dimmer (but
       // still clearly visible, never invisible) for a geometrically blocked one. Always a solid
       // line -- see the outline comment above for why dashing was removed.
+      // VIS-013: warm gold roles per style; charged (free + aiming at a live target) reads
+      // stronger but stays static — only hover/hint may animate (fantasy-effect).
+      // No shadowBlur on static arrows (perf): the glow feel comes from layered strokes.
+      const bodyColor = pinned ? col.rock : blocked ? pal.bodyBlocked : aims ? pal.bodyAimed : pal.bodyFree
+      const bodyGlow = pinned ? col.rockGlow : blocked ? pal.glowFree : aims ? pal.glowAimed : pal.glowFree
+      if (pal.bevel && !pinned) {
+        ctx.save()
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        // Inlaid bronze band between keyline and gold: the embossed-metal read.
+        ctx.globalAlpha = free ? 0.9 : 0.7
+        ctx.strokeStyle = pal.bevel
+        ctx.lineWidth = lw + Math.max(1.5, lw * 0.3)
+        traceShaft()
+        ctx.stroke()
+        ctx.restore()
+      }
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.shadowBlur = pinned ? 10 : free ? (aims ? 16 : 9) : (aims ? 7 : 4)
-      ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : free ? col.freeGlow : col.mutedGlow
-      ctx.strokeStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
+      ctx.strokeStyle = bodyColor
       ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
       ctx.lineWidth = lw
-      polyline(pts)
+      traceShaft()
+      ctx.stroke()
+      // Static warm under-glow: a wider translucent pass of the same hue (cheap, no blur).
+      ctx.globalAlpha = pinned ? 0.5 : free ? 0.5 : 0.3
+      ctx.strokeStyle = bodyGlow
+      ctx.lineWidth = lw + Math.max(3, lw * 0.8)
+      traceShaft()
+      ctx.stroke()
       ctx.restore()
 
       // Inner highlight: a thin near-white core along the same path for a glossy look (free, unpinned only).
       if (free && !pinned) {
         ctx.save()
         ctx.globalCompositeOperation = 'lighter'
-        ctx.globalAlpha = 0.22
-        ctx.strokeStyle = '#ffffff'
+        ctx.globalAlpha = arrowStyle === 'fantasy-flat' ? 0.22 : 0.3
+        ctx.strokeStyle = pal.core
         ctx.lineWidth = Math.max(1, lw * 0.32)
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        polyline(pts)
+        traceShaft()
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      // VIS-013: inlaid rune diamonds on the bends (static, free arrows only) — the quiet
+      // "enchanted metal" accent the flat style skips.
+      if (pal.rune && free && !pinned && pts.length > 2) {
+        ctx.save()
+        ctx.fillStyle = pal.rune
+        ctx.globalAlpha = aims ? 0.9 : 0.55
+        const dr = Math.max(2, lw * 0.28)
+        for (let i = 1; i < pts.length - 1; i++) {
+          const [px, py] = pts[i]
+          ctx.beginPath()
+          ctx.moveTo(px, py - dr)
+          ctx.lineTo(px + dr, py)
+          ctx.lineTo(px, py + dr)
+          ctx.lineTo(px - dr, py)
+          ctx.closePath()
+          ctx.fill()
+        }
         ctx.restore()
       }
 
@@ -922,40 +997,117 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.globalAlpha = 0.55
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        polyline(pts)
+        traceShaft()
+        ctx.stroke()
         ctx.restore()
       }
 
-      // Arrowhead: a filled kite with a small highlight edge.
+      // VIS-013: integrated arrowhead. The kite's base overlaps the shaft end (headBack), so
+      // head and shaft paint as one shape in the same outline/fill language — no detached or
+      // kinked head. It points along the drawn (rotated) segment, like before.
       const [hx, hy] = pts[pts.length - 1]
       const d = a.dir
       const rot = shownAngle
       const [dxr, dyr] = rotateDirPx(d, rot)
       const sz = localScale * 0.42
+      const headLen = sz * 1.25
+      const headHalfW = lw * 0.85 + sz * 0.3
+      const headBack = sz * 0.4
+      const tipX = hx + dxr * headLen
+      const tipY = hy + dyr * headLen
+      const baseX = hx - dxr * headBack
+      const baseY = hy - dyr * headBack
+      const headFill = pinned ? col.rock : blocked ? pal.bodyBlocked : aims ? pal.bodyAimed : pal.bodyFree
+      const kite = (pad) => {
+        ctx.beginPath()
+        ctx.moveTo(tipX + dxr * pad, tipY + dyr * pad)
+        ctx.lineTo(baseX + dyr * (headHalfW + pad), baseY - dxr * (headHalfW + pad))
+        ctx.lineTo(baseX - dyr * (headHalfW + pad), baseY + dxr * (headHalfW + pad))
+        ctx.closePath()
+      }
       ctx.save()
-      ctx.fillStyle = col.arrowOutline
-      ctx.globalAlpha = free ? 0.6 : 0.45
-      const headOutlinePad = sz * 0.22
-      ctx.beginPath()
-      ctx.moveTo(hx + dxr * (sz + headOutlinePad), hy + dyr * (sz + headOutlinePad))
-      ctx.lineTo(hx + dyr * (sz * 0.82 + headOutlinePad), hy - dxr * (sz * 0.82 + headOutlinePad))
-      ctx.lineTo(hx - dyr * (sz * 0.82 + headOutlinePad), hy + dxr * (sz * 0.82 + headOutlinePad))
-      ctx.closePath()
+      ctx.fillStyle = pal.keyline
+      ctx.globalAlpha = free ? 0.85 : 0.6
+      kite(sz * 0.22)
       ctx.fill()
       ctx.restore()
 
       ctx.save()
-      ctx.shadowBlur = pinned ? 6 : free ? 10 : 0
-      ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : col.freeGlow
-      ctx.fillStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
+      ctx.fillStyle = headFill
       ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
-      ctx.beginPath()
-      ctx.moveTo(hx + dxr * sz, hy + dyr * sz)
-      ctx.lineTo(hx + dyr * sz * 0.82, hy - dxr * sz * 0.82)
-      ctx.lineTo(hx - dyr * sz * 0.82, hy + dxr * sz * 0.82)
-      ctx.closePath()
+      kite(0)
       ctx.fill()
+      // Emboss chevron: a light V from the tip back into the kite, same core language as
+      // the shaft highlight, so the head reads as folded metal, not a flat sticker.
+      if (free && !pinned) {
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.globalAlpha = 0.5
+        ctx.strokeStyle = pal.core
+        ctx.lineWidth = Math.max(1, lw * 0.22)
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(tipX - dxr * headLen * 0.15, tipY - dyr * headLen * 0.15)
+        ctx.lineTo(baseX + dyr * headHalfW * 0.45, baseY - dxr * headHalfW * 0.45)
+        ctx.moveTo(tipX - dxr * headLen * 0.15, tipY - dyr * headLen * 0.15)
+        ctx.lineTo(baseX - dyr * headHalfW * 0.45, baseY + dxr * headHalfW * 0.45)
+        ctx.stroke()
+      }
       ctx.restore()
+
+      // VIS-013: the focused-only magic treatment (fantasy-effect + hover/hint). Everything
+      // here is driven by wall-clock + arrow id — deterministic, no Math.random, no flicker.
+      // At most a hovered and a hinted arrow ever run this path (see `runEffect` above).
+      if (runEffect && pal.halo && pal.highlight && pal.spark) {
+        // Warm halo pooled at the head.
+        const haloR = Math.max(10, lw * 2.6)
+        const halo = ctx.createRadialGradient(hx, hy, 1, hx, hy, haloR)
+        halo.addColorStop(0, pal.halo)
+        halo.addColorStop(1, 'rgba(255,178,70,0)')
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.fillStyle = halo
+        ctx.beginPath()
+        ctx.arc(hx, hy, haloR, 0, Math.PI * 2)
+        ctx.fill()
+        // Traveling highlight along the shaft: a dashed pass with an animated offset.
+        ctx.globalAlpha = 0.85
+        ctx.strokeStyle = pal.highlight
+        ctx.lineWidth = Math.max(1.5, lw * 0.42)
+        ctx.lineCap = 'round'
+        ctx.setLineDash([lw * 2.4, lw * 3.6])
+        ctx.lineDashOffset = -((now / 26 + a.id * 41) % (lw * 6))
+        traceShaft()
+        ctx.stroke()
+        ctx.setLineDash([])
+        // Resting sparks gliding along the shaft.
+        const segLens = []
+        let pathLen = 0
+        for (let i = 1; i < pts.length; i++) {
+          const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])
+          segLens.push(L)
+          pathLen += L
+        }
+        const at = (u) => {
+          let target = Math.min(0.999, Math.max(0, u)) * pathLen
+          for (let i = 0; i < segLens.length; i++) {
+            if (target <= segLens[i] || i === segLens.length - 1) {
+              const t = segLens[i] > 0 ? target / segLens[i] : 0
+              return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t]
+            }
+            target -= segLens[i]
+          }
+          return pts[pts.length - 1]
+        }
+        ctx.fillStyle = pal.spark
+        for (const sp of sparkParams(now, a.id)) {
+          const [sx, sy] = at(sp.u)
+          ctx.globalAlpha = sp.alpha
+          ctx.beginPath()
+          ctx.arc(sx, sy, Math.max(1.2, lw * 0.16 * sp.size), 0, Math.PI * 2)
+          ctx.fill()
+        }
+        ctx.restore()
+      }
 
       drawPinFx(col, a, hx, hy, dxr, dyr, sz, pinned, s, localScale)
     }
