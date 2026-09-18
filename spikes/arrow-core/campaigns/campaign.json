@@ -194,14 +194,11 @@
         "enemies": [
           {
             "id": "mob_top",
-            "species": "dire-wolf",
-            "label": "Dire Wolf (Target)",
+            "species": "skeleton-child",
+            "label": "Skeleton Child (Enemy)",
             "side": 0,
             "hp": 2,
-            "attackTimer": {
-              "interval": 4,
-              "damage": 2
-            }
+            "attackTimer": null
           }
         ],
         "rotate": {
