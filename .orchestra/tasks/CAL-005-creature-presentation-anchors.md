@@ -77,7 +77,7 @@ START_SHA: a0de83d74c001cd5f98a9f556b9ca227622419a7
 
 ## RESULT
 
-SHA: 4f678c6d0fd158b1d43e6407c51a3c4a6af8be31 (code c3a888b + report)
+SHA: 6580e68f08a99aba9768e008eec15f71f9076dcf (code c3a888b + report; код неизменен после c3a888b)
 
 Сделано в `spikes/arrow-core`, только presentation-слой, gameplay/arrow renderer не тронуты:
 
