@@ -74,6 +74,11 @@
 }
 .pose-slot .pose-clear:hover { color: #ff4444; }
 
+/* CAL-005: the Adjust sliders live in the sidebar (between Current values and Source
+   frames) -- give two-word labels room so they don't wrap. */
+.side-panel .scale-row { grid-template-columns: 66px 1fr 62px; }
+.side-panel .scale-row label { white-space: nowrap; }
+
 .source-gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; max-height: 62vh; overflow-y: auto; }
 .source-thumb {
   display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px; min-width: 0;
