@@ -21,6 +21,8 @@ import {
 // kept intact as a debug/fallback style -- see ARROW_STYLES / setArrowStyle.
 import { ARROW_INSET_PX, ARROW_SCALE, buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow, shapeForCell } from './filled-arrow-render.js'
 import { MATERIALS } from './filled-arrow-materials.js'
+// BUILD-035: projectile flight trajectory (exit dir, then steer to the hit-anchor).
+import { FLIGHT_MS, flightPoint, straightLen } from './projectile-flight.js'
 
 // STORY-001: scripted-flee presentation beat, shared by every `flee` enemy. Three beats
 // sequenced by gameplay, not wall-clock: taunt (starts once the hit impact lands, holds one
@@ -116,6 +118,13 @@ export function createBoardRenderer(canvas, stageEl) {
   const arrowFx = new Map() // arrow id -> { pinT, unpinT, deniedT }
   let hoverId = -1
   let flash = { blocked: -1, blocker: -1 }
+  // BUILD-035: projectile flight style (debug/QA + user switcher -- painting only, no
+  // gameplay effect). 'standard' = amber kite; 'heavy' = thick slow-looking bolt;
+  // 'needle' = thin long-trail dart; 'crit' = standard + white core + arrival ring;
+  // 'lob' = standard figure on a raised arc trajectory. Trajectory sync (FLIGHT_MS hit
+  // timing) is identical for every style.
+  const FLIGHT_STYLES = ['standard', 'heavy', 'needle', 'crit', 'lob']
+  let flightStyle = 'needle'
   // BUILD-034: how arrows are painted. 'filled' = the new single-shape board-space renderer
   // (default); 'stroke' = the legacy polyline+kite renderer, kept as debug/fallback. The material
   // only applies to 'filled'. Neither choice touches gameplay: hitTest/ownerAt/canExit are
@@ -167,6 +176,14 @@ export function createBoardRenderer(canvas, stageEl) {
   // VIS-007: per-frame debug layout (canvas coords) for automated checks. Reset on every
   // frame; drawTarget appends one entry per live target (key/side/char/face/plate/badge/board).
   let layoutInfo = []
+  // BUILD-035: last rendered body-center anchor per target (canvas coords), for projectile
+  // flight. Rebuilt every frame alongside layoutInfo, so a shot always steers to where its
+  // target visibly is -- never to a stale position. Presentation only.
+  let targetAnchors = new Map()
+  // BUILD-035: pending impact visuals per target: { hp, dead, until }.
+  // The engine applies damage synchronously at tap, but the HP bar / 'убит' line must not
+  // drop until the projectile actually arrives -- frame() shows the pre-tap values until then.
+  let pendingHp = new Map()
   let boardBBox = { x: 0, y: 0, w: 0, h: 0 }
 
   // FIX-023: `calibration` is an optional ARENA_CALIBRATIONS entry (arena-calibration.js) for a
@@ -261,18 +278,32 @@ export function createBoardRenderer(canvas, stageEl) {
   function onTapResult(level, id, r, targetsBefore) {
     const now = performance.now()
     const local = level.arrows[id].dir
-    shots.push({ cells: level.arrows[id].cells, dir: local, arenaDir: r.arenaDir, hit: r.hit, t0: now })
+    // BUILD-035: resolve the hit-anchor at event time (last rendered frame -- fresh to one
+    // frame). A miss (or no anchor yet) flies straight and fades, exactly like before.
+    let target = null
     if (r.hit) {
       const hitTarget = targetsBefore.find((t) => t.side === r.arenaDir)
       if (hitTarget) {
+        target = targetAnchors.get(targetKey(hitTarget)) ?? null
+        // BUILD-035: HP/dead visuals wait for the arrival (see frame()'s pendingHp patch).
+        pendingHp.set(targetKey(hitTarget), { hp: hitTarget.hp, dead: hitTarget.dead, until: now + FLIGHT_MS })
         const fx = fxFor(targetKey(hitTarget))
-        fx.hitT = now + 220 // shots already carry a ~220ms travel delay before impact
+        fx.hitT = now + FLIGHT_MS // impact flash syncs with the projectile's arrival, not the tap
         // EXP-011/VS-001: only a genuine cast-interrupt gets the "CAST INTERRUPTED" burst -- the
         // legacy EXP-010 interruptOnHit reset (r.interrupted without r.castInterrupted) is unused
         // by any current content and isn't a cast, so it gets no burst text.
-        if (r.castInterrupted) fx.interruptT = now + 220
+        if (r.castInterrupted) fx.interruptT = now + FLIGHT_MS
       }
     }
+    // BUILD-035: 'lob' raises the steered leg into an arc (same duration/endpoints/sync);
+    // every other style flies the same trajectory and differs only in figure painting.
+    // The style is frozen per shot so a mid-flight switch never pops the figure.
+    let arc = 0
+    if (flightStyle === 'lob' && target) {
+      const [ehx, ehy] = cellCenter(level.arrows[id].cells[level.arrows[id].cells.length - 1], shownAngle)
+      arc = Math.min(160, Math.max(40, Math.hypot(target.x - ehx, target.y - ehy) * 0.25))
+    }
+    shots.push({ cells: level.arrows[id].cells, dir: local, arenaDir: r.arenaDir, hit: r.hit, target, arc, style: flightStyle, t0: now })
     if (r.enemyAttacks && r.enemyAttacks.length) {
       for (const a of r.enemyAttacks) fxFor(a.id).attackT = now
     } else if (r.enemyAttacked) {
@@ -399,7 +430,7 @@ export function createBoardRenderer(canvas, stageEl) {
     } else {
       shownAngle = s.rotation * 90
     }
-    shots = shots.filter((sh) => now - sh.t0 < 420)
+      shots = shots.filter((sh) => now - sh.t0 < FLIGHT_MS)
     if (shots.length) animating = true
     for (const fx of targetFx.values()) {
       if (now - fx.hitT < 260 || now - fx.attackT < 320 || now - fx.interruptT < 700 || now - fx.deathT < 550) animating = true
@@ -457,7 +488,21 @@ export function createBoardRenderer(canvas, stageEl) {
     drawBoardSurface(col, backdrop)
     drawSideReadouts(col, s, def)
     layoutInfo = []
-    for (const t of targets) drawTarget(col, t, now)
+    targetAnchors = new Map()
+    for (const t of targets) {
+      // BUILD-035: pre-impact HP presentation -- show pre-tap hp/dead until the projectile
+      // arrives (pendingHp), then fall through to live state. Expired entries are dropped.
+      const pend = pendingHp.get(targetKey(t))
+      if (pend) {
+        if (now < pend.until) {
+          t.hp = pend.hp
+          t.dead = pend.dead
+        } else {
+          pendingHp.delete(targetKey(t))
+        }
+      }
+      drawTarget(col, t, now)
+    }
     for (const a of level.arrows) drawArrow(col, s, def, a, hint)
     for (const sh of shots) drawShot(col, sh, now)
 
@@ -799,6 +844,8 @@ export function createBoardRenderer(canvas, stageEl) {
       const ax = slot.x + ox
       const ay = slot.y + oy
       const charR = { x: ax - charW / 2, y: ay - charH / 2, w: charW, h: charH }
+      // BUILD-035: body-center hit-anchor for projectile flight (canvas coords).
+      targetAnchors.set(key, { x: ax, y: ay })
       layoutInfo.push({
         key, side: t.side, isBoss: t.isBoss,
         char: charR,
@@ -1225,28 +1272,100 @@ export function createBoardRenderer(canvas, stageEl) {
     }
 
     function drawShot(col, sh, now) {
-      const t = clamp01((now - sh.t0) / 300)
+      const t = clamp01((now - sh.t0) / FLIGHT_MS)
       const [hx, hy] = cellCenter(sh.cells[sh.cells.length - 1], shownAngle)
       const [dxr, dyr] = rotateDirPx(sh.dir, shownAngle)
       // FIX-023: stroke thickness/tail length are perspective-sensitive (localScale, sampled at
       // the exit cell); overall travel distance stays geo.cell-based -- it's an off-board flight
       // path to the podium, not a piece of the stone grid, so it doesn't need perspective scale.
       const localScale = localScaleAt(sh.cells[sh.cells.length - 1], shownAngle)
-      const dist = (Math.max(geo.w, geo.h) + 3.5) * geo.cell * t
-      const x = hx + dxr * dist
-      const y = hy + dyr * dist
+      // BUILD-035: exit along the freed direction, then steer into the hit-anchor.
+      const from = { x: hx, y: hy }
+      const dir = { x: dxr, y: dyr } // rotateDirPx preserves unit length
+      const leg = sh.target
+        ? straightLen(from, sh.target)
+        : (Math.max(geo.w, geo.h) + 3.5) * geo.cell
+      const p = flightPoint(t, { from, dir, target: sh.target, straightLen: leg, arc: sh.arc ?? 0 })
+      // Projectile figure per flight style (frozen on the shot -- a mid-flight switch never
+      // pops the figure). All styles share trajectory sync; only the painting differs.
+      // standard: amber kite; heavy: 1.5x bolt, short trail; needle: 0.7x dart, long trail;
+      // crit: standard + white core + arrival ring; lob: standard figure (the arc is the style).
+      const style = sh.style ?? 'standard'
+      const figK = style === 'heavy' ? 1.5 : style === 'needle' ? 0.7 : style === 'crit' ? 1.25 : 1
+      const trailK = style === 'heavy' ? 0.6 : style === 'needle' ? 1.8 : 1
+      const shaftK = style === 'heavy' ? 1.3 : style === 'needle' ? 0.7 : 1
+      const sz = Math.max(4, localScale * 0.3) * figK
+      const headL = sz * 2.6
+      const tailL = sz * 4.5 * trailK
+      const fade = t > 0.8 ? 1 - (t - 0.8) / 0.2 : 1
+      // BUILD-035: a hitting projectile is emissive -- fixed vivid amber in both themes so
+      // the flight reads on bright day-stone and night-stone alike. A miss stays the quiet
+      // theme-aware gray (it must not blaze -- nothing happened).
+      const body = sh.hit ? '#ffd76a' : col.arrowDim
+      const glow = sh.hit ? 'rgba(255,190,80,0.9)' : col.mutedGlow
       ctx.save()
-      ctx.shadowBlur = 10
-      ctx.shadowColor = sh.hit ? col.aimGlow : col.mutedGlow
-      ctx.strokeStyle = sh.hit ? col.aim : col.arrowDim
-      ctx.lineWidth = Math.max(3, localScale * 0.22)
+      ctx.translate(p.x, p.y)
+      ctx.rotate(p.angle)
+      // BUILD-035: speed squeeze -- the faster the leg, the thinner and longer the figure;
+      // it relaxes back into full shape as it settles into the hit. Trail stretches with it.
+      const thin = Math.min(1, Math.max(0.45, 1 / (1 + 0.45 * p.speed)))
+      const stretch = Math.min(1.8, Math.max(1, 1 + 0.3 * p.speed))
+      ctx.scale(stretch, thin)
+      ctx.globalAlpha = (sh.hit ? 1 : 0.7) * fade
+      ctx.shadowBlur = 12
+      ctx.shadowColor = glow
+      const grad = ctx.createLinearGradient(-tailL, 0, 0, 0)
+      grad.addColorStop(0, 'rgba(0,0,0,0)')
+      grad.addColorStop(1, body)
+      ctx.strokeStyle = grad
+      ctx.lineWidth = sz * 0.9
       ctx.lineCap = 'round'
-      ctx.globalAlpha = 1 - t * 0.5
       ctx.beginPath()
-      ctx.moveTo(x - dxr * localScale * 1.1, y - dyr * localScale * 1.1)
-      ctx.lineTo(x, y)
+      ctx.moveTo(-tailL, 0)
+      ctx.lineTo(0, 0)
       ctx.stroke()
+      ctx.strokeStyle = body
+      ctx.lineWidth = sz * shaftK
+      ctx.beginPath()
+      ctx.moveTo(-headL * 0.9, 0)
+      ctx.lineTo(headL * 0.35, 0)
+      ctx.stroke()
+      ctx.fillStyle = body
+      ctx.beginPath()
+      ctx.moveTo(headL, 0)
+      ctx.lineTo(0, -sz)
+      ctx.lineTo(headL * 0.35, 0)
+      ctx.lineTo(0, sz)
+      ctx.closePath()
+      ctx.fill()
+      if (style === 'crit' && sh.hit) {
+        // White-hot core -- the crit reads before it even lands.
+        ctx.shadowBlur = 0
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'
+        ctx.beginPath()
+        ctx.moveTo(headL * 0.8, 0)
+        ctx.lineTo(headL * 0.1, -sz * 0.4)
+        ctx.lineTo(headL * 0.35, 0)
+        ctx.lineTo(headL * 0.1, sz * 0.4)
+        ctx.closePath()
+        ctx.fill()
+      }
       ctx.restore()
+      if (style === 'crit' && sh.hit && sh.target) {
+        // Arrival ring at the hit-anchor -- expands and fades right after impact.
+        const sinceImpact = now - (sh.t0 + FLIGHT_MS)
+        if (sinceImpact >= 0 && sinceImpact < 260) {
+          const q = sinceImpact / 260
+          ctx.save()
+          ctx.globalAlpha = (1 - q) * 0.9
+          ctx.strokeStyle = '#ffd76a'
+          ctx.lineWidth = 3
+          ctx.beginPath()
+          ctx.arc(sh.target.x, sh.target.y, 6 + q * localScale * 3, 0, Math.PI * 2)
+          ctx.stroke()
+          ctx.restore()
+        }
+      }
     }
   }
 
@@ -1317,7 +1436,14 @@ export function createBoardRenderer(canvas, stageEl) {
   return {
     resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markFled, markFledAdvance, resetFx, frame,
     get geo() { return geo },
+    /** BUILD-035: live shots + last-frame hit-anchors (debug/QA only -- no gameplay effect). */
+    debugShots() { return shots.map((sh) => ({ ...sh })) },
+    debugAnchors() { return Object.fromEntries(targetAnchors) },
     /** BUILD-034: arrow presentation selector (debug/QA only -- no gameplay effect). */
+    /** BUILD-035: projectile flight style selector (switcher UI + debug -- painting only). */
+    listFlightStyles() { return [...FLIGHT_STYLES] },
+    setFlightStyle(style) { if (FLIGHT_STYLES.includes(style)) flightStyle = style },
+    getFlightStyle() { return flightStyle },
     setArrowStyle(style) { if (style === 'filled' || style === 'stroke') arrowStyle = style },
     getArrowStyle() { return arrowStyle },
     setArrowMaterial(id) { if (MATERIALS.some((m) => m.id === id)) arrowMaterial = id },
