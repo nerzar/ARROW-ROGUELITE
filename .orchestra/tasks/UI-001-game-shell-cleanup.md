@@ -1,6 +1,6 @@
 # TASK: UI-001 — Game Shell Cleanup
 
-STATUS: READY
+STATUS: DONE
 TYPE: FIX
 SIZE: S/M
 BASE_BRANCH: main
@@ -72,3 +72,19 @@ Dropdown должен отражать ФАКТИЧЕСКИ текущую runti
 - как скрыть/вернуть admin UI
 
 Commit + push. Не merge в main.
+
+## RESULT
+
+- Clean game view: `?clean=1`, кнопка ⚙ справа внизу, localStorage; `body.clean` прячет admin-only (baked arena, ссылки, debug toggle) и force-скрывает debug-панель. Editors не тронуты.
+- Top-left overlap: topbar больше не врапается (nowrap + horizontal scroll, фиксированная высота) — hint-line на top:44px ничего не перекрывает.
+- Scene truth: `scene-sync.js` (pure) + `syncScenePick()` в `loadActiveStep`; позиция run побеждает entry key на advance; debug-борды показывают transient option с живым названием.
+
+## VERIFY
+
+- tests 28 файлов / 325 OK (новый `ui-001-scene-sync.test.ts`); typecheck OK; build OK.
+- Browser 11/11: clean скрывает/возвращает/персистит; ручной выбор/baked/возврат truthful; prologue + act1 открываются; 480x700 без наложений; pageerrors 0.
+
+## FOUND
+
+- Advance-маппинг проверен юнитом (позиция > entry key), не живым переходом: живой advance требует выигранного этапа, руками долго; кодовый путь тот же `loadActiveStep`.
+- Transient debug option переиспользуется одна (`__debug__`), текст обновляется под текущий борд.

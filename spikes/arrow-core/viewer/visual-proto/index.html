@@ -16,11 +16,11 @@
     <span id="sceneTitle" class="muted"></span>
     <button id="restartBtn" title="R">restart</button>
     <button id="hintBtn" title="H">hint</button>
-    <button id="debugToggle" title="D">debug</button>
-    <label>FIX-023 baked arena <select id="bakedArenaPick"></select></label>
-    <button id="bakedArenaLoadBtn" title="Load baked-grid debug arena">load</button>
-    <a href="../cp-prologue.html" style="color:inherit">gray debug viewer →</a>
-    <a href="./calibration-editor.html" style="color:#7be08a; font-weight:700">🎨 Campaign Editor →</a>
+    <button id="debugToggle" class="admin-only" title="D">debug</button>
+    <label class="admin-only">FIX-023 baked arena <select id="bakedArenaPick"></select></label>
+    <button id="bakedArenaLoadBtn" class="admin-only" title="Load baked-grid debug arena">load</button>
+    <a href="../cp-prologue.html" class="admin-only" style="color:inherit">gray debug viewer →</a>
+    <a href="./calibration-editor.html" class="admin-only" style="color:#7be08a; font-weight:700">🎨 Campaign Editor →</a>
   </header>
 
   <div class="hint-line" id="msgLine"></div>
@@ -62,6 +62,9 @@
     <h4>Validator</h4>
     <pre id="report"></pre>
   </aside>
+
+  <!-- UI-001: explicit admin UI switch, always visible (the way back from clean view). -->
+  <button id="adminToggle" class="admin-toggle" title="Hide admin UI (clean game view)">⚙</button>
 
   <div class="overlay" id="overlay">
     <div class="card">
