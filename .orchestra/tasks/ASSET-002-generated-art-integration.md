@@ -132,6 +132,8 @@ Added 4 new `ARENA_CALIBRATIONS` entries (`grimskull-5x5`, `ironvow-6x6`, `autum
 painted grid, then checked live in the browser. Verified all 4 resolve correctly via
 `getArenaCalibration()`.
 
+RESULT_SHA (code): 80a2dae
+
 ## VERIFY
 
 Browser (isolated worktree's own dev server, port 5205):
