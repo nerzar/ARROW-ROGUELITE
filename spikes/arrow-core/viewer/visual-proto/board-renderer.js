@@ -13,7 +13,8 @@ import {
   hudBoxes, podiumSlot, spriteMirror,
 } from './arena-layout.js'
 import {
-  backdropCornersPx, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx, screenToCell,
+  backdropCornersPx, cellPointToScreen, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx,
+  screenToCell,
 } from './board-plane.js'
 
 // FIX-023: an ARENA_CALIBRATIONS entry's {top,left,right} anchor group (either `anchors` or
@@ -85,6 +86,188 @@ function spritePivotsFor(calibration) {
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
 
+/** Point at fraction `t` (0..1) along a polyline's own arc length -- used to place the effect
+ * layer's traveling spark on the arrow's actual drawn (rounded, projected) path. */
+function pointAtFraction(pts, t) {
+  if (pts.length < 2) return pts[0] ? { x: pts[0][0], y: pts[0][1] } : null
+  const segLens = []
+  let total = 0
+  for (let i = 1; i < pts.length; i++) {
+    const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])
+    segLens.push(d)
+    total += d
+  }
+  if (total <= 0) return { x: pts[0][0], y: pts[0][1] }
+  let remain = clamp01(t) * total
+  for (let i = 0; i < segLens.length; i++) {
+    if (remain <= segLens[i] || i === segLens.length - 1) {
+      const frac = segLens[i] > 0 ? Math.min(1, remain / segLens[i]) : 0
+      const [x0, y0] = pts[i]
+      const [x1, y1] = pts[i + 1]
+      return { x: x0 + (x1 - x0) * frac, y: y0 + (y1 - y0) * frac }
+    }
+    remain -= segLens[i]
+  }
+  return { x: pts[pts.length - 1][0], y: pts[pts.length - 1][1] }
+}
+
+/** #rrggbb -> lighten (amt > 0) or darken (amt < 0) by blending toward white/black, |amt| in
+ * 0..1. VIS-016 (feedback pass 5): the flat single-color fill was reported as looking flat/
+ * plastic, not the reference's metallic-gold relief -- this derives a light/dark pair from each
+ * palette's own base hex so the body can be painted as a real gradient without hand-tuning three
+ * separate hexes per state per palette. */
+function shadeHex(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const t = amt >= 0 ? 255 : 0
+  const p = Math.min(1, Math.abs(amt))
+  const mix = (c) => Math.round(c + (t - c) * p)
+  return `rgb(${mix(r)},${mix(g)},${mix(b)})`
+}
+
+/** A vertical (bounding-box top->bottom) 3-stop light/base/dark gradient over `pts` -- reads as a
+ * gilded-metal relief lit from above instead of a flat poster-color fill, without needing a per-
+ * segment normal (which a rounded multi-bend path doesn't have a single consistent one of). */
+function verticalShadeGradient(ctx, pts, baseHex) {
+  let minY = Infinity, maxY = -Infinity
+  for (const p of pts) {
+    minY = Math.min(minY, p[1])
+    maxY = Math.max(maxY, p[1])
+  }
+  if (!Number.isFinite(minY) || maxY - minY < 1) maxY = minY + 1
+  const g = ctx.createLinearGradient(0, minY, 0, maxY)
+  g.addColorStop(0, shadeHex(baseHex, 0.38))
+  g.addColorStop(0.5, baseHex)
+  g.addColorStop(1, shadeHex(baseHex, -0.3))
+  return g
+}
+
+/** VIS-016 (feedback pass 13): the full embossed-bevel material stack, inside -> outside:
+ * 1. gold FACE (subtle gradient, not flat) -- painted by the caller (verticalShadeGradient).
+ * 2. thin bright HIGHLIGHT, right at the face's own edge.
+ * 3. reddish-brown/bronze BEVEL band -- the layer that actually reads as "depth"/a 3D edge.
+ * 4. soft semi-transparent, blurred RIM (light, warm) -- an ambient glow between the bevel and
+ *    the hard outline.
+ * 5. crisp thin dark OUTLINE.
+ * 6. tiny pale OUTER separation rim, between the outline and the stone.
+ * Every color here is DERIVED from the arrow's own baseHex (shadeHex), not a fixed independent
+ * hex -- this is what actually fixes "the border reads as flat black": a color mixed from black
+ * toward the arrow's own warm hue can't land on neutral black the way an unrelated fixed dark hex
+ * could still happen to (previous passes kept reading as "basically black" despite nominally
+ * being a warm brown, because that brown wasn't actually tied to the metal it was outlining). */
+/** #rrggbb blended toward a fixed warm bronze/terracotta anchor (not toward black/white like
+ * shadeHex) -- VIS-016 (feedback pass 14): the bevel band was "barely readable", and shading the
+ * arrow's own hue toward black (shadeHex) mostly just darkens it, it doesn't shift its HUE --
+ * against a gold face that reads as "a slightly darker patch of the same gold", not a distinct
+ * reddish-brown material band. A genuine hue shift toward bronze is what makes that band actually
+ * look like a different, richer metal edge, which is what sells the "3D game icon" feel over a
+ * flat/plastic single-hue shape. */
+function toBronze(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const tr = 120, tg = 56, tb = 24
+  const mix = (c, t) => Math.round(c + (t - c) * amt)
+  return `rgb(${mix(r, tr)},${mix(g, tg)},${mix(b, tb)})`
+}
+
+function arrowBevelColors(baseHex) {
+  return {
+    highlight: shadeHex(baseHex, 0.6),
+    // VIS-016 (feedback pass 15): FOUND why "no transparent layer is visible" -- `rim` at +0.3 was
+    // still much closer in value to the gold face (+0.38 at its lightest) than to the bevel/
+    // outline browns next to it, so it visually fused with the face instead of reading as its own
+    // pale gap between bevel and outline. Pushed much lighter/paler (+0.8, close to cream/white)
+    // so it unambiguously reads as a light band sandwiched between two darker brown ones.
+    rim: shadeHex(baseHex, 0.8),
+    // Lightened a bit (was 0.6 toward the bronze anchor) and the anchor itself brightened -- at
+    // 0.6 it landed close enough in both hue AND value to `outline` that the two fused into one
+    // "huge brown border" with nothing readable between them.
+    bevel: toBronze(baseHex, 0.45),
+    outline: shadeHex(baseHex, -0.6),
+  }
+}
+
+/** Per-side pixel width of each of the 4 add-on bevel layers (see arrowBevelColors), scaled
+ * gently off the shaft's own local width `lw` so they stay proportionate across the board's
+ * perspective range without ballooning into fat bands on a normal-thickness shaft (the defect
+ * every percentage-of-lw border attempt hit before). VIS-016 (feedback pass 15): dropped the 5th
+ * "pale outer separation rim" layer entirely -- it needed a screen-space offset trick to read as
+ * one-sided ("like a reflection"), and that offset broke cleanly at the shaft's rounded bends
+ * ("some glitches at the corners"). Four clean, always-uniform rings is more robust than five
+ * where one is a special case. `bevel` eased back down a little from pass 14's widening (that pass
+ * fixed "barely visible" but overshot into "huge") now that `rim` actually separates it from
+ * `outline` instead of the two reading as one mass. */
+function arrowBevelWidths(lw) {
+  return {
+    hi: Math.max(0.8, lw * 0.06),
+    bevel: Math.max(2, lw * 0.2),
+    rim: Math.max(1, lw * 0.07),
+    outline: Math.max(1, lw * 0.07),
+  }
+}
+
+// VIS-016: finalized arrow visual style. Replaces PLAYTEST-002's black-halo/near-white-core look
+// (rejected as "black pipes" + "glow noodle") with a simple, opaque, warm-filled base -- see
+// .orchestra/handoffs/VIS-016-arrow-style-finalize.md for the full accepted/rejected history.
+// Three calm, live-switchable variants on the same geometry (?arrowPalette=<key> or
+// visualDebug.setArrowPalette) so the user can compare on the real board instead of waiting on
+// separate design cycles. No separate `bodyBlocked` field: blocked is the SAME bodyFree hue,
+// just darkened at draw time (shadeHex) -- per feedback, blocked must stay the same warm-gold
+// material family, only less saturated/lit, never a distinct grey/stone color.
+const ARROW_PALETTES = {
+  // Default: rich warm gold/champagne -- the closest match to the user-approved "beautiful and
+  // pleasant" reference. A clean opaque gilded arrow, not a glowing rune.
+  champagneGold: {
+    // VIS-016 (feedback pass 10, self-review): richer/more saturated gold -- the prior hex read
+    // muddy/brownish next to the reference's more vivid champagne-gold.
+    bodyFree: '#f0a828', bodyAim: '#f7c04a',
+    // VIS-016 (feedback pass 12): an explicit, dedicated ash-brown/stone tone for blocked --
+    // darkening bodyFree (the old approach) kept too much of the gold's own hue/saturation and
+    // read as "still basically gold, just dim" rather than the distinct muted grey-brown material
+    // asked for ("не делай их золотыми... приглушённый серо-коричневый").
+    bodyBlocked: '#8c7c64',
+    bevel: 'rgba(255,238,200,0.55)',
+    magicEdge: 'rgba(255,200,120,0.5)', magicSpark: '#ffe6b0',
+  },
+  // Deeper, more saturated amber/orange -- a duskier variant of the same shape/finish.
+  duskAmber: {
+    bodyFree: '#d98a35', bodyAim: '#f0a23e',
+    bodyBlocked: '#7d715a',
+    bevel: 'rgba(255,220,180,0.5)',
+    magicEdge: 'rgba(240,150,70,0.5)', magicSpark: '#ffcf8a',
+  },
+  // Warmer/redder ember-bronze.
+  honeyBronze: {
+    bodyFree: '#c98a4a', bodyAim: '#e2a558',
+    bodyBlocked: '#82705a',
+    bevel: 'rgba(255,226,182,0.5)',
+    magicEdge: 'rgba(230,150,80,0.5)', magicSpark: '#ffd8a0',
+  },
+}
+const DEFAULT_ARROW_PALETTE = 'champagneGold'
+function arrowPaletteFor(name) {
+  return ARROW_PALETTES[name] ?? ARROW_PALETTES[DEFAULT_ARROW_PALETTE]
+}
+
+// VIS-016 (feedback pass 9): the outer border -- warm dark brown/bronze, explicitly NOT
+// black/near-black ("не чёрный-чёрный, а тёплый тёмный контур"). Shared across all 3 color
+// palettes (the edge reads as neutral "depth", not a palette-specific hue).
+// VIS-016 (feedback pass 13): every fixed independent edge color (this file tried a few) kept
+// reading as flat/neutral-black no matter how "warm" it nominally was -- because it genuinely
+// WASN'T tied to the metal it outlined. Replaced by arrowBevelColors(baseHex), which derives
+// every layer's color (including the dark outline) from the arrow's own hue via shadeHex, so the
+// outline literally can't land on neutral black.
+
+// VIS-016 (feedback pass 5): two selectable fill techniques on the SAME geometry, so the user can
+// compare on the live board instead of me guessing which reads as "solid warm fantasy arrow"
+// rather than "flat UI plate". 'flat' = one solid opaque color. 'bevel' = a soft vertical
+// light/base/dark gradient body, reading as a gilded relief rather than a poster-flat color. Both
+// now share the same 6-layer embossed-bevel edge treatment (see arrowBevelColors).
+const ARROW_MATERIALS = ['flat', 'bevel']
+// VIS-016 (feedback pass 6): 'flat' confirmed as the base to push toward the reference -- 'bevel'
+// stays selectable for comparison but is no longer the default.
+const DEFAULT_ARROW_MATERIAL = 'flat'
+
 export function createBoardRenderer(canvas, stageEl) {
   const ctx = canvas.getContext('2d')
   let geo = null
@@ -98,6 +281,12 @@ export function createBoardRenderer(canvas, stageEl) {
   const arrowFx = new Map() // arrow id -> { pinT, unpinT, deniedT }
   let hoverId = -1
   let flash = { blocked: -1, blocker: -1 }
+  // VIS-016: active arrow color palette (see ARROW_PALETTES) -- live-switchable so the user can
+  // compare the 3 calm variants on the real board without a separate design cycle.
+  let arrowPaletteName = DEFAULT_ARROW_PALETTE
+  // VIS-016 (feedback pass 5): active arrow fill technique (see ARROW_MATERIALS) -- 'flat' vs
+  // 'bevel', live-switchable so A/B can be compared on the real board before picking one.
+  let arrowMaterialName = DEFAULT_ARROW_MATERIAL
 
   function fxFor(key) {
     let fx = targetFx.get(key)
@@ -381,7 +570,7 @@ export function createBoardRenderer(canvas, stageEl) {
     layoutInfo = []
     for (const t of targets) drawTarget(col, t, now)
     for (const a of level.arrows) drawArrow(col, s, def, a, hint)
-    for (const sh of shots) drawShot(col, sh, now)
+    for (const sh of shots) drawShot(sh, now)
 
     return animating
 
@@ -852,13 +1041,11 @@ export function createBoardRenderer(canvas, stageEl) {
     function drawArrow(col, s, def, a, hint) {
       const alive = s.board.isAlive(a.id)
       if (!alive) return
-      const arena = s.arenaDir(a.id)
       const free = s.board.canExit(a.id)
       // EXP-013/VS-001: a rock-pinned arrow is geometrically free (board.canExit is unchanged) but
       // mechanically untappable -- s.isPinned is the same "playable" overlay rock-spike.js already
       // draws from, kept visually consistent here (rock-brown, dashed) so the two viewers agree.
       const pinned = s.isPinned(a.id)
-      const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead) : arena === s.bossSide
       const pts = a.cells.map((c) => cellCenter(c, shownAngle))
       // FIX-023: perspective-sensitive scale, sampled at the arrowhead's own cell (the most
       // visually prominent point of the arrow) rather than geo.cell's whole-board average --
@@ -872,92 +1059,298 @@ export function createBoardRenderer(canvas, stageEl) {
       const fx = arrowFxFor(a.id)
       const isDenied = now - fx.deniedT >= 0 && now - fx.deniedT < 320
 
-      // PLAYTEST-002: contrast outline underneath every arrow body -- a dark halo so the body reads
-      // against both bright torch-lit stone and dark shadowed stone, independent of free/blocked/
-      // pinned state. Solid line always (see below): a dashed round-capped stroke at this line
-      // width visually degenerates into a chain of beads ("caterpillar" effect) -- reported
-      // unreadable/ugly in playtest. Blocked/pinned status is conveyed by color+opacity only now.
-      ctx.save()
-      ctx.lineCap = 'round'
-      ctx.lineJoin = 'round'
-      ctx.globalAlpha = free ? 0.6 : 0.45
-      ctx.strokeStyle = col.arrowOutline
-      ctx.lineWidth = lw + Math.max(2.5, lw * 0.55)
-      polyline(pts)
-      ctx.restore()
+      const ap = arrowPaletteFor(arrowPaletteName)
 
-      // Body: strong + colored for a free/aimed arrow, rock-brown for a pinned one, dimmer (but
-      // still clearly visible, never invisible) for a geometrically blocked one. Always a solid
-      // line -- see the outline comment above for why dashing was removed.
-      ctx.save()
-      ctx.lineCap = 'round'
-      ctx.lineJoin = 'round'
-      ctx.shadowBlur = pinned ? 10 : free ? (aims ? 16 : 9) : (aims ? 7 : 4)
-      ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : free ? col.freeGlow : col.mutedGlow
-      ctx.strokeStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
-      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
-      ctx.lineWidth = lw
-      polyline(pts)
-      ctx.restore()
+      // VIS-016 (feedback pass 2): a blocked arrow only reads as blocked/dim when something ELSE
+      // already calls attention to it (a damaging/denied tap flash, the hint call-out) or during
+      // the guided Prologue (def.id is `prologue_*`/`cp_e*` for exactly the 5 canon Prologue
+      // steps) -- otherwise every arrow uses the same uniform free look, so a puzzle-solving
+      // glance can't read "safe" vs "blocked" off color alone. Pinned is unaffected -- that's an
+      // active, already-telegraphed debuff (rock icon + turn badge), not solution information.
+      const isTutorialDef = /^prologue|^cp_e/i.test(def.id ?? '')
+      const revealBlocked = !free && (isTutorialDef || isBlocked || isBlocker || isHint || isDenied)
+      // VIS-016 (feedback pass 12): blocked uses ap.bodyBlocked -- a dedicated muted ash-brown/
+      // stone tone (same material/render logic, distinct hue), not gold with its alpha/lightness
+      // turned down. That reads as the puzzle giving away "still basically the free color" instead
+      // of a genuinely muted, distinct material.
+      const baseHex = revealBlocked ? ap.bodyBlocked : ap.bodyFree
+      const bodyAlpha = pinned ? 0.9 : revealBlocked ? 0.92 : 1
 
-      // Inner highlight: a thin near-white core along the same path for a glossy look (free, unpinned only).
-      if (free && !pinned) {
+      // VIS-016: arrowhead geometry built entirely in LOGICAL board coordinates (cell-fraction
+      // units), then each vertex (tip, base, left/right corner) is projected through the board's
+      // homography INDIVIDUALLY -- a homography does not preserve angles, so rotating one already-
+      // projected screen-space tangent by 90 degrees (the old `rotateDirPx`-built kite) is not the
+      // true projection of the logical perpendicular; it read as a subtly skewed head under real
+      // perspective near the board's far/top edges and off-square rotations. `rotateDirPx` is kept
+      // only for drawPinFx's marker offset below, not for the head shape itself.
+      const lastC = a.cells[a.cells.length - 1]
+      const lastX = lastC % geo.w
+      const cCol = lastX + 0.5
+      const cRow = (lastC - lastX) / geo.w + 0.5
+      const d = a.dir
+      const rot = shownAngle
+      const dirU = DX[d]
+      const dirV = DY[d]
+      const perpU = -dirV
+      const perpV = dirU
+      const sz = localScale * 0.42
+      // VIS-016 (feedback pass 7): FOUND the real cause of "heads are still different sizes" --
+      // headLen/headHalfW/headBack were proportional to THIS ARROW's own localScale (FIX-023's
+      // per-cell perspective scale, sampled at each arrow's own end cell), so the rendered head
+      // was, BY DESIGN, smaller near the board's far/top edge and bigger near its near/bottom edge
+      // -- same intent as the shaft's own perspective-sensitive width, just far more noticeable on
+      // a bold kite shape than on a thin line. Repeatedly read as a bug, not a feature, across
+      // several feedback rounds -- the fix is to size the head from a single BOARD-WIDE reference
+      // scale (sampled once, at the board's own center cell) instead of each arrow's own position,
+      // so every head renders at the same pixel size regardless of where on the board it ends.
+      // `headHalfW/localScale` below still divides by THIS arrow's own localScale (not the board
+      // reference) -- that's still correct and necessary: it converts the fixed pixel target into
+      // the cell-fraction offset that projects back to that same fixed pixel size AT THIS ARROW'S
+      // OWN position (see cellPointToScreen's own comment on why cell-fraction, not px, is what
+      // gets projected). Only the NUMERATOR (the pixel target itself) is now position-independent.
+      const boardRefCell = Math.floor(geo.h / 2) * geo.w + Math.floor(geo.w / 2)
+      const boardScale = localScaleAt(boardRefCell, rot)
+      const hsz = boardScale * 0.42
+      const hlw = Math.max(3, boardScale * 0.27)
+      const headLen = hsz * 0.75
+      // VIS-016 (feedback pass 8): widened per feedback.
+      const headHalfW = hlw * 0.68 + hsz * 0.2
+      const headBack = hsz * 0.27
+      const headPoint = (uOff, vOff) => cellPointToScreen(geo.plane, geo.fit, cCol + uOff, cRow + vOff, rot)
+      const backOffU = -dirU * (headBack / localScale)
+      const backOffV = -dirV * (headBack / localScale)
+      const basePt = headPoint(backOffU, backOffV)
+      const tipPt = headPoint(dirU * ((headLen + headBack) / localScale), dirV * ((headLen + headBack) / localScale))
+      const halfWC = headHalfW / localScale
+      const leftPt = headPoint(backOffU + perpU * halfWC, backOffV + perpV * halfWC)
+      const rightPt = headPoint(backOffU - perpU * halfWC, backOffV - perpV * halfWC)
+      // `kitePath(closed)`: the fill needs the closed triangle (tip-left, left-right, right-tip),
+      // but VIS-016 (feedback pass 8) FOUND that stroking that same closed path for the border
+      // draws that left-right BACK edge too -- a solid line straight across the head's base,
+      // cutting across the narrower shaft that continues right through the middle of that span
+      // (reported as "a solid line under the arrowhead"). The border strokes use `closed = false`
+      // instead: an OPEN left->tip->right path, so only the two real silhouette edges (tip-left,
+      // tip-right) get drawn -- the "shoulder" segments below still cover the small flare between
+      // the shaft's own edge and each head corner, left open here on purpose.
+      const kitePath = (closed = true) => {
+        ctx.beginPath()
+        if (closed) {
+          ctx.moveTo(tipPt.x, tipPt.y)
+          ctx.lineTo(leftPt.x, leftPt.y)
+          ctx.lineTo(rightPt.x, rightPt.y)
+          ctx.closePath()
+        } else {
+          ctx.moveTo(leftPt.x, leftPt.y)
+          ctx.lineTo(tipPt.x, tipPt.y)
+          ctx.lineTo(rightPt.x, rightPt.y)
+        }
+      }
+
+      // VIS-016: rounded shaft, trimmed to end at the head's own base (basePt) instead of the raw
+      // final cell center -- so the shaft path never pokes out past the opaque head fill drawn on
+      // top of it, and the head never shows a bare round shaft cap peeking out from underneath
+      // (the "shaft shows through the head" defect the earlier VIS-014 pass called out).
+      const shaftPts = pts.slice(0, -1).concat([[basePt.x, basePt.y]])
+      const BEND_RADIUS = Math.max(4, lw * 1.1)
+      const shaftPath = () => {
+        ctx.beginPath()
+        ctx.moveTo(shaftPts[0][0], shaftPts[0][1])
+        for (let i = 1; i < shaftPts.length - 1; i++) {
+          const [px, py] = shaftPts[i - 1]
+          const [cx, cy] = shaftPts[i]
+          const [nx, ny] = shaftPts[i + 1]
+          const toPrev = Math.hypot(cx - px, cy - py)
+          const toNext = Math.hypot(nx - cx, ny - cy)
+          const r = Math.min(BEND_RADIUS, toPrev * 0.45, toNext * 0.45)
+          ctx.lineTo(cx + (px - cx) * (r / toPrev), cy + (py - cy) * (r / toPrev))
+          ctx.quadraticCurveTo(cx, cy, cx + (nx - cx) * (r / toNext), cy + (ny - cy) * (r / toNext))
+        }
+        const last = shaftPts[shaftPts.length - 1]
+        ctx.lineTo(last[0], last[1])
+      }
+
+      // VIS-016 (feedback pass 13): the full embossed-bevel stack (arrowBevelColors/
+      // arrowBevelWidths) -- six concentric passes, widest/outermost first: pale separation rim ->
+      // dark outline -> blurred semi-transparent rim -> bronze bevel band -> bright highlight ->
+      // gold face (gradient, not flat). Every color is derived from baseHex, so the dark outline
+      // literally cannot land on neutral black -- it's a mix of black toward the arrow's own warm
+      // hue, which is what actually fixes "the border reads as black" (previous passes used an
+      // unrelated fixed dark hex that kept reading that way regardless of how "warm" it nominally
+      // was). `pinned` skips all of it -- rock-brown is a separate, already-established material.
+      const headPts = [[tipPt.x, tipPt.y], [leftPt.x, leftPt.y], [rightPt.x, rightPt.y]]
+      if (pinned) {
         ctx.save()
-        ctx.globalCompositeOperation = 'lighter'
-        ctx.globalAlpha = 0.22
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = Math.max(1, lw * 0.32)
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        polyline(pts)
+        ctx.strokeStyle = col.rock
+        ctx.globalAlpha = bodyAlpha
+        ctx.lineWidth = lw
+        shaftPath()
+        ctx.stroke()
+        ctx.restore()
+      } else {
+        const bc = arrowBevelColors(baseHex)
+        const bw = arrowBevelWidths(lw)
+        const wOutline = lw + 2 * (bw.hi + bw.bevel + bw.rim + bw.outline)
+        const wRim = lw + 2 * (bw.hi + bw.bevel + bw.rim)
+        const wBevel = lw + 2 * (bw.hi + bw.bevel)
+        const wHi = lw + 2 * bw.hi
+        // VIS-016 (feedback pass 14): `lineCap = 'butt'` (was 'round') on every add-on layer --
+        // a round cap on the shaft's own wide translucent layers bulges out as a circular blob
+        // PAST basePt, into the head's own footprint (and the head's matching open-edge strokes
+        // bulge back the other way), reported as "the arrowhead's edges run into the shaft's
+        // body" / the head looking "glued on top" rather than part of the same shape. A flush
+        // butt cap at the shaft's head-facing end removes that bulge entirely; the opaque face
+        // fill (kept round-capped, drawn last) still gives the shaft's own FAR end its normal
+        // rounded tail, and the head's own fill covers this end completely regardless.
+        const strokePass = (color, alpha, width, blurPx) => {
+          ctx.save()
+          ctx.lineCap = 'butt'
+          ctx.lineJoin = 'round'
+          if (blurPx) ctx.filter = `blur(${blurPx}px)`
+          ctx.globalAlpha = alpha
+          ctx.strokeStyle = color
+          ctx.lineWidth = width
+          shaftPath()
+          ctx.stroke()
+          ctx.restore()
+        }
+        strokePass(bc.outline, 0.9, wOutline)                    // 4. crisp thin dark outline (outermost)
+        strokePass(bc.rim, 0.55, wRim, Math.max(0.6, lw * 0.06)) // 3. soft blurred semi-transparent rim
+        strokePass(bc.bevel, bodyAlpha, wBevel)                  // 2. reddish-brown/bronze bevel band
+        strokePass(bc.highlight, 0.55, wHi)                      // 1b. thin bright inner highlight
+        // 1. gold face -- subtle gradient, not a flat fill ("not an approximation as a flat
+        // fill... subtle lighting/gradient" per the brief). Always shaded now, regardless of the
+        // flat/bevel material toggle -- a genuinely flat face read as the "still too flat"
+        // complaint even with the rest of the bevel stack around it.
+        const faceStyle = verticalShadeGradient(ctx, shaftPts.concat(headPts), baseHex)
+        ctx.save()
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.strokeStyle = faceStyle
+        ctx.globalAlpha = bodyAlpha
+        ctx.lineWidth = lw
+        shaftPath()
+        ctx.stroke()
+        ctx.restore()
+      }
+      const bodyFillStyle = pinned
+        ? col.rock
+        : verticalShadeGradient(ctx, shaftPts.concat(headPts), baseHex)
+
+      // Optional effect layer: restrained warm-magic glow along the shaft, only on hover/hint --
+      // NOT the always-on base, and (per feedback) no separate ring/circle on the head anymore.
+      const magicHover = isHover && !pinned
+      const magicHint = Boolean(isHint)
+      if (magicHover || magicHint) {
+        ctx.save()
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.strokeStyle = ap.magicEdge
+        ctx.globalAlpha = magicHint ? 0.4 : 0.28
+        ctx.lineWidth = lw + 5
+        shaftPath()
+        ctx.stroke()
+        const p = pointAtFraction(shaftPts, ((now / 900) % 1 + 1) % 1)
+        if (p) {
+          ctx.globalAlpha = magicHint ? 0.6 : 0.4
+          ctx.fillStyle = ap.magicSpark
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, Math.max(1.5, lw * 0.28), 0, Math.PI * 2)
+          ctx.fill()
+        }
         ctx.restore()
       }
 
-      if (isHover || isBlocked || isBlocker || isHint || isDenied) {
+      // Gameplay-consequential flash ring: a damaging blocked tap, a no-HP-cost denied tap, and
+      // the tutorial/hint call-out. Strokes BOTH the shaft and the head kite -- previously only
+      // the shaft got it, so the reported "red highlight doesn't reach the arrowhead" left the
+      // most eye-catching part of the arrow (the tip, where the player's eye lands) untouched.
+      if (isBlocked || isBlocker || isHint || isDenied) {
         ctx.save()
         // Denied (tapped while pinned) gets its own amber ring, deliberately NOT the blocked-tap
         // red -- this never costs HP, so it must not look like a damaging mistake.
-        ctx.strokeStyle = isBlocked ? '#e53935' : isBlocker ? '#fb8c00' : isDenied ? col.rock : isHint ? '#43a047' : col.muted
-        ctx.lineWidth = lw + 6
+        ctx.strokeStyle = isBlocked ? '#e53935' : isBlocker ? '#fb8c00' : isDenied ? col.rock : '#43a047'
         ctx.globalAlpha = 0.55
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        polyline(pts)
+        ctx.lineWidth = lw + 6
+        shaftPath()
+        ctx.stroke()
+        ctx.lineWidth = Math.max(3, sz * 0.5)
+        kitePath(false)
+        ctx.stroke()
         ctx.restore()
       }
 
-      // Arrowhead: a filled kite with a small highlight edge.
-      const [hx, hy] = pts[pts.length - 1]
-      const d = a.dir
-      const rot = shownAngle
+      // Arrowhead: same 6-layer embossed-bevel stack as the shaft (pass 13), same bw widths (`lw`-
+      // based, not headHalfW-based) so the border reads as one continuous thickness across the
+      // shaft-head seam. Geometry (tipPt/leftPt/rightPt/basePt) computed above.
+      const headShoulderPath = () => {
+        if (headHalfW <= lw / 2) return false
+        const shaftEdgeC = (lw / 2) / localScale
+        const leftInner = headPoint(backOffU + perpU * shaftEdgeC, backOffV + perpV * shaftEdgeC)
+        const rightInner = headPoint(backOffU - perpU * shaftEdgeC, backOffV - perpV * shaftEdgeC)
+        ctx.beginPath()
+        ctx.moveTo(leftInner.x, leftInner.y)
+        ctx.lineTo(leftPt.x, leftPt.y)
+        ctx.moveTo(rightInner.x, rightInner.y)
+        ctx.lineTo(rightPt.x, rightPt.y)
+        return true
+      }
+      // "Shoulder" segments: kitePath(false) only covers the tip-left/tip-right edges. Where the
+      // head flares wider than the shaft it caps, the flare itself still needs a border -- these
+      // cover just that flare, from the shaft's own edge out to each head corner, leaving the
+      // middle open where the shaft keeps going straight through (a full-width line there would
+      // cut across the shaft, reported as "a solid line under the arrowhead").
+      // VIS-016 (feedback pass 14): `lineCap = 'butt'` (was 'round') -- same reasoning as the
+      // shaft's strokePass: a round cap at the open path's free ends (leftPt/rightPt, exactly
+      // where the shoulder strokes meet it) bulged sideways/backward into the shaft, the other
+      // half of the "edges run into the body" defect.
+      const strokeHeadEdge = (color, alpha, width, blurPx) => {
+        ctx.save()
+        ctx.lineJoin = 'round'
+        ctx.lineCap = 'butt'
+        if (blurPx) ctx.filter = `blur(${blurPx}px)`
+        ctx.globalAlpha = alpha
+        ctx.strokeStyle = color
+        ctx.lineWidth = width
+        kitePath(false)
+        ctx.stroke()
+        if (headShoulderPath()) ctx.stroke()
+        ctx.restore()
+      }
+      if (pinned) {
+        ctx.save()
+        ctx.fillStyle = col.rock
+        ctx.globalAlpha = bodyAlpha
+        kitePath()
+        ctx.fill()
+        ctx.restore()
+      } else {
+        const bc = arrowBevelColors(baseHex)
+        const bw = arrowBevelWidths(lw)
+        const wOutline = 2 * (bw.hi + bw.bevel + bw.rim + bw.outline)
+        const wRim = 2 * (bw.hi + bw.bevel + bw.rim)
+        const wBevel = 2 * (bw.hi + bw.bevel)
+        const wHi = 2 * bw.hi
+        strokeHeadEdge(bc.outline, 0.9, wOutline)                     // 4. crisp thin dark outline (outermost)
+        strokeHeadEdge(bc.rim, 0.55, wRim, Math.max(0.6, lw * 0.06))  // 3. soft blurred semi-transparent rim
+        strokeHeadEdge(bc.bevel, bodyAlpha, wBevel)                   // 2. reddish-brown/bronze bevel band
+        strokeHeadEdge(bc.highlight, 0.55, wHi)                       // 1b. thin bright inner highlight
+        // 1. gold face -- same gradient fillStyle as the shaft (shaft+head shade continuously).
+        ctx.save()
+        ctx.fillStyle = bodyFillStyle
+        ctx.globalAlpha = bodyAlpha
+        kitePath()
+        ctx.fill()
+        ctx.restore()
+      }
+
+      // rotateDirPx kept only for drawPinFx's marker offset (an icon/text popup anchored past the
+      // tip, not part of the arrow's own drawn shape) -- see that function's own comment.
       const [dxr, dyr] = rotateDirPx(d, rot)
-      const sz = localScale * 0.42
-      ctx.save()
-      ctx.fillStyle = col.arrowOutline
-      ctx.globalAlpha = free ? 0.6 : 0.45
-      const headOutlinePad = sz * 0.22
-      ctx.beginPath()
-      ctx.moveTo(hx + dxr * (sz + headOutlinePad), hy + dyr * (sz + headOutlinePad))
-      ctx.lineTo(hx + dyr * (sz * 0.82 + headOutlinePad), hy - dxr * (sz * 0.82 + headOutlinePad))
-      ctx.lineTo(hx - dyr * (sz * 0.82 + headOutlinePad), hy + dxr * (sz * 0.82 + headOutlinePad))
-      ctx.closePath()
-      ctx.fill()
-      ctx.restore()
-
-      ctx.save()
-      ctx.shadowBlur = pinned ? 6 : free ? 10 : 0
-      ctx.shadowColor = pinned ? col.rockGlow : aims ? col.aimGlow : col.freeGlow
-      ctx.fillStyle = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.arrowDim
-      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.75
-      ctx.beginPath()
-      ctx.moveTo(hx + dxr * sz, hy + dyr * sz)
-      ctx.lineTo(hx + dyr * sz * 0.82, hy - dxr * sz * 0.82)
-      ctx.lineTo(hx - dyr * sz * 0.82, hy + dxr * sz * 0.82)
-      ctx.closePath()
-      ctx.fill()
-      ctx.restore()
-
-      drawPinFx(col, a, hx, hy, dxr, dyr, sz, pinned, s, localScale)
+      drawPinFx(col, a, tipPt.x, tipPt.y, dxr, dyr, sz, pinned, s, localScale)
     }
 
     /** Direction unit vector d (board-local, DX/DY) turned by the puzzle layer's current visual
@@ -1033,7 +1426,7 @@ export function createBoardRenderer(canvas, stageEl) {
       }
     }
 
-    function drawShot(col, sh, now) {
+    function drawShot(sh, now) {
       const t = clamp01((now - sh.t0) / 300)
       const [hx, hy] = cellCenter(sh.cells[sh.cells.length - 1], shownAngle)
       const [dxr, dyr] = rotateDirPx(sh.dir, shownAngle)
@@ -1044,10 +1437,13 @@ export function createBoardRenderer(canvas, stageEl) {
       const dist = (Math.max(geo.w, geo.h) + 3.5) * geo.cell * t
       const x = hx + dxr * dist
       const y = hy + dyr * dist
+      // VIS-016: firing is one of the handoff's explicit optional-effect-layer states -- the warm
+      // magic glow (ap.magicEdge), restrained everywhere else, is allowed to show here.
+      const ap = arrowPaletteFor(arrowPaletteName)
       ctx.save()
       ctx.shadowBlur = 10
-      ctx.shadowColor = sh.hit ? col.aimGlow : col.mutedGlow
-      ctx.strokeStyle = sh.hit ? col.aim : col.arrowDim
+      ctx.shadowColor = ap.magicEdge
+      ctx.strokeStyle = sh.hit ? ap.bodyAim : ap.bodyFree
       ctx.lineWidth = Math.max(3, localScale * 0.22)
       ctx.lineCap = 'round'
       ctx.globalAlpha = 1 - t * 0.5
@@ -1057,13 +1453,6 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.stroke()
       ctx.restore()
     }
-  }
-
-  function polyline(pts) {
-    ctx.beginPath()
-    ctx.moveTo(pts[0][0], pts[0][1])
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1])
-    ctx.stroke()
   }
 
   function quadPath(q) {
@@ -1093,14 +1482,10 @@ export function createBoardRenderer(canvas, stageEl) {
       dot: dark ? '#4a4a4f' : '#c9c9c6',
       // FIX-023: debug grid-line mesh, bright enough to read against any baked arena art.
       gridLine: dark ? 'rgba(120,220,255,0.75)' : 'rgba(20,120,180,0.75)',
-      // PLAYTEST-002: `arrow` brightened toward a warm parchment tone (was a mid-gray that blended
-      // into the stone under both themes) and `arrowDim` given real contrast in each theme (was
-      // near-identical to the stone tone it sits on -- effectively invisible) instead of one flat
-      // gray reused for both. `arrowOutline` is a dark halo drawn under every arrow body/head/pin
-      // marker (see drawArrow) so any arrow color still reads against bright or dark stone.
-      arrow: dark ? '#f3ecd9' : '#2c2013', arrowDim: dark ? '#c9c4b4' : '#5a4d3a', aim: dark ? '#ffd76a' : '#b8791a',
-      arrowOutline: 'rgba(12,9,6,0.75)',
-      aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',
+      // VIS-016: the arrow body/head/head-fill itself is now painted from ARROW_PALETTES (`ap.*`
+      // in drawArrow/drawShot), not this theme pair -- see that const's own comment. `aim` stays
+      // here only for the unrelated enemy-telegraph urgency ring (see the CAST/ATTACK ellipse).
+      aim: dark ? '#ffd76a' : '#b8791a',
       text: dark ? '#eee' : '#20180f', muted: dark ? '#999' : '#777',
       bossA: dark ? '#5b4a63' : '#8d7a96', bossB: dark ? '#332a3a' : '#5c4d63', bossGlow: dark ? 'rgba(180,120,220,0.5)' : 'rgba(120,70,150,0.4)',
       enemyA: dark ? '#4a5563' : '#7c8ea0', enemyB: dark ? '#2b323c' : '#54606e', enemyGlow: dark ? 'rgba(120,170,220,0.45)' : 'rgba(70,100,140,0.35)',
@@ -1125,6 +1510,15 @@ export function createBoardRenderer(canvas, stageEl) {
     resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, resetFx, frame,
     get geo() { return geo },
     collectTargets,
+    /** VIS-016: live arrow color palette (see ARROW_PALETTES) -- 'champagneGold' (default) |
+     * 'duskAmber' | 'honeyBronze'. Unknown names fall back to the default. */
+    setArrowPalette(name) { arrowPaletteName = ARROW_PALETTES[name] ? name : DEFAULT_ARROW_PALETTE },
+    getArrowPalette() { return arrowPaletteName },
+    listArrowPalettes() { return Object.keys(ARROW_PALETTES) },
+    /** VIS-016 (feedback pass 5): live arrow fill technique -- 'flat' | 'bevel' (default). */
+    setArrowMaterial(name) { arrowMaterialName = ARROW_MATERIALS.includes(name) ? name : DEFAULT_ARROW_MATERIAL },
+    getArrowMaterial() { return arrowMaterialName },
+    listArrowMaterials() { return ARROW_MATERIALS.slice() },
     /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */
     debugLayout() { return layoutInfo },
     /** FIX-021: board-plane debug API (corners/logical size/fit + point projection). */

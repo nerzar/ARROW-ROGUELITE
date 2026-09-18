@@ -18,6 +18,8 @@ function makeMockCanvasAndStage(stageW = 960, stageH = 540) {
   const baseTarget: any = {
     measureText: (t: string) => ({ width: t.length * 7 }),
     createRadialGradient: () => ({ addColorStop() {} }),
+    // VIS-016: the arrow renderer's 'bevel' fill material shades the body with a linear gradient.
+    createLinearGradient: () => ({ addColorStop() {} }),
   }
   const dummyCtx: any = new Proxy(baseTarget, {
     get(target, prop) {

@@ -177,6 +177,36 @@ export function cellToScreen(plane, fit, col, row, angleDeg) {
   return project(plane.H, u, v)
 }
 
+/** Logical (col,row) point anywhere within/around the grid -- col/row may be fractional (e.g.
+ * 2.5,1.5 is that cell's own center, same as cellToScreen(2,1,...); 2.8,1.5 is 0.3 cell toward
+ * col 3). Interpolates linearly between the surrounding colFracs/rowFracs entries, so it agrees
+ * exactly with cellToScreen/gridLineToScreen at integer/half-integer inputs while also covering
+ * the in-between points those two can't express. VIS-016: lets the arrowhead be built from actual
+ * logical-space offsets (tip/base/corner, in cell-fraction units) and projected individually
+ * through the board's own homography, instead of rotating one already-projected screen-space
+ * tangent by 90 degrees -- a homography does not preserve angles, so the latter drifts from the
+ * true perspective-correct shape near the board's far/top edges and off-square rotations. */
+export function cellPointToScreen(plane, fit, col, row, angleDeg) {
+  const cu = fracAt(fit.colFracs, col)
+  const cv = fracAt(fit.rowFracs, row)
+  const lu = fit.u0 + cu * fit.gridU
+  const lv = fit.v0 + cv * fit.gridV
+  const { u, v } = rotateUV(lu, lv, angleDeg)
+  return project(plane.H, u, v)
+}
+
+/** Linear-interpolate a fractional index `t` (0..n, n = fracs.length-1) into a monotonic fracs
+ * table, extrapolating past either end using that boundary segment's own slope -- same contract
+ * as fracBucket's out-of-range handling, just returning the interpolated value instead of the
+ * bucket index. */
+function fracAt(fracs, t) {
+  const n = fracs.length - 1
+  const seg = t < 0 ? 0 : t >= n ? n - 1 : Math.floor(t)
+  const i0 = Math.max(0, Math.min(n - 1, seg))
+  const frac = t - i0
+  return fracs[i0] + (fracs[i0 + 1] - fracs[i0]) * frac
+}
+
 /** Logical grid-LINE intersection (col,row) -- a cell boundary, not cellToScreen's cell center.
  * col ranges 0..cols, row ranges 0..rows (cols+1 / rows+1 distinct lines each way). FIX-023: the
  * debug grid-line overlay draws exactly these points/lines against the baked art so alignment can

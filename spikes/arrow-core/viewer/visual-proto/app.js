@@ -747,6 +747,14 @@ const hashParams = new URLSearchParams(location.hash.slice(1))
 const mode = queryParams.get('mode') ?? hashParams.get('mode')
 const stageParam = queryParams.get('stage') ?? hashParams.get('stage')
 
+// VIS-016: pick an arrow color variant from the URL so a link can be shared pre-set to a
+// specific one, same convention as mode/stage/scene above.
+const arrowPaletteParam = queryParams.get('arrowPalette') ?? hashParams.get('arrowPalette')
+if (arrowPaletteParam) renderer.setArrowPalette(arrowPaletteParam)
+// VIS-016 (feedback pass 5): same convention for the A/B fill-technique switch ('flat' | 'bevel').
+const arrowMaterialParam = queryParams.get('arrowMaterial') ?? hashParams.get('arrowMaterial')
+if (arrowMaterialParam) renderer.setArrowMaterial(arrowMaterialParam)
+
 let initialKey = queryParams.get('scene') ?? hashParams.get('scene')
 if (mode === 'authored' && authoredSteps.length > 0) {
   const stIdx = Number(stageParam ?? 0)
@@ -833,6 +841,16 @@ window.visualDebug = {
   boardPlane: () => renderer.boardPlane(),
   projectBoardPoint: (col, row, angleDeg) => renderer.projectBoardPoint(col, row, angleDeg),
   unprojectBoardPoint: (x, y, angleDeg) => renderer.unprojectBoardPoint(x, y, angleDeg),
+  // VIS-016: live arrow color palette switch -- 'champagneGold' (default) | 'duskAmber' |
+  // 'honeyBronze' -- so the 3 variants can be compared on the real board without a reload.
+  setArrowPalette: (name) => { renderer.setArrowPalette(name); kick(); return renderer.getArrowPalette() },
+  getArrowPalette: () => renderer.getArrowPalette(),
+  listArrowPalettes: () => renderer.listArrowPalettes(),
+  // VIS-016 (feedback pass 5): live A/B fill-technique switch -- 'flat' | 'bevel' (default) -- on
+  // the SAME geometry, so the two can be compared on the real board before picking one.
+  setArrowMaterial: (name) => { renderer.setArrowMaterial(name); kick(); return renderer.getArrowMaterial() },
+  getArrowMaterial: () => renderer.getArrowMaterial(),
+  listArrowMaterials: () => renderer.listArrowMaterials(),
   // FIX-021: square-first policy visual QA -- see loadSquareDebug's own comment.
   loadSquareDebug,
   // FIX-023: TRUE baked-grid calibration visual QA -- see loadBakedArenaDebug's own comment.
