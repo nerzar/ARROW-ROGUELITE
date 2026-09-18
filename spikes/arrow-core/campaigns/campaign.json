@@ -494,14 +494,14 @@
             }
           },
           "actorScale": {
-            "top": 0.55,
+            "top": 0.63,
             "left": 1,
             "right": 1
           },
           "spritePivot": {
             "top": {
               "dx": 0,
-              "dy": 0
+              "dy": 0.07
             },
             "left": {
               "dx": 0,
