@@ -88,14 +88,26 @@
       },
       "encounter": {
         "id": "enc_stage_1",
-        "title": "Этап 1 · Базовый выстрел",
+        "title": "Этап 1 · Goblin King сбегает",
         "enemies": [
           {
-            "id": "mob_top",
+            "id": "goblin_king",
+            "species": "goblin-taunter",
+            "label": "Goblin King",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": null,
+            "flee": {
+              "afterHits": 2,
+              "label": "taunt-flee"
+            }
+          },
+          {
+            "id": "mob_right",
             "species": "skeleton-child",
             "label": "Skeleton Child (Enemy)",
-            "side": 0,
-            "hp": 2,
+            "side": 1,
+            "hp": 1,
             "attackTimer": null
           }
         ],
@@ -103,7 +115,7 @@
           "allow": []
         },
         "blockedTapDamage": 0,
-        "notes": "Stage 1: Basic shot. Board 5x5 seed 1107. 5 arrows. Passive target at center/TOP (side 0), 1 HP. Arrow #0 (N) hits boss on North and kills directly. 0 damage."
+        "notes": "Stage 1 (STORY-001): first story beat. Goblin King (goblin-taunter art) holds center/TOP (side 0), 3 HP, passive, flee.afterHits 2 — unkillable by construction (only two N arrows exist on this board). After the 2nd hit he taunts and flees; the fight does NOT end — the player finishes the puzzle (kill the 1 HP Skeleton Child on RIGHT with arrow #3, clear the board) for a board-clear win. Board 5x5 seed 1107. 5 arrows: #0 (N, free) hits King, #2 (N) triggers flee, #4/#3/#1 clear. 0 damage."
       }
     },
     {

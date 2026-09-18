@@ -271,9 +271,15 @@ function loadActiveStep() {
   buildWolfPoseButtons()
   targetsBefore = renderer.collectTargets(run.encounter, def)
   const hasAbility = def.enemies?.some((e) => e.ability)
+  // STORY-001: scripted-flee intro — the encounter opens with an unkillable guest. Generic:
+  // any enemy carrying `flee` announces itself, so the next such event needs no new code.
+  const fleeGuests = (def.enemies ?? []).filter((e) => e.flee)
+  const fleeIntro = fleeGuests.length
+    ? ` 👑 ${fleeGuests.map((e) => e.label ?? e.id).join(', ')} нельзя убить: после ${fleeGuests[0].flee.afterHits} попаданий он сбежит, но бой продолжится — чисти board до конца.`
+    : ''
   ui.msgLine.textContent = def.enemies
     ? `Враги одновременно: ${run.encounter.enemies.map((e) => e.label ?? e.id).join(', ')}.` +
-      (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '')
+      (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '') + fleeIntro
     : `Цель: ${def.boss?.id ?? 'boss'}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
   ui.report.textContent = formatEncounterReport(rep)
@@ -336,6 +342,8 @@ function tap(id) {
   renderer.onTapResult(level, id, r, before)
   const after = renderer.collectTargets(s, def)
   renderer.markDeaths(before, after)
+  // STORY-001: stamp the scripted-flee presentation beat (taunt-then-exit) for whoever fled.
+  renderer.markFled(before, after)
   targetsBefore = after
   // VIS-006: gameplay -> per-actor presentation. Priority per actor: defeated > attack
   // (its own strike is the latest visible beat) > hit > baseline sync. Untouched actors only
@@ -382,11 +390,17 @@ function tap(id) {
   if (r.pinExpired && r.pinExpired.length) text += ` · UNPINNED: #${r.pinExpired.join(', #')}`
   if (r.won) text = `Цель выполнена. ${text}`
   else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
+  // STORY-001: scripted flee — the beat the encounter was building toward. The fight goes on:
+  // the engine keeps the fled enemy "alive", so only a later kill / full board clear wins.
+  if (r.fled && r.fled.length) {
+    for (const f of r.fled) text += ` · 👑 ${f.label ?? f.id} дразнит и убегает! Бой продолжается — чисти board до конца.`
+  }
   setMsg(text, r.playerDead)
   pushLog(
     `${formatAction({ kind: 'tap', id })}  ${r.hit ? 'HIT' : 'miss'}  hp ${s.hp}` +
       (r.enemyAttacked ? `  ENEMY (player ${r.playerHp})` : '') +
       (r.castInterrupted ? '  CAST INTERRUPTED' : '') +
+      (r.fled && r.fled.length ? `  FLED: ${r.fled.map((f) => f.id).join(', ')}` : '') +
       (r.pinnedThisTurn && r.pinnedThisTurn.length ? `  ROCK THROWN: #${r.pinnedThisTurn.map((p) => `${p.id}(${p.turnsLeft}t)`).join(', #')}` : '') +
       (r.pinExpired && r.pinExpired.length ? `  UNPINNED: #${r.pinExpired.join(', #')}` : ''),
   )
@@ -819,6 +833,7 @@ window.visualDebug = {
     return bossSpecies
   },
   wolf: () => wolfVisuals ? Object.fromEntries([...wolfVisuals].map(([id, w]) => [id, w.pose])) : null, // VIS-006: per-actor poses (null in boss mode)
+  fled: () => run.encounter.enemies.filter((e) => e.fled).map((e) => e.id), // STORY-001: which enemies already fled (empty when none)
   setWolfPose: (id, pose) => { // VIS-006: manual debug override per actor
     if (wolfVisuals?.has(id)) {
       wolfVisuals.set(id, manualEnemyPose(wolfVisuals.get(id), pose, performance.now()))
