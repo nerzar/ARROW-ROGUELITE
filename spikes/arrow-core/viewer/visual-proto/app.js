@@ -159,6 +159,15 @@ async function loadScene(key) {
 // generator every other scene uses, and reuses rock-spike's minimal single-enemy def (same
 // structural requirements: level + def, independent of board size) just so a full, valid
 // EncounterState/RunState exists to drive the renderer. Never wired to any UI control.
+//
+// FIX-031: both debug loaders below used to end with `stepCache.set(step.id, step)`. That was a
+// leftover from CAL-004, which moved the step cache into ./prologue-steps.js as a module-private
+// Map -- app.js never imported it, so the line threw `stepCache is not defined` and killed the
+// loader before it could swap the arena. The line was also pointless: that cache is keyed by
+// `scene.key` and only ever read by getStep(), whereas these debug steps are synthesised here,
+// keyed by `step.id`, and handed straight to `new RunState(...)`. Nothing could ever read them
+// back, so writing them would only have polluted the scene cache with non-scene keys. Deleted
+// rather than re-imported -- do not "restore" it.
 async function loadSquareDebug(n, seed = 1) {
   activeCalibration = null // flexible-arena regression path -- see loadBakedArenaDebug
   const base = await getStep(STANDALONE_SCENES.find((s) => s.key === 'rock-spike'))
@@ -168,7 +177,6 @@ async function loadSquareDebug(n, seed = 1) {
     id: `debug-square-${n}`, title: `FIX-021 debug -- square ${n}x${n} (seed ${seed})`,
     level: gen.level, def: base.def, board: { preset: `square-${n}`, seed },
   }
-  stepCache.set(step.id, step)
   run = new RunState(runConfig, [step])
   restoreDefaultBackground()
   loadActiveStep()
@@ -198,14 +206,19 @@ async function loadBakedArenaDebug(calibId, seed = 1, defSceneKey = 'rock-spike'
     level: gen.level, def: base.def, board: { preset: `baked-${calibId}`, seed },
     presentation: { calibration: calibId },
   }
-  stepCache.set(step.id, step)
-  run = new RunState(runConfig, [step])
+  // FIX-031: `run` is swapped only AFTER the background await, together with loadActiveStep().
+  // It used to be assigned before it, which left a window -- the length of an image load -- where
+  // the render loop saw the NEW run against the OLD scene's `def`/`bossVisual`. A pending rAF
+  // firing inside that window crashed in readBossSnapshot ("Cannot read properties of undefined
+  // (reading 'phases')") when the two disagreed about whether the scene has a boss. Keeping the
+  // two assignments adjacent means no frame can ever observe a half-swapped scene.
   activeCalibration = calib
   const img = await loadImageEl(calib.background)
   if (img) {
     ui.bgLayer.style.setProperty('--bg-image', `url(${img.src})`)
     ui.bgLayer.classList.add('has-image')
   }
+  run = new RunState(runConfig, [step])
   loadActiveStep()
   return { ok: true, width: gen.level.width, height: gen.level.height, arrows: gen.level.arrows.length, calibration: calibId }
 }
