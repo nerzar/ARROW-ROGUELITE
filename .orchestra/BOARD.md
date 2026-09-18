@@ -1,62 +1,74 @@
 # Доска Arrow-Roguelite
 
-Здесь только работа, которая **сейчас** требует внимания. Подробности активной задачи живут в её task-card. История — в Git и `.orchestra/archive/`.
+BOARD хранит не только одну текущую задачу, а **согласованный ближний план**: что делаем сейчас, что уже READY, что идёт следующим продуктовым шагом и что пользователь явно отложил.
+
+Подробности конкретной READY-задачи живут в её task-card. История выполненного — в Git и `.orchestra/archive/`.
 
 ## База
 
 `main` — текущий рабочий playable baseline.
 
-В `main` уже сведены и приняты:
-- playable Prologue из 5 этапов;
+Уже сведены и приняты:
+- playable Prologue 5/5;
 - Campaign Editor и Pose Editor;
-- импорт и загрузка baked-арен;
+- arena calibration / baked arena loader;
 - Goblin King flee intro;
 - Goblin Shaman defeat;
-- filled-arrow renderer в реальной игре;
-- 15 материалов стрел + `viewer/filled-arrow.html`;
-- Rotate / текущий combat flow;
-- CAL-005: species pivot/scale, HUD offset/scale, shadow offset, parity editor ↔ runtime.
+- filled-arrow renderer + 15 materials + gallery;
+- shared Rotate flow;
+- CAL-005: species pivot/scale, HUD offset/scale, shadow offset, editor ↔ runtime parity.
 
-Стрелочный трек закончен. BUILD-032/033 и старые VIS/FIX arrow-ветки — история/источники отдельных идей, а не активная разработка.
+Стрелочный renderer/material трек закончен. Старые BUILD-032/033 и VIS/FIX arrow-эксперименты — история/источники отдельных идей.
 
-## Сейчас
+## Сейчас / READY
 
-| Task | Исполнитель | Статус | Ветка | Зачем |
-|---|---|---|---|---|
-| VFX-001 — Combat Feel Lab | DeepSeek 4.1 Flash / дешёвый исполнитель | READY | `spike/VFX-001-combat-feel-lab` | Отдельный визуальный стенд: trail, impact, particles, damage number, hit reaction, visual hit-stop, shake, death/boss/reward FX. Сначала пользователь выбирает ощущения глазами, потом решаем архитектуру. |
+| Task | Статус | Ветка | Смысл |
+|---|---|---|---|
+| VFX-001 — Combat Feel Lab | READY | `spike/VFX-001-combat-feel-lab` | Отдельный визуальный стенд: trail, impact, particles, damage number, hit reaction, visual hit-stop, shake, death/boss/reward FX. Сначала пользователь выбирает глазами, потом решаем интеграцию/архитектуру. |
+| BUILD-035 — Projectile Flight v1 | READY | `build/BUILD-035-projectile-flight-v1` | Стрела сначала летит по исходному направлению выхода из board, затем плавно доворачивает к hit-anchor текущей цели. Только presentation, без изменения combat/damage/target selection. |
+| UI-001 — Game Shell Cleanup | READY | `fix/UI-001-game-shell-cleanup` | Скрываемый admin/debug UI, убрать кашу в левом верхнем углу, scene dropdown всегда показывает фактически активную runtime scene. Это обычный game-shell fix, не mobile-задача. |
+| REF-001 — Browser Combat UI / VFX References | READY | `research/REF-001-browser-combat-ui-vfx-references` | Посмотреть браузерные игры ради HUD animations, hit/damage feedback, cast/attack telegraphs, boss/death/reward presentation и собрать конкретные приёмы для вдохновения. |
+
+Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
+
+## Следующий продуктовый слой
+
+Это уже согласованное направление, но карточки создаются только когда предыдущий результат просмотрен и scope понятен.
+
+| Task/направление | Статус | Что именно хотим |
+|---|---|---|
+| ACT-I-002 — Act I Vertical Slice | PLANNED | Развить уже существующие первые Act I encounters в короткий кусок настоящего акта, который интересно проходить, а не просто технически тестировать. |
+| RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, 2–3 типа апгрейдов, желание сделать ещё один забег. |
+| VFX integration | WAITING FOR VFX-001 | В игру попадают только эффекты, которые пользователь реально выбрал в lab/reference-pass. Reusable VFX-система строится под выбранные эффекты, а не заранее. |
+| AUDIO-001 — Combat Audio | PLANNED LATER | После принятого визуального combat feel: hit/cast/death/reward SFX, без преждевременного большого sound-system. |
+| VK production pass | PLANNED LATER | SDK, saves, lifecycle/fullscreen, audio rules, rewarded ads, analytics, слабые устройства — после приятного vertical slice. |
+
+## Согласованное направление run
+
+Не task queue, а продуктовый ориентир, который нельзя потерять:
+- Prologue вводит направление как боевой ресурс и уже выдаёт shared Rotate reward;
+- Act I развивает multi-side combat и ведёт к boss reward **Ricochet**;
+- позже run должен раскрыть **Serpent Form**;
+- ещё позже — **Chain**;
+- boss rewards должны менять правила/поведение стрел, а не быть только +цифры.
+
+Конкретные encounter counts, баланс и порядок внутри актов не фиксировать молча — это решается отдельными task/playtest.
 
 ## Отложено пользователем
 
 | Task | Статус | Условие возврата |
 |---|---|---|
-| MOB-001 — Mobile/Game UI Polish | DEFERRED | Не запускать до явной команды пользователя. Мобильная версия уже вручную проверена как в целом рабочая; позже нужны только точечные UI/mobile фиксы. |
-| Market/VK follow-ups | DEFERRED | Возвращаться только по явному приоритету пользователя. |
+| MOB-001 — Mobile/Game UI Polish | DEFERRED | Не запускать до явной команды пользователя. Mobile landscape уже вручную проверен как в целом рабочий. |
+| Market/VK research follow-ups | DEFERRED | Возвращаться только по явному приоритету пользователя. |
 
-## После VFX-001
-
-Не строить длинную автоматическую очередь.
-
-Ближайшее решение после просмотра VFX Lab:
-1. пользователь выбирает, какие боевые эффекты реально нравятся;
-2. только выбранные эффекты интегрируются в игру;
-3. reusable VFX-архитектура делается только под реальные выбранные эффекты, а не заранее.
-
-Отдельно запланирован визуальный reference-pass по браузерным играм: HUD, damage feedback, cast/attack telegraphs, boss feedback, rewards, projectile/impact animation. Цель — вдохновение и разбор приёмов, не копирование.
-
-## Более дальний маршрут — обсуждали, но это НЕ активные задачи
-
-- короткий Act I vertical slice;
-- проверить roguelite rewards/progression на коротком run;
-- combat juice / VFX / audio;
-- позже VK production: SDK, saves, lifecycle, fullscreen, ads, analytics;
-- расширение контента после того, как вертикальный срез приятно играть.
-
-Каждый следующий task создаётся только после отдельного решения пользователя.
+Когда MOB-001 будет разморожен, там остаются только mobile-specific вещи: safe-area, responsive HUD polish, touch-size и реальный телефон. Общие admin/scene/top-left проблемы вынесены в UI-001 и не зависят от mobile.
 
 ## Правила доски
 
-- Не использовать BOARD как большой backlog.
-- Не хранить здесь DONE-задачи после принятия/архивации.
-- Не создавать несколько параллельных задач вокруг одной проблемы без причины.
-- Новая задача появляется только когда понятен конкретный следующий результат.
+- BOARD обязан хранить согласованный ближний план, чтобы решения из чата не терялись.
+- Не превращать BOARD в свалку из десятков идей.
+- Для READY-задач должна быть task-card.
+- PLANNED-направление может стоять без task-card, пока scope ещё не определён.
+- DEFERRED не запускать без явной команды пользователя.
+- DONE после принятия уходит из активной части; важный результат фиксируется в PROJECT/archive/Git.
 - Для визуальной работы зависимый шаг ждёт реального просмотра пользователя.
