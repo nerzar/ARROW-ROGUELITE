@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BUILD-032 · filled-arrow renderer</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f4f4f2; --fg: #1d1d1b; --muted: #777; --panel: #fff; --line: #ccc; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #19191b; --fg: #e8e8e6; --muted: #999; --panel: #242427; --line: #444; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #wrap { background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; padding: 8px; }
+  canvas { max-width: 100%; touch-action: manipulation; }
+  aside { background: var(--panel); border: 1px solid var(--line); padding: 10px; overflow: auto; }
+  pre { margin: 0; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; }
+  .row { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  fieldset { border: 1px solid var(--line); margin: 8px 0 0; padding: 6px 8px; }
+  legend { font-weight: 600; }
+  button { padding: 5px 10px; font: inherit; }
+  input[type=range] { flex: 1; min-width: 110px; }
+  input[type=number] { width: 70px; }
+  .val { min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+  #msg { min-height: 1.6em; font-weight: 600; font-size: 14px; }
+  .muted { color: var(--muted); }
+  .mat { display: inline-flex; gap: 4px; align-items: center; border: 1px solid var(--line); padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <strong>BUILD-032 · filled arrow</strong>
+  <label>preset <select id="preset"></select></label>
+  <label>seed <input id="seed" type="number" min="0" step="1"></label>
+  <button id="apply">применить</button>
+  <a href="./encounter.html">stroke-viewer (не трогаем)</a>
+</header>
+<main>
+  <div>
+    <div class="row">
+      <button id="undo" title="U">undo</button>
+      <button id="reset" title="R">reset</button>
+    </div>
+    <div id="wrap"><canvas id="board"></canvas></div>
+    <div id="msg"></div>
+    <div class="muted">Каждая стрелка — <b>один цельный filled-контур</b> в board-space (shaft + скруглённые изгибы + head), затем вся фигура проецируется <b>гомографией</b> на экран. Gameplay/hitbox без изменений (canExit/ownerAt). Клик — выпустить стрелку. Клавиши: 1/2/3 — материал, R — reset.</div>
+  </div>
+  <aside>
+    <fieldset>
+      <legend>Материал — одна геометрия, live (1/2/3)</legend>
+      <div class="row">
+        <label class="mat"><input id="mSolid" type="radio" name="mat"> warm-solid</label>
+        <label class="mat"><input id="mBevel" type="radio" name="mat"> warm-bevel</label>
+        <label class="mat"><input id="mMagic" type="radio" name="mat"> warm-magic</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Геометрия (board-space, доли cell)</legend>
+      <div class="row"><label for="shaft">shaft width</label><input id="shaft" type="range" min="0.22" max="0.5" step="0.01"><span id="shaftV" class="val"></span></div>
+      <div class="row"><label for="bend">bend radius</label><input id="bend" type="range" min="0" max="0.45" step="0.01"><span id="bendV" class="val"></span></div>
+      <div class="row"><label>изгиб <select id="bendStyle"><option value="arc">arc (fantasy)</option><option value="chamfer">chamfer</option></select></label></div>
+      <div class="row"><label><input id="showIds" type="checkbox"> id стрелок</label></div>
+    </fieldset>
+    <fieldset>
+      <legend>Проекция</legend>
+      <div class="row"><label for="tilt">perspective tilt</label><input id="tilt" type="range" min="0" max="0.35" step="0.01"><span id="tiltV" class="val"></span></div>
+      <div class="muted">tilt = 0 — та же проекция, что boardMatrix; tilt &gt; 0 — настоящая перспективная гомография (геометрия не меняется).</div>
+    </fieldset>
+    <h3>Состояние</h3>
+    <pre id="info"></pre>
+  </aside>
+</main>
+<script type="module" src="./filled-arrow.js"></script>
+</body>
+</html>
