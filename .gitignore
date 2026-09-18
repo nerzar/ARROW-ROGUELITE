@@ -10,6 +10,7 @@ data/raw/
 # Common local files
 .DS_Store
 Thumbs.db
+.idea/
 node_modules/
 __pycache__/
 *.pyc
