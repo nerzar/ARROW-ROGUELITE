@@ -41,14 +41,28 @@
           <input type="number" id="scaleNum" min="0.4" max="2" step="0.01" value="1">
         </div>
       </div>
+
+      <section class="pose-slot-section">
+        <h3>Pose slots</h3>
+        <p class="small muted">Click a slot to make it the active/previewed pose, then pick a
+          source frame from the gallery on the right to assign it. Slots left at "— none —" fall
+          back to idle at runtime.</p>
+        <div id="poseSlotList" class="pose-slot-strip"></div>
+      </section>
     </div>
 
     <aside class="side-panel">
       <section>
-        <h3>Pose slots</h3>
-        <p class="small muted">Click a slot to make it the active/previewed pose, then pick a
-          source frame below to assign it. Slots left at "— none —" fall back to idle at runtime.</p>
-        <div id="poseSlotList"></div>
+        <h3>Current values</h3>
+        <table class="values-table" id="valuesTable">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Species id</td><td id="valSpeciesId">—</td></tr>
+          <tr><td>Active pose</td><td id="valActivePose">—</td></tr>
+          <tr><td>Pivot X (frac)</td><td id="valPivotX">—</td></tr>
+          <tr><td>Pivot Y (frac)</td><td id="valPivotY">—</td></tr>
+          <tr><td>Scale</td><td id="valScale">—</td></tr>
+          <tr><td>Poses assigned</td><td id="valAssignedCount">—</td></tr>
+        </table>
       </section>
 
       <section>

@@ -14,6 +14,8 @@ const ui = {
   stage: $('stage'), previewImg: $('previewImg'), pivotHandle: $('pivotHandle'),
   activePoseLabel: $('activePoseLabel'), scaleRange: $('scaleRange'), scaleNum: $('scaleNum'),
   poseSlotList: $('poseSlotList'), sourceFolderHint: $('sourceFolderHint'), sourceGallery: $('sourceGallery'),
+  valSpeciesId: $('valSpeciesId'), valActivePose: $('valActivePose'), valPivotX: $('valPivotX'),
+  valPivotY: $('valPivotY'), valScale: $('valScale'), valAssignedCount: $('valAssignedCount'),
 }
 
 const CATALOG = getCreatureCatalog()
@@ -175,18 +177,33 @@ function updatePreview() {
     ui.previewImg.removeAttribute('src')
     ui.previewImg.classList.add('empty')
   }
+  refreshValuesTable()
+}
+
+// TOOL-001: freed-up sidebar space after moving pose slots below the preview -- surfaces the
+// numbers behind the handles/sliders, same idea as calibration-editor.js's "ALL VALUES" table.
+function refreshValuesTable() {
+  ui.valSpeciesId.textContent = currentSpecies?.id ?? '—'
+  ui.valActivePose.textContent = activePose ?? '—'
+  ui.valPivotX.textContent = pivot.x.toFixed(4)
+  ui.valPivotY.textContent = pivot.y.toFixed(4)
+  ui.valScale.textContent = scale.toFixed(2)
+  const assignedCount = Object.values(assignment).filter(Boolean).length
+  ui.valAssignedCount.textContent = `${assignedCount} / ${poseNames.length}`
 }
 
 function positionPivotHandle() {
   const rect = ui.stage.getBoundingClientRect()
   ui.pivotHandle.style.left = `${Math.round(pivot.x * rect.width)}px`
   ui.pivotHandle.style.top = `${Math.round(pivot.y * rect.height)}px`
+  refreshValuesTable()
 }
 
 function renderScaleInputs() {
   ui.scaleRange.value = String(scale)
   ui.scaleNum.value = scale.toFixed(2)
   ui.stage.style.setProperty('--preview-scale', String(scale))
+  refreshValuesTable()
 }
 
 // Single draggable pivot handle -- same pointer-capture + keyboard-nudge pattern as
@@ -231,14 +248,12 @@ function wirePivotHandle() {
 
 ui.scaleRange.addEventListener('input', () => {
   scale = Number(ui.scaleRange.value)
-  ui.scaleNum.value = scale.toFixed(2)
-  ui.stage.style.setProperty('--preview-scale', String(scale))
+  renderScaleInputs()
   markUnsaved()
 })
 ui.scaleNum.addEventListener('input', () => {
   scale = Number(ui.scaleNum.value) || 1
-  ui.scaleRange.value = String(scale)
-  ui.stage.style.setProperty('--preview-scale', String(scale))
+  renderScaleInputs()
   markUnsaved()
 })
 
