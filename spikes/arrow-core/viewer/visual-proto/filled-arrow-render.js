@@ -33,12 +33,22 @@ export const ARROW_SHAPE = { ...GEOM_DEFAULTS }
  */
 export const ARROW_INSET_PX = { tipPx: 5, tailPx: 8 }
 
+/** Overall size of the figure, as a fraction of the BUILD-032 silhouette. The spine is pinned to
+ * cell centres by the grid, so "smaller" means a slimmer shaft and a proportionally smaller head:
+ * shaftFull / headLen / headHalf all scale together, which keeps the accepted head-to-shaft
+ * proportions intact. 1 = exactly BUILD-032. */
+export const ARROW_SCALE = 0.92
+
 /** Resolve the px insets against a concrete px-per-cell into the cell-unit knobs the geometry
  * builder wants. Clamped so a very small cell can never invert the head or eat the whole shaft. */
-export function shapeForCell(cellPx, base = ARROW_SHAPE, inset = ARROW_INSET_PX) {
+export function shapeForCell(cellPx, base = ARROW_SHAPE, inset = ARROW_INSET_PX, scale = ARROW_SCALE) {
   const cell = Math.max(8, cellPx || 0)
+  const k = scale > 0 ? scale : 1
   return {
     ...base,
+    shaftFull: base.shaftFull * k,
+    headLen: base.headLen * k,
+    headHalf: base.headHalf * k,
     tipReach: Math.max(0.18, 0.5 - (inset.tipPx ?? 0) / cell),
     tailExtend: Math.max(0, Math.min(0.3, (inset.tailPx ?? 0) / cell)),
   }

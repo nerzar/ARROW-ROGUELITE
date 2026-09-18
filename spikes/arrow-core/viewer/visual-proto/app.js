@@ -812,6 +812,7 @@ const stageParam = queryParams.get('stage') ?? hashParams.get('stage')
     setMaterial: (id) => { renderer.setArrowMaterial(id); if (ui.arrowMatPick) ui.arrowMatPick.value = renderer.getArrowMaterial(); kick(); return renderer.getArrowMaterial() },
     setStyle: (st) => { renderer.setArrowStyle(st); if (ui.arrowStylePick) ui.arrowStylePick.value = renderer.getArrowStyle(); kick(); return renderer.getArrowStyle() },
     get: () => ({ style: renderer.getArrowStyle(), material: renderer.getArrowMaterial() }),
+    geometry: () => renderer.arrowGeometry(),
   }
 }
 

@@ -32,6 +32,7 @@ import {
 import { MATERIALS, findMaterial } from './visual-proto/filled-arrow-materials.js'
 import {
   ARROW_INSET_PX,
+  ARROW_SCALE,
   ARROW_SHAPE,
   buildArrowPathWith,
   createHoverFade,
@@ -51,6 +52,7 @@ const ui = {
   showIds: $('showIds'),
   tilt: $('tilt'), tiltV: $('tiltV'),
   tipPx: $('tipPx'), tipPxV: $('tipPxV'),
+  scale: $('scale'), scaleV: $('scaleV'),
   tailPx: $('tailPx'), tailPxV: $('tailPxV'),
 }
 const ctx = ui.canvas.getContext('2d')
@@ -74,6 +76,7 @@ const params = {
   // be dialled in against real art before it is baked into ARROW_INSET_PX.
   tipPx: ARROW_INSET_PX.tipPx,
   tailPx: ARROW_INSET_PX.tailPx,
+  scale: ARROW_SCALE, // общий размер фигуры, 1 = исходный BUILD-032
 }
 
 // ---------------------------------------------------------------------------
@@ -159,7 +162,7 @@ function paintArrow(a, geo, H, now) {
     a,
     (pt) => { const [x, y] = applyH(H, pt); return { x, y } },
     DX, DY, level.width,
-    shapeForCell(geo.cell, params, { tipPx: params.tipPx, tailPx: params.tailPx }),
+    shapeForCell(geo.cell, params, { tipPx: params.tipPx, tailPx: params.tailPx }, params.scale),
   )
   paintFilledArrow(ctx, built, {
     col: GALLERY_COL,
@@ -291,7 +294,7 @@ function renderPanel() {
     `осталось: ${board.remaining} · свободных: ${board.freeCount}${board.cleared ? ' · ВСЕ ВЫШЛИ' : ''}`,
     `геометрия: ONE filled path в board-space → homography на экран`,
     `материал: ${materialLabel(params.material)} · shaft ${params.shaftFull.toFixed(2)} · bend ${params.bendStyle} ${params.bend.toFixed(2)} · tilt ${params.tilt.toFixed(2)}`,
-    `отступ от грида: tip ${params.tipPx}px · tail ${params.tailPx}px · cell ${Math.round(computeGeo().cell)}px`,
+    `размер ${Math.round(params.scale * 100)}% · отступ от грида: tip ${params.tipPx}px · tail ${params.tailPx}px · cell ${Math.round(computeGeo().cell)}px`,
   ]
   ui.info.textContent = lines.join('\n')
 }
@@ -368,6 +371,7 @@ function syncLabels() {
   ui.tiltV.textContent = params.tilt.toFixed(2)
   ui.tipPxV.textContent = `${params.tipPx}px`
   ui.tailPxV.textContent = `${params.tailPx}px`
+  ui.scaleV.textContent = `${Math.round(params.scale * 100)}%`
 }
 ui.shaft.oninput = () => { params.shaftFull = Number(ui.shaft.value); syncLabels(); kick() }
 ui.bend.oninput = () => { params.bend = Number(ui.bend.value); syncLabels(); kick() }
@@ -376,6 +380,7 @@ ui.showIds.onchange = kick
 ui.tilt.oninput = () => { params.tilt = Number(ui.tilt.value); syncLabels(); kick() }
 ui.tipPx.oninput = () => { params.tipPx = Number(ui.tipPx.value); syncLabels(); kick() }
 ui.tailPx.oninput = () => { params.tailPx = Number(ui.tailPx.value); syncLabels(); kick() }
+ui.scale.oninput = () => { params.scale = Number(ui.scale.value); syncLabels(); kick() }
 $('undo').onclick = () => { if (board.undo() !== -1) { shots = []; ui.msg.textContent = 'undo'; kick() } }
 $('reset').onclick = start
 $('apply').onclick = start
@@ -402,6 +407,7 @@ ui.bend.value = String(params.bend)
 ui.tilt.value = String(params.tilt)
 ui.tipPx.value = String(params.tipPx)
 ui.tailPx.value = String(params.tailPx)
+ui.scale.value = String(params.scale)
 syncLabels()
 setMaterial('warm-bevel')
 start()

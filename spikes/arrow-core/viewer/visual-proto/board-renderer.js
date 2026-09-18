@@ -19,7 +19,7 @@ import {
 // BUILD-034: filled-arrow renderer (single closed board-space shape + Muse material pack),
 // projected through this renderer's own calibrated plane. The legacy stroke renderer below is
 // kept intact as a debug/fallback style -- see ARROW_STYLES / setArrowStyle.
-import { buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow, shapeForCell } from './filled-arrow-render.js'
+import { ARROW_INSET_PX, ARROW_SCALE, buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow, shapeForCell } from './filled-arrow-render.js'
 import { MATERIALS } from './filled-arrow-materials.js'
 
 // STORY-001: scripted-flee presentation beat, shared by every `flee` enemy. Three beats
@@ -1316,6 +1316,22 @@ export function createBoardRenderer(canvas, stageEl) {
     setArrowStyle(style) { if (style === 'filled' || style === 'stroke') arrowStyle = style },
     getArrowStyle() { return arrowStyle },
     setArrowMaterial(id) { if (MATERIALS.some((m) => m.id === id)) arrowMaterial = id },
+    /** FIX-032b: what geometry the arrows are ACTUALLY drawn with right now -- the resolved
+     * cell-unit shape plus the px inset it came from, so "did that setting apply in the real
+     * game?" is answerable without reading the source. */
+    arrowGeometry() {
+      if (!geo) return null
+      const cellPx = geo.cell
+      const shape = shapeForCell(cellPx)
+      return {
+        cellPx: Math.round(cellPx),
+        scale: ARROW_SCALE,
+        insetPx: { ...ARROW_INSET_PX },
+        resolved: shape,
+        tipGapPx: +((0.5 - shape.tipReach) * cellPx).toFixed(1),
+        tailBackPx: +(shape.tailExtend * cellPx).toFixed(1),
+      }
+    },
     getArrowMaterial() { return arrowMaterial },
     listArrowMaterials() { return MATERIALS.map((m) => ({ id: m.id, name: m.name, vibe: m.vibe, animated: !!m.animated })) },
     collectTargets,
