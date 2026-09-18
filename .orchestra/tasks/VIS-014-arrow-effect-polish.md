@@ -3,7 +3,7 @@
 STATUS: READY
 TYPE: SPIKE / VISUAL POLISH
 SIZE: S
-AGENT: free implementation agent
+AGENT: Claude / visual polish
 BASE_BRANCH: spike/VIS-013-arrow-renderer-reference
 BRANCH: spike/VIS-014-arrow-effect-polish
 START_SHA: 6ef85db9d0c9e0549babd2e78d2efccbc85ab4bd
@@ -22,6 +22,7 @@ Do not create more styles. Polish that one live.
 2. Arrowhead is visually crooked/misaligned and too clumsy.
 3. The palette/state treatment feels over-colored/overworked.
 4. The moving highlight in `fantasy-effect` is too white and too opaque; it reads like a white dashed tube rather than subtle fantasy magic.
+5. The arrowhead is partially transparent / visually open enough that the rounded end-cap of the shaft is visible underneath it. This makes the head look assembled from two overlapping pieces instead of one continuous arrow.
 
 ## Goal
 
@@ -50,6 +51,12 @@ The board is homography-projected, so the arrowhead direction must follow the AC
 Use the projected final path tangent (or project a small virtual step beyond the final logical cell in `a.dir`) so the head always aligns with the shaft under perspective and rotation.
 
 Make the head slightly smaller/narrower than the VIS-013 head and overlap it cleanly with the shaft.
+
+Also fix the shaft/head overlap artifact:
+- the shaft must terminate UNDER the head without its rounded line-cap being visible through the head;
+- do not rely on partial transparency to hide it;
+- preferred solutions are to trim the shaft to the head base / use a non-rounded cap for the terminal segment / clip or overpaint the shaft under the opaque head;
+- the final head should read as one solid continuous piece with the shaft, with no visible rounded "stick end" inside it.
 
 ### 2. Replace white dashed highlight
 
@@ -115,6 +122,7 @@ Check:
 - hover;
 - hint;
 - head remains aligned on arrows near top/bottom/left/right of projected board;
+- no rounded shaft end is visible through/inside the arrowhead at any perspective;
 - effect intensity changes live;
 - tests/typecheck/build green.
 
