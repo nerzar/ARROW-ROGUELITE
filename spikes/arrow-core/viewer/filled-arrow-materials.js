@@ -238,6 +238,49 @@ export const MATERIALS = [
       clipped(ctx, path, () => sparks(ctx, bb, seed, 5, now, '#ffb37a', Math.max(1, geo.cell * 0.045), 0.3))
     },
   },
+  {
+    id: 'carved-gold', name: 'Резное золото', vibe: 'референс 1 · золото по камню',
+    animated: true,
+    paint(ctx, path, bb, geo, now, seed) {
+      const t = now / 1000
+      // thin dark-bronze outline like the carved inlay edge
+      edge(ctx, path, Math.max(2, geo.cell * 0.07), '#5a3a0c')
+      // metallic gold body: champagne top → deep bronze bottom
+      ctx.fillStyle = vgrad(ctx, bb, [[0, '#fff3c4'], [0.4, '#f7c948'], [0.75, '#c88f1e'], [1, '#8a5f10']])
+      ctx.fill(path)
+      clipped(ctx, path, () => {
+        // top light wash (static, like sun on metal)
+        const g = ctx.createLinearGradient(0, bb.y0, 0, bb.y1)
+        g.addColorStop(0, 'rgba(255,252,240,0.55)')
+        g.addColorStop(0.4, 'rgba(255,252,240,0)')
+        ctx.fillStyle = g
+        ctx.fillRect(bb.x0, bb.y0, bb.x1 - bb.x0, bb.y1 - bb.y0)
+        // rare slow sheen so the metal feels alive
+        sheen(ctx, bb, geo.cell, t * 0.4 + seed, 0.15, [[0, 'rgba(255,255,255,0)'], [0.5, 'rgba(255,255,255,0.45)'], [1, 'rgba(255,255,255,0)']])
+      })
+      // crisp light inner edge
+      edge(ctx, path, Math.max(1, geo.cell * 0.03), 'rgba(255,244,205,0.85)')
+    },
+  },
+  {
+    id: 'neon-green', name: 'Руническое свечение', vibe: 'референс 2 · неон по камню',
+    animated: true,
+    paint(ctx, path, bb, geo, now, seed) {
+      const t = now / 1000
+      const pulse = 0.5 + 0.5 * Math.sin(t * 2.4 + seed)
+      // wide halo on the dark stone
+      edge(ctx, path, Math.max(4, geo.cell * 0.22), `rgba(110,255,110,${0.22 + pulse * 0.12})`)
+      glowBody(ctx, path, '#8fe83f', 'rgba(140,255,90,0.9)', geo.cell * (0.7 + 0.25 * pulse))
+      // neon core: near-white heart → saturated green edge
+      ctx.fillStyle = vgrad(ctx, bb, [[0, '#f4ffd6'], [0.45, '#b6ff6a'], [1, '#37c237']])
+      ctx.fill(path)
+      clipped(ctx, path, () => {
+        sheen(ctx, bb, geo.cell, 0.5, 0.001, [[0, 'rgba(255,255,255,0)'], [0.5, 'rgba(255,255,255,0.55)'], [1, 'rgba(255,255,255,0)']])
+        sparks(ctx, bb, seed, 5, now, '#eaffe0', Math.max(1, geo.cell * 0.045), 0.15)
+      })
+      edge(ctx, path, Math.max(1.5, geo.cell * 0.045), 'rgba(235,255,220,0.95)')
+    },
+  },
 ]
 
 export const MATERIAL_IDS = MATERIALS.map((m) => m.id)
