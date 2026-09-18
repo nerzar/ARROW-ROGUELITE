@@ -4,9 +4,10 @@
 // It never mutates combat state and never invents rules -- game state changes are driven entirely
 // by EncounterState; this module only plays back the *result* of a tap/rotate as animation.
 import { DX, DY } from '../../dist/src/index.js'
-import { resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets.js'
+import { bossSpeciesFor, resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets.js'
 import { BOSS_ANCHOR } from './boss-visual-state.js'
 import { ENEMY_ANCHOR } from './enemy-visual-state.js'
+import { speciesPivotDelta, speciesScale } from './species-presentation.js'
 import {
   ACTOR_BASE_CELL_FRAC,
   charSize, effectGround, faceRect,
@@ -483,9 +484,18 @@ export function createBoardRenderer(canvas, stageEl) {
         (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130) ||
         (wolfPose === 'hit' && wolfSince >= 0 && wolfSince < 130)
       const pivot = g.spritePivotOverride?.[t.side] ?? ZERO_PIVOT
+      // TOOL-002: species default presentation -- the middle layer between the shared
+      // ANCHOR.offsets above and this scene's own spritePivot override (see
+      // species-presentation.js's composition-order doc comment). A species with no saved
+      // pivot/scale in the Pose Editor contributes {dx:0,dy:0}/1, so this is a no-op until the
+      // user actually authors a default for it.
+      const speciesId = t.isBoss ? bossSpeciesFor(t.id) : (t.species ?? 'dire-wolf')
+      const speciesPivot = speciesPivotDelta(speciesId)
+      const scenePivot = { dx: pivot.dx + speciesPivot.dx, dy: pivot.dy + speciesPivot.dy }
+      const artScale = speciesScale(speciesId)
       if (img) {
-        if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH, pivot)
-        else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, charW, charH, pivot)
+        if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH, scenePivot, artScale)
+        else if (wolfImg) drawWolfArt(img, wolfPose, wolfSince, t, charW, charH, scenePivot, artScale)
         if (t.dead) {
           // Same alpha-masked tint as the hit-flash below -- a dead sprite darkens, it
           // doesn't grow a translucent box around its transparent edges.
@@ -661,11 +671,11 @@ export function createBoardRenderer(canvas, stageEl) {
     // bottom-center (ground point) is locked to the footprint's bottom-center, so a pose
     // swap never moves the anchor or the visual size. All motion here is wall-clock
     // cosmetics -- simulation timers are untouched.
-    function drawBossArt(img, pose, since, t, bw, bh, pivot = ZERO_PIVOT) {
+    function drawBossArt(img, pose, since, t, bw, bh, pivot = ZERO_PIVOT, artScale = 1) {
       const iw = img.naturalWidth || img.width
       const ih = img.naturalHeight || img.height
       if (!iw || !ih) return
-      const fit = Math.min(bw / iw, bh / ih)
+      const fit = Math.min(bw / iw, bh / ih) * artScale
       const dw = iw * fit
       const dh = ih * fit
       const off = BOSS_ANCHOR.offsets[pose] ?? { dx: 0, dy: 0 }
@@ -716,11 +726,11 @@ export function createBoardRenderer(canvas, stageEl) {
     // VIS-006/VIS-007: anchored wolf draw + presentation-only transforms. Same
     // ground-anchor contract as the boss (fixed character footprint, contain-fit,
     // bottom-center locked); mirroring follows the arena layout (face the board).
-    function drawWolfArt(img, pose, since, t, bw, bh, pivot = ZERO_PIVOT) {
+    function drawWolfArt(img, pose, since, t, bw, bh, pivot = ZERO_PIVOT, artScale = 1) {
       const iw = img.naturalWidth || img.width
       const ih = img.naturalHeight || img.height
       if (!iw || !ih) return
-      const fit = Math.min(bw / iw, bh / ih)
+      const fit = Math.min(bw / iw, bh / ih) * artScale
       const dw = iw * fit
       const dh = ih * fit
       const off = ENEMY_ANCHOR.offsets[pose] ?? { dx: 0, dy: 0 }

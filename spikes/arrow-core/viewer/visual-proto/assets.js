@@ -1,5 +1,6 @@
 import { BOSS_POSES } from './boss-visual-state.js'
 import { ENEMY_POSES } from './enemy-visual-state.js'
+import { setSpeciesPresentation } from './species-presentation.js'
 
 // VIS-001: declarative asset manifest + graceful-placeholder loader for the visual combat shell.
 // Nothing here is combat logic -- it only resolves image keys to HTMLImageElement|null so
@@ -129,14 +130,16 @@ export function enemyManifestFor(species) {
   return ENEMY_MANIFESTS[species] ?? WOLF_MANIFEST
 }
 
-/** TOOL-001: merges the Creature Pose Editor's saved, project-local pose manifest on top of the
- * hardcoded per-species manifests above -- this is what makes the editor's Save button actually
- * change what the game renders, without requiring a code edit for every pose reassignment.
+/** TOOL-001/TOOL-002: merges the Creature Pose Editor's saved, project-local pose manifest on top
+ * of the hardcoded per-species manifests above, and registers each species' saved default
+ * pivot/scale (species-presentation.js) -- this is what makes the editor's Save button actually
+ * change what the game renders, without requiring a code edit for every pose/pivot/scale change.
  * Same "register at runtime" shape as BUILD-029's registerArena(): mutates ENEMY_MANIFESTS/
  * BOSS_MANIFESTS in place, so every existing consumer (which already reads those objects by
  * reference) picks it up automatically. Missing/unreadable/empty file -> silent no-op, since a
  * fresh checkout with no authored overrides yet must render exactly as it did before this tool
- * existed. Callers must `await` this before building any pack from ENEMY_MANIFESTS/BOSS_MANIFESTS. */
+ * existed. Callers must `await` this before building any pack from ENEMY_MANIFESTS/BOSS_MANIFESTS
+ * or reading species-presentation.js's speciesPivotDelta/speciesScale. */
 export async function applyPoseOverrides(url = 'creature-poses.json') {
   let data
   try {
@@ -148,9 +151,11 @@ export async function applyPoseOverrides(url = 'creature-poses.json') {
   }
   for (const [species, entry] of Object.entries(data ?? {})) {
     const poses = entry?.poses
-    if (!poses || typeof poses !== 'object') continue
-    ENEMY_MANIFESTS[species] = { ...(ENEMY_MANIFESTS[species] ?? {}), ...poses }
-    if (BOSS_MANIFESTS[species]) BOSS_MANIFESTS[species] = { ...BOSS_MANIFESTS[species], ...poses }
+    if (poses && typeof poses === 'object') {
+      ENEMY_MANIFESTS[species] = { ...(ENEMY_MANIFESTS[species] ?? {}), ...poses }
+      if (BOSS_MANIFESTS[species]) BOSS_MANIFESTS[species] = { ...BOSS_MANIFESTS[species], ...poses }
+    }
+    setSpeciesPresentation(species, { pivot: entry?.pivot, scale: entry?.scale })
   }
 }
 
