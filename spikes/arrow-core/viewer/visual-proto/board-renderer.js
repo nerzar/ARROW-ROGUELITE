@@ -85,6 +85,43 @@ function spritePivotsFor(calibration) {
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
 
+// FIX-030 (color revision v2): the dark-groove-and-thin-thread pass read as "black pipes" with a
+// "white" active line -- rejected. User-supplied reference: a solid, chunky, warm-filled arrow
+// (soft bevel highlight, no harsh black border) for the base look, with a stronger colored glow
+// reserved for a separate effect/tutorial layer. Same geometry underneath (tangent head, trimmed
+// shaft, rounded corners) -- only the paint changed. Three calm palette variants, live-switchable
+// (?arrowPalette=, visualDebug.setArrowPalette) so the user can compare on the real board.
+const ARROW_PALETTES = {
+  // Warm stone gold -- the lightest/warmest of the three; inactive reads as sunlit sandstone.
+  stoneGold: {
+    keyline: 'rgba(52,36,20,0.55)',
+    bodyBlocked: '#8f7a5c', bodyFree: '#e8b45c', bodyAim: '#ffc766',
+    bevel: 'rgba(255,240,208,0.4)',
+    headBlocked: '#8f7a5c', headFree: '#e8b45c', headAim: '#ffc766',
+    magicEdge: 'rgba(255,199,120,0.5)', magicSpark: '#ffe6b0',
+  },
+  // Ash bronze -- cooler/duskier, inactive reads as tarnished bronze rather than sandstone.
+  ashBronze: {
+    keyline: 'rgba(42,32,22,0.55)',
+    bodyBlocked: '#7d715f', bodyFree: '#c99a5e', bodyAim: '#dcae68',
+    bevel: 'rgba(240,222,192,0.36)',
+    headBlocked: '#7d715f', headFree: '#c99a5e', headAim: '#dcae68',
+    magicEdge: 'rgba(224,180,110,0.46)', magicSpark: '#f0d9a8',
+  },
+  // Muted ember gold -- the warmest/reddest, inactive reads as banked coal-stone.
+  emberGold: {
+    keyline: 'rgba(48,28,16,0.55)',
+    bodyBlocked: '#8a725a', bodyFree: '#d9a256', bodyAim: '#eeb865',
+    bevel: 'rgba(255,226,182,0.38)',
+    headBlocked: '#8a725a', headFree: '#d9a256', headAim: '#eeb865',
+    magicEdge: 'rgba(240,166,90,0.48)', magicSpark: '#ffd8a0',
+  },
+}
+const DEFAULT_ARROW_PALETTE = 'stoneGold'
+function arrowPaletteFor(name) {
+  return ARROW_PALETTES[name] ?? ARROW_PALETTES[DEFAULT_ARROW_PALETTE]
+}
+
 export function createBoardRenderer(canvas, stageEl) {
   const ctx = canvas.getContext('2d')
   let geo = null
@@ -104,6 +141,10 @@ export function createBoardRenderer(canvas, stageEl) {
   // just the head when the arrow is aimed at a live target. All three stay restrained (no neon,
   // no thick black ring) -- strong pulse is reserved for the existing hint (green) cue, not this.
   let arrowFxVariant = 0
+  // FIX-030: active color palette for the arrow body/head/accent -- one of ARROW_PALETTES' keys,
+  // live-switchable the same way (?arrowPalette= / visualDebug.setArrowPalette) so the user can
+  // compare the 3 calm variants on the real board.
+  let arrowPaletteName = DEFAULT_ARROW_PALETTE
 
   function fxFor(key) {
     let fx = targetFx.get(key)
@@ -878,37 +919,37 @@ export function createBoardRenderer(canvas, stageEl) {
       const fx = arrowFxFor(a.id)
       const isDenied = now - fx.deniedT >= 0 && now - fx.deniedT < 320
 
-      // FIX-030 (Ember Groove base): the path reads as a channel carved into the stone, not a
-      // ribbon glued on top of it -- recess shadow + groove wall replace the old flat-black
-      // `arrowOutline` halo (PLAYTEST-002) everywhere it was drawn under the body/head. No
-      // shadowBlur, no white `lighter`-composite core (both were the reported "glow noodle").
+      // FIX-030 v2: solid warm-filled body (user reference), not a carved channel -- a soft warm
+      // keyline (never black) + an opaque body fill in a calm color for BOTH free and blocked
+      // (blocked is a muted stone/bronze fill, not an empty dark groove) + a thin warm bevel
+      // highlight along the same centerline for a soft sheen (same trick as the grain/ridge line
+      // elsewhere in this file: a thinner, lighter stroke on top reads as dimensionality without
+      // extra geometry). No shadowBlur, no near-black, no near-white.
+      const ap = arrowPaletteFor(arrowPaletteName)
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.globalAlpha = 0.55
-      ctx.strokeStyle = col.grooveShadow
-      ctx.lineWidth = lw + Math.max(3, lw * 0.7)
+      ctx.strokeStyle = ap.keyline
+      ctx.lineWidth = lw + Math.max(2, lw * 0.3)
       polyline(pts)
       ctx.restore()
 
       ctx.save()
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.strokeStyle = pinned ? col.rockGroove : col.groove
-      ctx.globalAlpha = pinned ? 0.95 : 1
-      ctx.lineWidth = lw + Math.max(1.5, lw * 0.35)
+      ctx.strokeStyle = pinned ? col.rock : free ? (aims ? ap.bodyAim : ap.bodyFree) : ap.bodyBlocked
+      ctx.globalAlpha = pinned ? 0.95 : free ? 1 : 0.92
+      ctx.lineWidth = lw
       polyline(pts)
       ctx.restore()
 
-      // Thread: thin warm line down the centre of the channel, lit only when free and unpinned --
-      // blocked is just the empty dark groove above, no separate blocked-body color needed.
-      if (free && !pinned) {
+      if (!isBlocked && !isBlocker) {
         ctx.save()
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        ctx.strokeStyle = aims ? col.aim : col.arrow
-        ctx.globalAlpha = 0.9
-        ctx.lineWidth = Math.max(1.4, lw * 0.24)
+        ctx.strokeStyle = ap.bevel
+        ctx.globalAlpha = pinned ? 0.25 : free ? 0.55 : 0.3
+        ctx.lineWidth = Math.max(1.2, lw * 0.26)
         polyline(pts)
         ctx.restore()
       }
@@ -940,8 +981,12 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.save()
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        ctx.strokeStyle = col.magicEdge
-        ctx.globalAlpha = magicHover ? 0.24 : 0.14
+        ctx.strokeStyle = ap.magicEdge
+        // FIX-030: base mode stays calm -- ambient "aimed at a target" is barely-there (0.06),
+        // an actual hover is a touch more present (0.16) but still nowhere near a full glow. A
+        // stronger version (closer to the user's effect reference) belongs to a tutorial/special
+        // mode, not the default -- that hook isn't built yet, kept out of scope for this pass.
+        ctx.globalAlpha = magicHover ? 0.16 : 0.06
         ctx.lineWidth = lw + 5
         polyline(pts)
         ctx.restore()
@@ -950,8 +995,8 @@ export function createBoardRenderer(canvas, stageEl) {
           const p = pointAtFraction(pts, ((now / 900) % 1 + 1) % 1)
           if (p) {
             ctx.save()
-            ctx.globalAlpha = magicHover ? 0.5 : 0.32
-            ctx.fillStyle = col.magicSpark
+            ctx.globalAlpha = magicHover ? 0.4 : 0.22
+            ctx.fillStyle = ap.magicSpark
             ctx.beginPath()
             ctx.arc(p.x, p.y, Math.max(1.5, lw * 0.3), 0, Math.PI * 2)
             ctx.fill()
@@ -960,20 +1005,19 @@ export function createBoardRenderer(canvas, stageEl) {
         }
       }
 
-      // Arrowhead: a flush kite carved into the stone -- a dark keyline stroke instead of the old
-      // black halo blob, no shadowBlur. Blocked heads use `headBlocked` (dull warm iron/stone)
-      // instead of reusing the flat beige `arrowDim`, which read as an "ugly grey" dead spot.
+      // Arrowhead: a flush kite matching the body -- a soft warm keyline (same `ap.keyline`, never
+      // black) instead of the old dark halo blob, no shadowBlur. Blocked heads use `ap.headBlocked`
+      // (calm warm stone/bronze) instead of a flat "ugly grey" dead spot.
       const [hx, hy] = pts[pts.length - 1]
       const d = a.dir
       const rot = shownAngle
       const [dxr, dyr] = rotateDirPx(d, rot)
       const sz = localScale * 0.48
-      const headFill = pinned ? col.rock : aims ? col.aim : free ? col.arrow : col.headBlocked
+      const headFill = pinned ? col.rock : aims ? ap.headAim : free ? ap.headFree : ap.headBlocked
       ctx.save()
       ctx.lineJoin = 'round'
-      ctx.strokeStyle = col.grooveShadow
-      ctx.lineWidth = Math.max(1.5, sz * 0.16)
-      ctx.globalAlpha = 0.85
+      ctx.strokeStyle = ap.keyline
+      ctx.lineWidth = Math.max(1.5, sz * 0.14)
       ctx.beginPath()
       ctx.moveTo(hx + dxr * sz, hy + dyr * sz)
       ctx.lineTo(hx + dyr * sz * 0.82, hy - dxr * sz * 0.82)
@@ -981,15 +1025,15 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.closePath()
       ctx.stroke()
       ctx.fillStyle = headFill
-      ctx.globalAlpha = pinned ? 0.9 : free ? 1 : 0.8
+      ctx.globalAlpha = pinned ? 0.95 : free ? 1 : 0.92
       ctx.fill()
       ctx.restore()
 
-      // Thin bright ridge line for shine -- free/unpinned only, never on a blocked head.
+      // Soft warm bevel highlight on the head, same idea as the body's -- never on a blocked head.
       if (free && !pinned) {
         ctx.save()
-        ctx.strokeStyle = col.magicSpark
-        ctx.globalAlpha = 0.35
+        ctx.strokeStyle = ap.bevel
+        ctx.globalAlpha = 0.55
         ctx.lineWidth = Math.max(1, sz * 0.12)
         ctx.lineCap = 'round'
         ctx.beginPath()
@@ -1001,9 +1045,9 @@ export function createBoardRenderer(canvas, stageEl) {
 
       if (magicTargetHead) {
         ctx.save()
-        ctx.strokeStyle = col.magicEdge
-        ctx.globalAlpha = 0.35
-        ctx.lineWidth = Math.max(1.5, sz * 0.22)
+        ctx.strokeStyle = ap.magicEdge
+        ctx.globalAlpha = 0.28
+        ctx.lineWidth = Math.max(1.5, sz * 0.2)
         ctx.beginPath()
         ctx.arc(hx, hy, sz * 1.15, 0, Math.PI * 2)
         ctx.stroke()
@@ -1178,23 +1222,11 @@ export function createBoardRenderer(canvas, stageEl) {
       // PLAYTEST-002: `arrow` brightened toward a warm parchment tone (was a mid-gray that blended
       // into the stone under both themes) and `arrowDim` given real contrast in each theme (was
       // near-identical to the stone tone it sits on -- effectively invisible) instead of one flat
-      // gray reused for both. `arrowOutline` is a dark halo drawn under every arrow body/head/pin
-      // marker (see drawArrow) so any arrow color still reads against bright or dark stone.
+      // gray reused for both. `arrow`/`arrowDim`/`aim` still back `drawShot`'s firing-flight
+      // streak; the arrow body/head itself is now painted from ARROW_PALETTES (`ap.*` in
+      // drawArrow) instead of this dark/light pair -- see that const's own comment.
       arrow: dark ? '#f3ecd9' : '#2c2013', arrowDim: dark ? '#c9c4b4' : '#5a4d3a', aim: dark ? '#ffd76a' : '#b8791a',
-      arrowOutline: 'rgba(12,9,6,0.75)',
       aimGlow: dark ? 'rgba(255,215,106,0.85)' : 'rgba(184,121,26,0.6)', freeGlow: dark ? 'rgba(200,200,220,0.55)' : 'rgba(120,110,90,0.35)', mutedGlow: 'rgba(0,0,0,0)',
-      // FIX-030: Ember Groove base -- the path reads as a channel carved into the stone (dark
-      // recess + walls), not an object glued on top of it. `groove`/`grooveShadow` replace the old
-      // flat-black `arrowOutline` halo everywhere it was used for arrow bodies/heads. `headBlocked`
-      // replaces reusing beige `arrowDim` on the head -- blocked heads read as dull warm iron/stone
-      // instead of a flat "ugly grey" fill. `magicEdge` is the toned-down hover/targeting accent
-      // (fantasy-effect direction, restrained: no neon, no thick black ring).
-      groove: dark ? '#241a12' : '#453521', grooveWall: dark ? '#382a1a' : '#5c4a30',
-      grooveShadow: 'rgba(10,7,4,0.6)',
-      rockGroove: dark ? '#4a3a2c' : '#5c4a36',
-      headBlocked: dark ? '#8a7a63' : '#6b5c46',
-      magicEdge: dark ? 'rgba(255,205,140,0.95)' : 'rgba(196,132,54,0.9)',
-      magicSpark: dark ? '#fff3d6' : '#fff0d0',
       text: dark ? '#eee' : '#20180f', muted: dark ? '#999' : '#777',
       bossA: dark ? '#5b4a63' : '#8d7a96', bossB: dark ? '#332a3a' : '#5c4d63', bossGlow: dark ? 'rgba(180,120,220,0.5)' : 'rgba(120,70,150,0.4)',
       enemyA: dark ? '#4a5563' : '#7c8ea0', enemyB: dark ? '#2b323c' : '#54606e', enemyGlow: dark ? 'rgba(120,170,220,0.45)' : 'rgba(70,100,140,0.35)',
@@ -1223,6 +1255,10 @@ export function createBoardRenderer(canvas, stageEl) {
      * highlight, 2 head-only ember on aimed arrows) -- see arrowFxVariant's own comment. */
     setArrowFx(v) { arrowFxVariant = [0, 1, 2].includes(v) ? v : 0 },
     getArrowFx() { return arrowFxVariant },
+    /** FIX-030: live arrow color palette (see ARROW_PALETTES) -- 'stoneGold' | 'ashBronze' |
+     * 'emberGold', defaults to stoneGold. Unknown names fall back to the default. */
+    setArrowPalette(name) { arrowPaletteName = ARROW_PALETTES[name] ? name : DEFAULT_ARROW_PALETTE },
+    getArrowPalette() { return arrowPaletteName },
     /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */
     debugLayout() { return layoutInfo },
     /** FIX-021: board-plane debug API (corners/logical size/fit + point projection). */
