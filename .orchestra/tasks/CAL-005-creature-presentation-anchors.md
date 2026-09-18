@@ -120,6 +120,15 @@ SHA: 6580e68f08a99aba9768e008eec15f71f9076dcf (code c3a888b + report; код н�
 - Скриншоты: `C:\Users\nerza\AppData\Local\Temp\opencode\cal005\` (pose-editor-shaman, shaman-defeat,
   king-defeat, wolf-defeat, playable-after-tap).
 
+## FOLLOW-UP (user review round, same branch)
+
+- Sliders moved to sidebar Adjust section (Scale / HUD X / HUD Y / HUD size / Shadow X / Shadow Y + Reset).
+- Removed main-screen texts (stage hint, Pose slots header/description); stage given reclaimed space.
+- Fixed pivot-handle runaway: frozen image rect during drag, full layout settles on release.
+- Added species-level HUD size (`hudScale`, 0.5..2, default 1): plate font/bar/badge scale around
+  the same anchor; E/W board clamp still wins. Save/reload + runtime wired, tests extended.
+- User's live `creature-poses.json` tuning intentionally left uncommitted.
+
 ## FOUND
 
 1. `assets/boss-goblin-shaman.png`, `assets/boss-goblin-taunter.png` (+ ещё один legacy-слот)

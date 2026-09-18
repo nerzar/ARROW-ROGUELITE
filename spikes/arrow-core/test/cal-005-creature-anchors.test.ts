@@ -3,6 +3,7 @@ import {
   resetSpeciesPresentation,
   setSpeciesPresentation,
   speciesHudOffset,
+  speciesHudScale,
   speciesPivotDelta,
   speciesScale,
   speciesShadowOffset,
@@ -21,6 +22,7 @@ describe('CAL-005 species HUD/shadow offsets', () => {
   it('an unconfigured species contributes zero HUD and shadow offsets (no-op)', () => {
     expect(speciesHudOffset('never-touched-species')).toEqual({ x: 0, y: 0 })
     expect(speciesShadowOffset('never-touched-species')).toEqual({ x: 0, y: 0 })
+    expect(speciesHudScale('never-touched-species')).toBe(1)
   })
 
   it('a pre-CAL-005 entry shape (pivot/scale only) still resolves zero offsets', () => {
@@ -28,6 +30,7 @@ describe('CAL-005 species HUD/shadow offsets', () => {
     setSpeciesPresentation('goblin-shaman', { pivot: { x: 0.49, y: 0.9 }, scale: 0.8 })
     expect(speciesHudOffset('goblin-shaman')).toEqual({ x: 0, y: 0 })
     expect(speciesShadowOffset('goblin-shaman')).toEqual({ x: 0, y: 0 })
+    expect(speciesHudScale('goblin-shaman')).toBe(1)
     // ...and the old fields keep working untouched.
     expect(speciesScale('goblin-shaman')).toBe(0.8)
     expect(speciesPivotDelta('goblin-shaman').dx).toBeCloseTo(0.49 - 0.5)
@@ -57,6 +60,17 @@ describe('CAL-005 species HUD/shadow offsets', () => {
     })
     expect(speciesHudOffset('small-goblin')).toEqual({ x: 0, y: 0 })
     expect(speciesShadowOffset('small-goblin')).toEqual({ x: 0, y: 0 })
+  })
+
+  it('a saved HUD size round-trips; malformed values fall back to 1', () => {
+    setSpeciesPresentation('dire-wolf', { hudScale: 1.5 })
+    expect(speciesHudScale('dire-wolf')).toBe(1.5)
+    setSpeciesPresentation('small-goblin', { hudScale: 0 })
+    expect(speciesHudScale('small-goblin')).toBe(1)
+    setSpeciesPresentation('small-goblin', { hudScale: -2 })
+    expect(speciesHudScale('small-goblin')).toBe(1)
+    setSpeciesPresentation('small-goblin', { hudScale: Number.NaN })
+    expect(speciesHudScale('small-goblin')).toBe(1)
   })
 
   it('an explicit zero offset is a no-op identical to an absent one', () => {

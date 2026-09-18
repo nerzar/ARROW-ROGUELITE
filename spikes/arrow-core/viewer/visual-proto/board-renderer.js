@@ -7,7 +7,7 @@ import { DX, DY } from '../../dist/src/index.js'
 import { bossSpeciesFor, resolveBossImage, resolveTargetImage, resolveWolfImage } from './assets.js'
 import { BOSS_ANCHOR } from './boss-visual-state.js'
 import { ENEMY_ANCHOR } from './enemy-visual-state.js'
-import { speciesHudOffset, speciesPivotDelta, speciesScale, speciesShadowOffset } from './species-presentation.js'
+import { speciesHudOffset, speciesHudScale, speciesPivotDelta, speciesScale, speciesShadowOffset } from './species-presentation.js'
 import {
   ACTOR_BASE_CELL_FRAC,
   charSize, effectGround, faceRect,
@@ -473,6 +473,9 @@ export function createBoardRenderer(canvas, stageEl) {
       const speciesShadowFrac = speciesShadowOffset(speciesId)
       const shadowOffPx = { x: speciesShadowFrac.x * charW, y: speciesShadowFrac.y * charH }
       const artScale = speciesScale(speciesId)
+      // CAL-005: species HUD size scales the plate's own font/bar metrics (measured and drawn
+      // at the scaled size); the offset above stays a pure position shift. Default 1 = no-op.
+      const hudScale = speciesHudScale(speciesId)
       const idle = Math.sin(now / 900 + t.side * 1.7) * 1.6
       const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
       const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * charCell : 0
@@ -669,7 +672,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // feet), always away from the board. It never sizes or clips the character, and two
       // simultaneous targets (e.g. cp-e4's two enemies) can never draw over each other.
       // Layout, not z-index: nothing belonging to the HUD may overlap the board footprint.
-      const fontPx = Math.max(10, Math.floor(charCell * (t.isBoss ? 0.3 : 0.25)))
+      const fontPx = Math.max(10, Math.floor(charCell * (t.isBoss ? 0.3 : 0.25))) * hudScale
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       const lines = [
@@ -701,11 +704,11 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
         maxW = Math.max(maxW, ctx.measureText(ln.text).width)
       }
-      const barH = Math.max(5, charCell * 0.16)
+      const barH = Math.max(5, charCell * 0.16) * hudScale
       const hud = hudBoxes({
         slot: { x: 0, y: 0 },
         char: { x: -charW / 2, y: -charH / 2, w: charW, h: charH },
-        side: t.side, fontPx, lineH, lineCount: lines.length, barH, maxTextW: maxW, cell: charCell,
+        side: t.side, fontPx, lineH, lineCount: lines.length, barH, maxTextW: maxW, cell: charCell * hudScale,
         slotAbsX: slot.x, boardCx: boardBBox.x + boardBBox.w / 2, boardHalfPx: boardBBox.w / 2,
         offset: hudOffPx, // CAL-005: one species-level anchor moves bar + plate + badges + lines
       })

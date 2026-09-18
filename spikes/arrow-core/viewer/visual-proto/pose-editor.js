@@ -16,13 +16,15 @@ const ui = {
   stage: $('stage'), previewImg: $('previewImg'), pivotHandle: $('pivotHandle'),
   fpBox: $('fpBox'), groundLine: $('groundLine'), shadowMock: $('shadowMock'),
   hudBarMock: $('hudBarMock'), hudPlateMock: $('hudPlateMock'),
-  activePoseLabel: $('activePoseLabel'), scaleRange: $('scaleRange'), scaleNum: $('scaleNum'),
+  scaleRange: $('scaleRange'), scaleNum: $('scaleNum'),
   hudXRange: $('hudXRange'), hudXNum: $('hudXNum'), hudYRange: $('hudYRange'), hudYNum: $('hudYNum'),
+  hudSizeRange: $('hudSizeRange'), hudSizeNum: $('hudSizeNum'),
   shXRange: $('shXRange'), shXNum: $('shXNum'), shYRange: $('shYRange'), shYNum: $('shYNum'),
+  resetBtn: $('resetBtn'),
   poseSlotList: $('poseSlotList'), sourceFolderHint: $('sourceFolderHint'), sourceGallery: $('sourceGallery'),
   valSpeciesId: $('valSpeciesId'), valActivePose: $('valActivePose'), valPivotX: $('valPivotX'),
   valPivotY: $('valPivotY'), valScale: $('valScale'), valAssignedCount: $('valAssignedCount'),
-  valHudX: $('valHudX'), valHudY: $('valHudY'), valShX: $('valShX'), valShY: $('valShY'),
+  valHudX: $('valHudX'), valHudY: $('valHudY'), valHudSize: $('valHudSize'), valShX: $('valShX'), valShY: $('valShY'),
 }
 
 const CATALOG = getCreatureCatalog()
@@ -38,6 +40,7 @@ let assignment = {}       // { [poseName]: sourceFileName | null } -- working st
 let pivot = { ...DEFAULT_PIVOT }
 let scale = 1
 let hudOffset = { ...DEFAULT_OFFSET } // CAL-005: species-level HUD offset (footprint fractions)
+let hudSize = 1 // CAL-005: species-level HUD size multiplier
 let shadowOffset = { ...DEFAULT_OFFSET } // CAL-005: species-level shadow offset (footprint fractions)
 let activePose = 'idle'
 let manifest = {}         // full creature-poses.json, loaded once, updated in place on save
@@ -97,6 +100,7 @@ async function selectSpecies(id) {
   scale = typeof existing?.scale === 'number' ? existing.scale : 1
   // CAL-005: entries saved before HUD/shadow offsets existed have neither key -- default {0,0}.
   hudOffset = isXy(existing?.hudOffset) ? { ...existing.hudOffset } : { ...DEFAULT_OFFSET }
+  hudSize = typeof existing?.hudScale === 'number' && existing.hudScale > 0 ? existing.hudScale : 1
   shadowOffset = isXy(existing?.shadowOffset) ? { ...existing.shadowOffset } : { ...DEFAULT_OFFSET }
 
   ui.sourceFolderHint.textContent = `Source: magicarrowassets/creatures/${currentSpecies.sourceFolder}`
@@ -111,6 +115,7 @@ async function selectSpecies(id) {
   renderGallery()
   renderScaleInputs()
   renderOffsetInputs()
+  renderHudSizeInputs()
   layoutPreview()
   updatePreview()
 }
@@ -189,7 +194,6 @@ function renderGallery() {
 }
 
 function updatePreview() {
-  ui.activePoseLabel.textContent = activePose
   const file = assignment[activePose]
   if (file) {
     ui.previewImg.src = sourceFileUrl(file)
@@ -211,6 +215,7 @@ function refreshValuesTable() {
   ui.valScale.textContent = scale.toFixed(2)
   ui.valHudX.textContent = hudOffset.x.toFixed(3)
   ui.valHudY.textContent = hudOffset.y.toFixed(3)
+  ui.valHudSize.textContent = hudSize.toFixed(2)
   ui.valShX.textContent = shadowOffset.x.toFixed(3)
   ui.valShY.textContent = shadowOffset.y.toFixed(3)
   const assignedCount = Object.values(assignment).filter(Boolean).length
@@ -257,12 +262,13 @@ function layoutPreview() {
   ui.shadowMock.style.left = `${Math.round(fp.cx + shadowOffset.x * fp.w - shW / 2)}px`
   ui.shadowMock.style.top = `${Math.round(fp.bottom + shadowOffset.y * fp.h - 4)}px`
   // HUD mock: the real hudBoxes math on the footprint, slot = footprint center (stage coords).
-  const fontPx = Math.max(10, Math.round(fp.h * 0.045))
+  // HUD size scales the font/bar metrics exactly like the runtime does (see board-renderer.js).
+  const fontPx = Math.max(10, Math.round(fp.h * 0.045)) * hudSize
   const hud = hudBoxes({
     slot: { x: fp.cx, y: fp.y + fp.h / 2 },
     char: { x: fp.x, y: fp.y, w: fp.w, h: fp.h },
     side: 0, fontPx, lineH: fontPx * 1.15, lineCount: 3,
-    barH: Math.max(5, fp.h * 0.03), maxTextW: fp.w * 0.55, cell: fp.h / 6,
+    barH: Math.max(5, fp.h * 0.03) * hudSize, maxTextW: fp.w * 0.55 * hudSize, cell: (fp.h / 6) * hudSize,
     offset: { x: hudOffset.x * fp.w, y: hudOffset.y * fp.h },
   })
   ui.hudBarMock.style.left = `${Math.round(hud.bar.x)}px`
@@ -302,13 +308,16 @@ function layoutPreview() {
   refreshValuesTable()
 }
 
-// Image-fraction point under a stage-space pointer (for pivot dragging).
-function pivotFromPointer(clientX, clientY) {
+// Image-fraction point under a stage-space pointer, mapped through a FROZEN image rect.
+// (The live rect can't be used mid-drag: moving the pivot re-lays-out the image by the same
+// delta, so the pointer would map to a different fraction every move event -- runaway
+// feedback, the dot and the mob visibly jumping. The rect is captured at dragstart and the
+// full layoutPreview() runs once on release.)
+function pivotFromPointer(clientX, clientY, imgRect) {
   const stageRect = ui.stage.getBoundingClientRect()
-  const imgRect = ui.previewImg.getBoundingClientRect()
-  const dw = imgRect.width
-  const dh = imgRect.height
-  if (!dw || !dh || ui.previewImg.classList.contains('empty')) {
+  const dw = imgRect?.width ?? 0
+  const dh = imgRect?.height ?? 0
+  if (!dw || !dh) {
     return {
       x: Math.min(1, Math.max(0, (clientX - stageRect.left) / stageRect.width)),
       y: Math.min(1, Math.max(0, (clientY - stageRect.top) / stageRect.height)),
@@ -318,6 +327,15 @@ function pivotFromPointer(clientX, clientY) {
     x: Math.min(1, Math.max(0, (clientX - imgRect.left) / dw)),
     y: Math.min(1, Math.max(0, (clientY - imgRect.top) / dh)),
   }
+}
+
+// Position the pivot dot for an already-known image rect (stage coords). Same mapping
+// layoutPreview() uses, without re-laying-out the image itself.
+function positionDotForRect(imgRect) {
+  const stageRect = ui.stage.getBoundingClientRect()
+  ui.pivotHandle.style.left = `${Math.round(imgRect.left - stageRect.left + pivot.x * imgRect.width)}px`
+  ui.pivotHandle.style.top = `${Math.round(imgRect.top - stageRect.top + pivot.y * imgRect.height)}px`
+  refreshValuesTable()
 }
 
 function renderScaleInputs() {
@@ -347,21 +365,27 @@ function renderOffsetInputs() {
 // layoutPreview() with the exact runtime formula.
 function wirePivotHandle() {
   let dragging = false
+  let dragRect = null // frozen image rect for the whole gesture (see pivotFromPointer)
   function updateFromPointer(ev) {
-    pivot = pivotFromPointer(ev.clientX, ev.clientY)
-    layoutPreview()
+    pivot = pivotFromPointer(ev.clientX, ev.clientY, dragRect)
+    if (dragRect) positionDotForRect(dragRect)
+    else layoutPreview()
     markUnsaved()
   }
   ui.pivotHandle.addEventListener('pointerdown', (ev) => {
     ev.preventDefault()
     ui.pivotHandle.setPointerCapture(ev.pointerId)
+    const live = ui.previewImg.getBoundingClientRect()
+    dragRect = (live.width && live.height && !ui.previewImg.classList.contains('empty')) ? live : null
     dragging = true
   })
   ui.pivotHandle.addEventListener('pointermove', (ev) => { if (dragging) updateFromPointer(ev) })
   function endDrag(ev) {
     if (!dragging) return
     dragging = false
+    dragRect = null
     try { ui.pivotHandle.releasePointerCapture(ev.pointerId) } catch {}
+    layoutPreview() // settle the image on the final pivot once, after the gesture
   }
   ui.pivotHandle.addEventListener('pointerup', endDrag)
   ui.pivotHandle.addEventListener('pointercancel', endDrag)
@@ -396,7 +420,7 @@ ui.scaleNum.addEventListener('input', () => {
   markUnsaved()
 })
 
-// CAL-005: HUD/shadow offset controls -- same range+number pattern, live preview via layoutPreview.
+// CAL-005: species HUD/shadow offset inputs -- same range+number pattern, live preview via layoutPreview.
 function wireOffsetPair(rangeEl, numEl, get, set) {
   rangeEl.addEventListener('input', () => {
     set(Number(rangeEl.value))
@@ -417,6 +441,40 @@ wireOffsetPair(ui.hudYRange, ui.hudYNum, () => hudOffset.y, (v) => { hudOffset =
 wireOffsetPair(ui.shXRange, ui.shXNum, () => shadowOffset.x, (v) => { shadowOffset = { ...shadowOffset, x: v } })
 wireOffsetPair(ui.shYRange, ui.shYNum, () => shadowOffset.y, (v) => { shadowOffset = { ...shadowOffset, y: v } })
 
+// CAL-005: species HUD size multiplier (0.5..2, default 1) -- same pattern as scale.
+function renderHudSizeInputs() {
+  ui.hudSizeRange.value = String(hudSize)
+  ui.hudSizeNum.value = hudSize.toFixed(2)
+  refreshValuesTable()
+}
+ui.hudSizeRange.addEventListener('input', () => {
+  hudSize = Number(ui.hudSizeRange.value)
+  renderHudSizeInputs()
+  layoutPreview()
+  markUnsaved()
+})
+ui.hudSizeNum.addEventListener('input', () => {
+  const v = Number(ui.hudSizeNum.value)
+  if (Number.isFinite(v)) hudSize = Math.min(2, Math.max(0.5, v))
+  renderHudSizeInputs()
+  layoutPreview()
+  markUnsaved()
+})
+
+// CAL-005: one-click reset of every species default this editor owns (applies on Save).
+ui.resetBtn.addEventListener('click', () => {
+  pivot = { ...DEFAULT_PIVOT }
+  scale = 1
+  hudOffset = { ...DEFAULT_OFFSET }
+  hudSize = 1
+  shadowOffset = { ...DEFAULT_OFFSET }
+  renderScaleInputs()
+  renderOffsetInputs()
+  renderHudSizeInputs()
+  layoutPreview()
+  markUnsaved()
+})
+
 ui.speciesPick.addEventListener('change', () => selectSpecies(ui.speciesPick.value))
 
 ui.saveBtn.addEventListener('click', async () => {
@@ -429,7 +487,7 @@ ui.saveBtn.addEventListener('click', async () => {
     const res = await fetch('/api/creature-poses/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ species: currentSpecies.id, sourceFolder: currentSpecies.sourceFolder, poses, pivot, scale, hudOffset, shadowOffset }),
+      body: JSON.stringify({ species: currentSpecies.id, sourceFolder: currentSpecies.sourceFolder, poses, pivot, scale, hudOffset, hudScale: hudSize, shadowOffset }),
     })
     const data = await res.json().catch(() => null)
     if (res.ok && data?.ok) {
@@ -470,12 +528,15 @@ window.poseEditorDebug = {
   pivot: () => pivot,
   scale: () => scale,
   hudOffset: () => hudOffset,
+  hudSize: () => hudSize,
   shadowOffset: () => shadowOffset,
   manifestEntry: () => manifest[currentSpecies?.id],
   selectSpecies,
   setActivePose: (p) => { activePose = p; renderPoseSlots(); renderGallery(); updatePreview() },
   assignFile: (file) => { assignment[activePose] = file; renderPoseSlots(); renderGallery(); updatePreview(); markUnsaved() },
   setHudOffset: (x, y) => { hudOffset = { x, y }; renderOffsetInputs(); layoutPreview(); markUnsaved() },
+  setHudSize: (v) => { hudSize = v; renderHudSizeInputs(); layoutPreview(); markUnsaved() },
   setShadowOffset: (x, y) => { shadowOffset = { x, y }; renderOffsetInputs(); layoutPreview(); markUnsaved() },
+  reset: () => ui.resetBtn.click(),
   save: () => ui.saveBtn.click(),
 }

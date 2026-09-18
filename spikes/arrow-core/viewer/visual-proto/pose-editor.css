@@ -74,10 +74,23 @@
 }
 .pose-slot .pose-clear:hover { color: #ff4444; }
 
+/* CAL-005: the pose page freed its hint/pose-slot texts -- give the reclaimed vertical
+   space to the stage (scoped here so the calibration editor is untouched). The column may
+   scroll on short viewports instead of clipping the pose strip. */
+.stage-col { overflow-y: auto; }
+.stage-col .stage { max-width: calc((100vh - 110px) * 16 / 9); }
+
 /* CAL-005: the Adjust sliders live in the sidebar (between Current values and Source
    frames) -- give two-word labels room so they don't wrap. */
 .side-panel .scale-row { grid-template-columns: 66px 1fr 62px; }
 .side-panel .scale-row label { white-space: nowrap; }
+.adjust-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 6px; }
+.adjust-head h3 { margin: 0; font: 700 11px system-ui; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-dim); }
+.reset-btn {
+  font: 600 11px system-ui; color: var(--ink); background: rgba(127,127,127,0.12);
+  border: 1px solid var(--panel-border); border-radius: 6px; padding: 3px 10px; cursor: pointer;
+}
+.reset-btn:hover { border-color: var(--selected); }
 
 .source-gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; max-height: 62vh; overflow-y: auto; }
 .source-thumb {
