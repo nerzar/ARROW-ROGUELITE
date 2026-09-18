@@ -1,0 +1,89 @@
+/* VFX-001: Combat Feel Lab styling.
+   Deliberately its own file rather than an addition to style.css: style.css belongs to the
+   playable Prologue page, and the task requires that page to stay untouched. Tokens are copied
+   from it so the lab still reads as the same project. */
+
+:root {
+  --ink: #efece4; --ink-dim: #b9b3a4; --accent: #ffd76a; --danger: #ff6b6b; --good: #7be08a;
+  --panel: rgba(20, 18, 24, 0.62); --panel-border: rgba(255, 255, 255, 0.14);
+  --bg-a: #201a2b; --bg-b: #171018;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font: 13px/1.45 system-ui, sans-serif; color: var(--ink); background: #0d0b11; }
+
+.lab {
+  display: grid; grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 12px; height: 100vh; padding: 12px;
+}
+
+/* --- stage: same 16:9 letterbox rule the playable page uses, so calibrated arena art and the
+       board-plane projection land in the same place they do in the game. ---------------------- */
+.lab-stage { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.stage18 {
+  position: relative; margin: 0 auto; overflow: hidden; border-radius: 12px;
+  border: 1px solid var(--panel-border); background: radial-gradient(120% 90% at 50% 20%, var(--bg-a), var(--bg-b));
+  aspect-ratio: 16 / 9; max-width: 100%;
+}
+@media (min-aspect-ratio: 16/9) { .stage18 { height: calc((100vh - 96px)); width: calc((100vh - 96px) * 16 / 9); } }
+@media (max-aspect-ratio: 16/9) { .stage18 { width: 100%; height: auto; } }
+.stage18 img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.stage18 canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.caption {
+  position: absolute; left: 10px; bottom: 8px; z-index: 5; pointer-events: none;
+  font-size: 11px; color: var(--ink-dim); text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.statusbar {
+  font-size: 12px; color: var(--ink-dim); min-height: 18px; padding: 0 4px;
+}
+
+/* --- control panel ------------------------------------------------------------------------- */
+.lab-panel {
+  overflow-y: auto; padding: 12px; border-radius: 12px;
+  border: 1px solid var(--panel-border); background: var(--panel); backdrop-filter: blur(6px);
+}
+.lab-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lab-head strong { font-size: 14px; letter-spacing: 0.02em; }
+.lab-head a { margin-left: auto; color: var(--good); font-weight: 700; text-decoration: none; }
+.muted { color: var(--ink-dim); }
+.note { font-size: 11px; color: var(--ink-dim); margin: 6px 0 12px; }
+.note code { color: var(--accent); }
+h4 { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim); }
+
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { flex: 1 1 auto; }
+
+button, select, input[type=number], input[type=text] {
+  font: inherit; color: var(--ink); background: rgba(255,255,255,0.06);
+  border: 1px solid var(--panel-border); border-radius: 6px; padding: 4px 8px;
+}
+button { cursor: pointer; }
+button:hover { background: rgba(255,255,255,0.12); }
+button.on { background: rgba(255,215,106,0.22); border-color: var(--accent); }
+button.trigger { background: rgba(255,215,106,0.14); }
+.row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.row > label { flex: 0 0 96px; font-size: 11px; color: var(--ink-dim); }
+.row > input[type=range] { flex: 1 1 auto; min-width: 0; }
+.row > .val { flex: 0 0 54px; text-align: right; font-size: 11px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.row > input[type=number], .row > input[type=text] { flex: 0 0 84px; }
+.row > select { flex: 1 1 auto; min-width: 0; }
+
+/* --- effect cards ------------------------------------------------------------------------- */
+.card {
+  border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+  background: rgba(0,0,0,0.18);
+}
+.card-head { display: flex; align-items: center; gap: 8px; }
+.card-head strong { font-size: 12px; }
+.card-head .idx { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.card-head button { margin-left: auto; padding: 2px 10px; font-size: 11px; }
+.card-body { margin-top: 4px; }
+.card-body:empty { display: none; }
+
+#debug {
+  font-size: 11px; white-space: pre-wrap; margin: 0; max-height: 200px; overflow: auto;
+  color: var(--ink-dim); font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arrow-Roguelite · Combat Feel Lab</title>
+<link rel="stylesheet" href="./vfx-lab.css">
+</head>
+<body>
+<div class="lab">
+
+  <section class="lab-stage">
+    <div class="stage18" id="stage">
+      <canvas id="fx"></canvas>
+      <div class="caption" id="caption"></div>
+    </div>
+    <div class="statusbar" id="statusbar"></div>
+  </section>
+
+  <aside class="lab-panel">
+    <header class="lab-head">
+      <strong>Combat Feel Lab</strong>
+      <span class="muted">VFX-001</span>
+      <a href="./index.html">← playable prologue</a>
+    </header>
+
+    <p class="note">
+      Стенд для подбора боевых эффектов. Gameplay сюда не подключён: всё, что здесь
+      происходит, — presentation. Lab ничего не импортирует из <code>EncounterState</code>
+      и не меняет playable-страницу.
+    </p>
+
+    <h4>Presets</h4>
+    <div class="presets" id="presets"></div>
+
+    <h4>Take</h4>
+    <div class="take" id="take"></div>
+
+    <h4>Effects <span class="muted" id="fxCount"></span></h4>
+    <div class="cards" id="cards"></div>
+
+    <h4>Debug</h4>
+    <pre id="debug"></pre>
+  </aside>
+
+</div>
+<script type="module" src="./vfx-lab.js"></script>
+</body>
+</html>
