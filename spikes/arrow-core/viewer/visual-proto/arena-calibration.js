@@ -283,14 +283,124 @@ export const ARENA_CALIBRATIONS = {
       right: { dx: 0, dy: 0.08 },
     },
   },
+  // ASSET-002: four new baked-grid arenas from magicarrowassets/arenas/, brought in for the
+  // campaign authoring tool's arena picker (asset-catalog.js's ARENA_CATALOG). Same composition
+  // (board on a stone dais, camera slightly above, torch-lit) as prologue-5x5-good/boss-shadow-
+  // moon, so their quads/anchors start as a direct copy of those two's already-proven numbers
+  // rather than a blind guess -- then adjusted against each image's own baked tile grid using the
+  // same live debug-grid-mesh-overlay method FIX-023 used (see this file's header comment).
+  // `autumnfall-8x7`/`demonforge-10x8` don't exactly match any current square board size (their
+  // painted grid is 8x7/10x8, not square) -- still usable as a background for square7..square10,
+  // same caveat CAL-004's own FOUND already recorded for the pre-existing arenas.
+  'grimskull-5x5': {
+    id: 'grimskull-5x5',
+    background: 'assets/arenas/prologue-act1/grimskull-5x5.png',
+    boardSizeLocked: 5,
+    boardPlaneFrac: {
+      tl: [0.365, 0.335], tr: [0.635, 0.335], br: [0.665, 0.700], bl: [0.335, 0.700],
+    },
+    anchors: {
+      top: { x: 0.5, y: 0.30 },
+      left: { x: 0.17, y: 0.60 },
+      right: { x: 0.83, y: 0.60 },
+    },
+    effectAnchors: {
+      top: { x: 0.5, y: 0.26 },
+      left: { x: 0.17, y: 0.56 },
+      right: { x: 0.83, y: 0.56 },
+    },
+    actorScale: { top: 0.55, left: 1.0, right: 1.0 },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
+    },
+  },
+  'ironvow-6x6': {
+    id: 'ironvow-6x6',
+    background: 'assets/arenas/prologue-act1/ironvow-6x6.png',
+    boardSizeLocked: 6,
+    boardPlaneFrac: {
+      tl: [0.3, 0.329], tr: [0.621, 0.329], br: [0.6875, 0.711], bl: [0.2125, 0.711],
+    },
+    anchors: {
+      top: { x: 0.5, y: 0.29 },
+      left: { x: 0.17, y: 0.6 },
+      right: { x: 0.83, y: 0.6 },
+    },
+    effectAnchors: {
+      top: { x: 0.5, y: 0.25 },
+      left: { x: 0.17, y: 0.56 },
+      right: { x: 0.83, y: 0.56 },
+    },
+    actorScale: { top: 0.55, left: 1.0, right: 1.0 },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
+    },
+  },
+  'autumnfall-8x7': {
+    id: 'autumnfall-8x7',
+    background: 'assets/arenas/prologue-act1/autumnfall-8x7.png',
+    boardSizeLocked: 7,
+    boardPlaneFrac: {
+      tl: [0.35, 0.34], tr: [0.65, 0.34], br: [0.68, 0.72], bl: [0.32, 0.72],
+    },
+    anchors: {
+      top: { x: 0.5, y: 0.30 },
+      left: { x: 0.17, y: 0.6 },
+      right: { x: 0.83, y: 0.6 },
+    },
+    effectAnchors: {
+      top: { x: 0.5, y: 0.26 },
+      left: { x: 0.17, y: 0.56 },
+      right: { x: 0.83, y: 0.56 },
+    },
+    actorScale: { top: 0.55, left: 1.0, right: 1.0 },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
+    },
+  },
+  'demonforge-10x8': {
+    id: 'demonforge-10x8',
+    background: 'assets/arenas/prologue-act1/demonforge-10x8.png',
+    boardSizeLocked: 10,
+    boardPlaneFrac: {
+      tl: [0.345, 0.335], tr: [0.655, 0.335], br: [0.685, 0.70], bl: [0.315, 0.70],
+    },
+    anchors: {
+      top: { x: 0.5, y: 0.30 },
+      left: { x: 0.17, y: 0.6 },
+      right: { x: 0.83, y: 0.6 },
+    },
+    effectAnchors: {
+      top: { x: 0.5, y: 0.26 },
+      left: { x: 0.17, y: 0.56 },
+      right: { x: 0.83, y: 0.56 },
+    },
+    actorScale: { top: 0.55, left: 1.0, right: 1.0 },
+    spritePivot: {
+      top: { dx: 0, dy: 0 },
+      left: { dx: 0, dy: 0 },
+      right: { dx: 0, dy: 0 },
+    },
+  },
 }
 
 const STORAGE_PREFIX = 'arena_calibration_override_'
 
+const CALIBRATION_ALIASES = {
+  '6x6-5': 'boss-shadow-moon',
+}
+
 /** Look up a calibration entry by id; returns null for unknown ids (never throws).
  * In a browser environment, merges any user-saved tuning override from localStorage. */
 export function getArenaCalibration(id) {
-  let c = ARENA_CALIBRATIONS[id]
+  const resolvedId = CALIBRATION_ALIASES[id] ?? id
+  let c = ARENA_CALIBRATIONS[resolvedId]
   if (!c) return null
   if (typeof localStorage !== 'undefined') {
     try {

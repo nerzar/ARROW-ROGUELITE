@@ -15,8 +15,9 @@ import {
   getNextAvailableSide,
   generateBoardForLevel,
   convertLevelToStep,
+  changeLevelArena,
 } from '../viewer/visual-proto/campaign-model.js'
-import { resolveArenaPresentation } from '../viewer/visual-proto/arena-calibration.js'
+import { getArenaCalibration, resolveArenaPresentation } from '../viewer/visual-proto/arena-calibration.js'
 import { ARENA_CATALOG, CREATURE_CATALOG, findArena, findCreature } from '../viewer/visual-proto/asset-catalog.js'
 
 describe('BUILD-026: Campaign & Level Authoring Model', () => {
@@ -148,5 +149,55 @@ describe('BUILD-026: Campaign & Level Authoring Model', () => {
 
     const arena = findArena('prologue-5x5-good')
     expect(arena.suggestedSize).toBe(5)
+  })
+
+  it('BUILD-028: changing arena immediately resolves that arena baseline calibration without stale geometry', () => {
+    const lvl = createDefaultLevel(1, 5)
+    lvl.board.seed = 4242
+    lvl.encounter.enemies![0].hp = 5
+
+    // Initial arena is prologue-5x5-good
+    expect(lvl.presentation.arena).toBe('prologue-5x5-good')
+    const base5x5 = getArenaCalibration('prologue-5x5-good')!
+    expect(base5x5).not.toBeNull()
+
+    // Switch arena to Ironvow Bastion
+    const ironvowCalib = changeLevelArena(lvl, 'ironvow-6x6')
+    expect(lvl.presentation.arena).toBe('ironvow-6x6')
+    expect(lvl.presentation.background).toBe('assets/arenas/prologue-act1/ironvow-6x6.png')
+
+    const calib = lvl.presentation.calibration as any
+    expect(calib).toBeDefined()
+    expect(calib.id).toBe('ironvow-6x6')
+    // Board plane corners must match Ironvow Bastion, NOT prologue-5x5-good
+    expect(calib.boardPlaneFrac.tl).toEqual(ironvowCalib.boardPlaneFrac.tl)
+    expect(calib.boardPlaneFrac.tl).not.toEqual(base5x5.boardPlaneFrac.tl)
+    expect(calib.anchors.top).toEqual(ironvowCalib.anchors.top)
+    expect(calib.actorScale).toEqual(ironvowCalib.actorScale)
+
+    // Gameplay and content fields must remain intact
+    expect(lvl.board.seed).toBe(4242)
+    expect(lvl.board.size).toBe(5)
+    expect(lvl.encounter.enemies![0].hp).toBe(5)
+
+    // Switch arena to Grimskull Throne
+    const grimskullCalib = changeLevelArena(lvl, 'grimskull-5x5')
+    const calibGrim = lvl.presentation.calibration as any
+    expect(calibGrim.id).toBe('grimskull-5x5')
+    expect(calibGrim.boardPlaneFrac.tl).toEqual(grimskullCalib.boardPlaneFrac.tl)
+    expect(calibGrim.boardPlaneFrac.tl).not.toEqual(ironvowCalib.boardPlaneFrac.tl)
+
+    // User tunes calibration after switching
+    calibGrim.actorScale.top = 1.25
+    const step = convertLevelToStep(lvl)
+    const resolved = resolveArenaPresentation((step as any).presentation)
+    expect(resolved).not.toBeNull()
+    expect(resolved!.actorScale!.top).toBe(1.25)
+    expect(resolved!.id).toBe('grimskull-5x5')
+
+    // 6x6-5 alias resolves to boss-shadow-moon
+    const aliasResolved = resolveArenaPresentation({ arena: '6x6-5' })
+    expect(aliasResolved).not.toBeNull()
+    expect(aliasResolved!.id).toBe('boss-shadow-moon')
   })
 })

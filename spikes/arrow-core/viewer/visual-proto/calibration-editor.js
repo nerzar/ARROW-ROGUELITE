@@ -10,7 +10,7 @@
 //  - Direct launch into playable game for single level or full campaign playtest.
 
 import { EncounterState, generateLevel, PRESETS } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
+import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import {
   ARENA_CALIBRATIONS, clearArenaCalibrationOverride, getArenaCalibration,
   hasArenaCalibrationOverride, saveArenaCalibrationOverride,
@@ -23,6 +23,7 @@ import { ARENA_CATALOG, CREATURE_CATALOG, findArena, findCreature } from './asse
 import {
   createDefaultCampaign, createDefaultLevel, generateBoardForLevel,
   getNextAvailableSide, convertLevelToStep, saveCampaign, loadCampaign,
+  changeLevelArena,
 } from './campaign-model.js'
 
 const $ = (id) => document.getElementById(id)
@@ -116,6 +117,11 @@ let selected = null
 const renderer = createBoardRenderer(ui.canvas, ui.stage)
 const assets = await loadAssets(ASSET_MANIFEST)
 const wolfPack = await loadWolfPack()
+// ASSET-002: same per-species preload as app.js, so the campaign editor's own preview shows the
+// real chosen creature, not always Dire Wolf.
+const enemyPacksBySpecies = Object.fromEntries(
+  await Promise.all(Object.entries(ENEMY_MANIFESTS).map(async ([species, manifest]) => [species, await loadWolfPack(manifest)])),
+)
 const bossPacks = {
   'goblin-shaman': await loadBossPack(BOSS_MANIFESTS['goblin-shaman']),
   'goblin-taunter': await loadBossPack(BOSS_MANIFESTS['goblin-taunter']),
@@ -192,13 +198,17 @@ async function loadLevel(idx) {
 
   // 2. Resolve Calibration
   const arenaInfo = findArena(levelDef.presentation?.arena || levelDef.presentation?.background)
+  const expectedCalibId = arenaInfo.calibrationId || 'prologue-5x5-good'
   let calib = levelDef.presentation?.calibration
-  if (!calib || typeof calib !== 'object') {
-    const calibId = arenaInfo.calibrationId || 'prologue-5x5-good'
-    calib = getArenaCalibration(calibId)
+  if (typeof calib === 'string') {
+    calib = getArenaCalibration(calib)
   }
-  // Ensure background path matches selected arena
-  calib = { ...calib, background: arenaInfo.path }
+  // Stale check: if calib is missing, not an object, or belongs to a different arena id, load baseline
+  if (!calib || typeof calib !== 'object' || (calib.id && expectedCalibId && calib.id !== expectedCalibId)) {
+    calib = getArenaCalibration(expectedCalibId) || getArenaCalibration('prologue-5x5-good')
+  }
+  // Ensure background path and id match selected arena
+  calib = { ...calib, id: calib.id || expectedCalibId, background: arenaInfo.path }
   applyCalibration(calib)
 
   // 3. Sync UI inputs
@@ -603,15 +613,19 @@ function wirePivotEvents() {
 // Arena picker
 ARENA_CATALOG.forEach((a) => ui.bgPick.append(new Option(a.label, a.path)))
 ui.bgPick.onchange = () => {
-  const arenaInfo = findArena(ui.bgPick.value)
-  draft.background = arenaInfo.path
   const currentLevel = campaign.levels[currentLevelIndex]
+  let newCalib
   if (currentLevel) {
-    currentLevel.presentation.background = arenaInfo.path
-    currentLevel.presentation.arena = arenaInfo.id
+    newCalib = changeLevelArena(currentLevel, ui.bgPick.value)
+  } else {
+    const arenaInfo = findArena(ui.bgPick.value)
+    const calibId = arenaInfo.calibrationId || 'prologue-5x5-good'
+    const baseline = getArenaCalibration(calibId) || getArenaCalibration('prologue-5x5-good')
+    newCalib = { ...deepClone(baseline), id: calibId, background: arenaInfo.path }
   }
-  setBackground(draft.background)
+  applyCalibration(newCalib)
   renderer.resize(level, draft)
+  positionHandles()
   refreshPanels()
   markUnsaved()
 }
@@ -760,8 +774,13 @@ ui.btnMoveDown.onclick = () => {
 async function executeSave() {
   const currentLevel = campaign.levels[currentLevelIndex]
   if (currentLevel) {
-    currentLevel.presentation.calibration = buildExportObject()
-    currentLevel.presentation.background = draft.background
+    const arenaInfo = findArena(draft.background)
+    currentLevel.presentation = {
+      ...currentLevel.presentation,
+      arena: arenaInfo?.id ?? currentLevel.presentation?.arena ?? draft.id,
+      background: draft.background,
+      calibration: buildExportObject(),
+    }
   }
   ui.saveBadge.className = 'save-badge'
   ui.saveBadge.textContent = 'Saving...'
@@ -857,7 +876,7 @@ function loop(now) {
     s: encounterState, def, level: frameLevel, assets,
     hint: null,
     boss: (bossVisual && showSprites) ? { pack: bossPack, visual: bossVisual } : null,
-    wolf: (wolfVisuals && showSprites) ? { pack: wolfPack, visuals: wolfVisuals } : null,
+    wolf: (wolfVisuals && showSprites) ? { pack: wolfPack, packsBySpecies: enemyPacksBySpecies, visuals: wolfVisuals } : null,
     debug: ui.toggleGrid.checked,
   })
 }
@@ -921,4 +940,9 @@ window.calibrationEditorDebug = {
   addEnemy: () => ui.authorAddEnemyBtn.click(),
   save: executeSave,
   getLayout: () => renderer.debugLayout(),
+  setArena: (idOrPath) => {
+    const arena = findArena(idOrPath)
+    ui.bgPick.value = arena.path
+    ui.bgPick.onchange()
+  },
 }

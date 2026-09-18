@@ -69,6 +69,57 @@ const WOLF_RUNTIME = { idle: 'idle.png', attackReady: 'attack-ready.png', attack
 export const WOLF_PACK_BASE = 'assets/enemies/dire-wolf/'
 export const WOLF_MANIFEST = Object.fromEntries(ENEMY_POSES.map((p) => [p, `${WOLF_PACK_BASE}${WOLF_RUNTIME[p]}`]))
 
+// ASSET-002: additional ordinary-enemy species for the campaign authoring tool's enemy catalog
+// (source: magicarrowassets/creatures/<species>). Unlike Dire Wolf, these were generated with the
+// same idle/angry/taunt/cast/stun/death/back pose set as the BOSS roster (goblin-shaman/goblin-
+// king), not Dire Wolf's own idle/attack-ready/attack/hit/defeat set -- so only `idle`, `hit`
+// (<- stun/stun-hit, the literal "reaction to being hit" pose) and `defeat` (<- death) have a real
+// literal filename to map here. `attackReady`/`attack` have no matching source file for these
+// species and are deliberately left unmapped rather than guessed -- ENEMY_POSES's existing
+// pose->idle graceful-degradation (see resolveWolfImage below) already covers it, exactly the same
+// contract every other missing pose on any pack already uses.
+// spider-brute/skeleton-child ship with only a single clean usable frame each (the rest of their
+// source folders are either raw ungrouped batches or a labeled concept/reference sheet, not
+// individually usable sprites) -- idle-only, every other pose falls back to idle.
+const ENEMY_RUNTIME_GREEN_SLIME = { idle: 'idle.png', hit: 'stun-hit.png', defeat: 'death.png' }
+const ENEMY_RUNTIME_SMALL_GOBLIN = { idle: 'idle.png', hit: 'stun.png', defeat: 'death.png' }
+const ENEMY_RUNTIME_SPIDER_BRUTE = { idle: 'idle.png' }
+const ENEMY_RUNTIME_SKELETON_CHILD = { idle: 'idle.png' }
+
+function enemyManifest(base, runtime) {
+  return Object.fromEntries(ENEMY_POSES.filter((p) => runtime[p]).map((p) => [p, `${base}${runtime[p]}`]))
+}
+export const GREEN_SLIME_MANIFEST = enemyManifest('assets/enemies/green-slime/', ENEMY_RUNTIME_GREEN_SLIME)
+export const SMALL_GOBLIN_MANIFEST = enemyManifest('assets/enemies/small-goblin/', ENEMY_RUNTIME_SMALL_GOBLIN)
+export const SPIDER_BRUTE_MANIFEST = enemyManifest('assets/enemies/spider-brute/', ENEMY_RUNTIME_SPIDER_BRUTE)
+export const SKELETON_CHILD_MANIFEST = enemyManifest('assets/enemies/skeleton-child/', ENEMY_RUNTIME_SKELETON_CHILD)
+
+/** ASSET-002: species -> ordinary-enemy pose manifest, for the campaign editor's per-enemy
+ * `species` field (asset-catalog.js's CREATURE_CATALOG ids). Unknown/unset species falls back to
+ * `dire-wolf` (today's only pre-existing ordinary-enemy pack) so an authored level with no species
+ * chosen yet still renders something real instead of nothing.
+ *
+ * `goblin-shaman`/`goblin-taunter` are CREATURE_CATALOG's two "Boss" entries -- but the campaign
+ * authoring tool always builds `def.enemies` (array shape), never `def.boss`, so a boss species
+ * placed in an enemy slot goes through this same ordinary-enemy pipeline, not the boss one. Without
+ * an entry here it silently fell back to Dire Wolf's sprite despite the "(Boss)" label. Reusing
+ * their own BOSS_MANIFEST/SHAMAN_MANIFEST here is safe even though the pose vocabularies differ
+ * (ENEMY_POSES' `attackReady`/`attack`/`hit` aren't in a boss pack) -- resolveWolfImage's existing
+ * pose->idle fallback (below) already covers every pose the boss pack doesn't define, so this
+ * renders a real, correctly-grounded idle portrait instead of a wrong species. */
+export const ENEMY_MANIFESTS = {
+  'dire-wolf': WOLF_MANIFEST,
+  'green-slime': GREEN_SLIME_MANIFEST,
+  'small-goblin': SMALL_GOBLIN_MANIFEST,
+  'spider-brute': SPIDER_BRUTE_MANIFEST,
+  'skeleton-child': SKELETON_CHILD_MANIFEST,
+  'goblin-shaman': SHAMAN_MANIFEST,
+  'goblin-taunter': BOSS_MANIFEST,
+}
+export function enemyManifestFor(species) {
+  return ENEMY_MANIFESTS[species] ?? WOLF_MANIFEST
+}
+
 /** Enemy/boss id -> manifest key, for the three VS-001 scenes' known cast (cp-e4, cp-e5,
  * rock-spike). A future encounter with an unlisted id still gets *a* portrait, not a blank panel,
  * via SIDE_FALLBACK_SLOT below -- this is bookkeeping for placeholder-vs-real art, not a design

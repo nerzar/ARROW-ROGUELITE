@@ -61,6 +61,7 @@ export interface LoadCampaignResult {
 export declare const STORAGE_CAMPAIGN_KEY: string
 
 export declare function createDefaultLevel(index?: number, size?: number): AuthoredLevelDef
+export declare function changeLevelArena(levelDef: AuthoredLevelDef, newArenaIdOrPath: string): ArenaCalibration
 export declare function createDefaultCampaign(): AuthoredCampaign
 export declare function generateBoardForLevel(levelDef: AuthoredLevelDef): GenerateLevelResult
 export declare function getNextAvailableSide(existingEnemies?: Array<{ side: number | string }>): number

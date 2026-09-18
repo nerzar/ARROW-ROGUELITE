@@ -49,6 +49,29 @@ export function createDefaultLevel(index = 1, size = 5) {
 }
 
 /**
+ * Changes a level's arena, immediately resolving the new arena's baseline
+ * calibration/presentation so stale geometry from the previous arena is not retained.
+ * Keeps gameplay/content fields intact (board seed/size, encounter, enemies, HP/timers).
+ */
+export function changeLevelArena(levelDef, newArenaIdOrPath) {
+  const arena = findArena(newArenaIdOrPath)
+  const calibId = arena.calibrationId || 'prologue-5x5-good'
+  const baseline = getArenaCalibration(calibId) || getArenaCalibration('prologue-5x5-good')
+  const newCalib = {
+    ...JSON.parse(JSON.stringify(baseline)),
+    id: calibId,
+    background: arena.path,
+  }
+  levelDef.presentation = {
+    ...levelDef.presentation,
+    arena: arena.id,
+    background: arena.path,
+    calibration: newCalib,
+  }
+  return newCalib
+}
+
+/**
  * Creates a default campaign containing initial playable levels.
  */
 export function createDefaultCampaign() {
