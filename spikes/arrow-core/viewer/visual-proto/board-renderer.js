@@ -767,6 +767,8 @@ export function createBoardRenderer(canvas, stageEl) {
         side: t.side, fontPx, lineH, lineCount: lines.length, barH, maxTextW: maxW, cell: charCell * hudScale,
         slotAbsX: slot.x, boardCx: boardBBox.x + boardBBox.w / 2, boardHalfPx: boardBBox.w / 2,
         offset: hudOffPx, // CAL-005: one species-level anchor moves bar + plate + badges + lines
+        // FIX-033: keep the stack inside the visible stage (last resort after all offsets).
+        viewport: { w: g.stageW, h: g.stageH, x: slot.x, y: slot.y },
       })
       if (!t.dead || t.isBoss) {
         const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0

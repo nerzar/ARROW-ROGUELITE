@@ -1,6 +1,6 @@
 # TASK: FIX-033 — Combat HUD polish (mob HUD + player HUD)
 
-STATUS: READY
+STATUS: DONE
 TYPE: FIX
 SIZE: S/M
 AGENT:
@@ -49,8 +49,11 @@ tests + typecheck + build в `spikes/arrow-core`; ручная проверка 
 
 ## Итог
 
-RESULT:
+RESULT: viewport clamp стека HUD в `hudBoxes` (последняя инстанция после CAL-005 offsets и E/W board clamp; без viewport геометрия legacy) + проводка `viewport` из renderer + player card framing в CSS. Калибровочные данные не тронуты.
 
-VERIFY:
+VERIFY: tests 344 OK (новый `fix-033-combat-hud.test.ts`, 6 кейсов; legacy suites зелёные); typecheck/build OK; браузер prologue-5x5/cp-e4/authored-3 на 1920 и 480: все plate/badge y>=0 (было до -35), ошибок нет; скриншоты до/после в `C:\Users\nerza\AppData\Local\Temp\opencode\cal005\d33-*.png`.
 
 FOUND:
+- Диагноз: N/top plate регулярно за верхом stage (моб: -5/-9.5/-35; fhd: -3/-8.5) — корень в layout (стек безусловно вверх), не в цифрах калибровки; починено клампом.
+- E-спрайт на fhd стоит наполовину за правым краем (char до x=1934 при stage 1920) — это anchor placement (PODIUM_GROUND/калибровка арен), по границе карточки не трогал; нужно техлиду калибровки.
+- Plate может сесть на лицо спрайта при сильном переполнении — осознанный lesser evil вместо невидимого HUD; CAL-005 offsets применяются первыми и не перебиваются.
