@@ -45,6 +45,7 @@ export interface AuthoredCampaign {
   title: string
   levels: AuthoredLevelDef[]
   customArenas?: ArenaCatalogItem[]
+  arenaDefaults?: Record<string, any>
 }
 
 export interface SaveCampaignResult {
@@ -63,7 +64,8 @@ export interface LoadCampaignResult {
 export declare const STORAGE_CAMPAIGN_KEY: string
 
 export declare function createDefaultLevel(index?: number, size?: number): AuthoredLevelDef
-export declare function changeLevelArena(levelDef: AuthoredLevelDef, newArenaIdOrPath: string): ArenaCalibration
+export declare function getArenaBaseline(arena: ArenaCatalogItem, campaign?: AuthoredCampaign | null): ArenaCalibration
+export declare function changeLevelArena(levelDef: AuthoredLevelDef, newArenaIdOrPath: string, campaign?: AuthoredCampaign | null): ArenaCalibration
 export declare function createDefaultCampaign(): AuthoredCampaign
 export declare function generateBoardForLevel(levelDef: AuthoredLevelDef): GenerateLevelResult
 export declare function getNextAvailableSide(existingEnemies?: Array<{ side: number | string }>): number

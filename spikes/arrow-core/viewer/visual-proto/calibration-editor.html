@@ -17,6 +17,7 @@
     <button id="playLevelBtn" class="play-btn" title="Play current level in game">▶ Play Level</button>
     <button id="playCampaignBtn" class="play-btn" title="Play full campaign sequence">▶ Play Campaign</button>
     <label>arena <select id="bgPick"></select></label>
+    <button id="saveArenaDefaultBtn" class="default-btn" title="Save current calibration as default for this arena">★ Arena Default</button>
     <button id="importArenaBtn" title="Import a local image file as a new arena for this level">📥 Import Arena</button>
     <input type="file" id="importArenaInput" accept="image/png,image/jpeg,image/webp" style="display:none">
     <label title="Legacy debug preview" style="display:none">debug <select id="arenaPick"><option value="">— none —</option></select></label>
@@ -108,18 +109,18 @@
         <div class="scale-controls">
           <div class="scale-row">
             <label for="scaleTop">TOP</label>
-            <input type="range" id="scaleTop" min="0.5" max="2.0" step="0.05" value="1.0">
-            <input type="number" id="scaleTopNum" min="0.5" max="2.0" step="0.05" value="1.00">
+            <input type="range" id="scaleTop" min="0.1" max="2.0" step="0.01" value="1.0">
+            <input type="number" id="scaleTopNum" min="0.1" max="2.0" step="0.01" value="1.00">
           </div>
           <div class="scale-row">
             <label for="scaleLeft">LEFT</label>
-            <input type="range" id="scaleLeft" min="0.5" max="2.0" step="0.05" value="1.0">
-            <input type="number" id="scaleLeftNum" min="0.5" max="2.0" step="0.05" value="1.00">
+            <input type="range" id="scaleLeft" min="0.1" max="2.0" step="0.01" value="1.0">
+            <input type="number" id="scaleLeftNum" min="0.1" max="2.0" step="0.01" value="1.00">
           </div>
           <div class="scale-row">
             <label for="scaleRight">RIGHT</label>
-            <input type="range" id="scaleRight" min="0.5" max="2.0" step="0.05" value="1.0">
-            <input type="number" id="scaleRightNum" min="0.5" max="2.0" step="0.05" value="1.00">
+            <input type="range" id="scaleRight" min="0.1" max="2.0" step="0.01" value="1.0">
+            <input type="number" id="scaleRightNum" min="0.1" max="2.0" step="0.01" value="1.00">
           </div>
           <div class="scale-link-row">
             <label class="chk"><input type="checkbox" id="linkSideScale"> Link LEFT + RIGHT</label>

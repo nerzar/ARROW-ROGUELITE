@@ -49,17 +49,37 @@ export function createDefaultLevel(index = 1, size = 5) {
 }
 
 /**
+ * Resolves the default/baseline calibration for a given arena.
+ * Priority:
+ * 1. campaign.arenaDefaults (custom default set by user for this arena)
+ * 2. arena.defaultCalibration (if embedded in arena catalog entry)
+ * 3. getArenaCalibration(arena.calibrationId) (built-in calibrated arena)
+ * 4. getArenaCalibration('prologue-5x5-good') (safe fallback)
+ */
+export function getArenaBaseline(arena, campaign = null) {
+  if (!arena) return getArenaCalibration('prologue-5x5-good')
+  const customDefault = campaign?.arenaDefaults?.[arena.id]
+    ?? campaign?.arenaDefaults?.[arena.path]
+    ?? arena.defaultCalibration
+  if (customDefault && typeof customDefault === 'object') {
+    return JSON.parse(JSON.stringify(customDefault))
+  }
+  const calibId = arena.calibrationId || 'prologue-5x5-good'
+  const builtIn = getArenaCalibration(calibId) || getArenaCalibration('prologue-5x5-good')
+  return JSON.parse(JSON.stringify(builtIn))
+}
+
+/**
  * Changes a level's arena, immediately resolving the new arena's baseline
  * calibration/presentation so stale geometry from the previous arena is not retained.
  * Keeps gameplay/content fields intact (board seed/size, encounter, enemies, HP/timers).
  */
-export function changeLevelArena(levelDef, newArenaIdOrPath) {
+export function changeLevelArena(levelDef, newArenaIdOrPath, campaign = null) {
   const arena = findArena(newArenaIdOrPath)
-  const calibId = arena.calibrationId || 'prologue-5x5-good'
-  const baseline = getArenaCalibration(calibId) || getArenaCalibration('prologue-5x5-good')
+  const baseline = getArenaBaseline(arena, campaign)
   const newCalib = {
     ...JSON.parse(JSON.stringify(baseline)),
-    id: calibId,
+    id: arena.id || arena.calibrationId || 'prologue-5x5-good',
     background: arena.path,
   }
   levelDef.presentation = {
@@ -88,6 +108,7 @@ export function createDefaultCampaign() {
     // asset and persisted here so they round-trip through Save/Load exactly like a built-in
     // ARENA_CATALOG entry.
     customArenas: [],
+    arenaDefaults: {},
   }
 }
 

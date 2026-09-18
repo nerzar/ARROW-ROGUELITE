@@ -95,6 +95,15 @@ export const CREATURE_CATALOG = [
     defaultTimer: null,
   },
   {
+    id: 'small-green-slime',
+    label: 'Small Green Slime (Enemy)',
+    kind: 'enemy',
+    species: 'small-green-slime',
+    defaultHp: 1,
+    defaultSide: 0,
+    defaultTimer: null,
+  },
+  {
     id: 'small-goblin',
     label: 'Small Goblin (Enemy)',
     kind: 'enemy',
@@ -111,6 +120,24 @@ export const CREATURE_CATALOG = [
     defaultHp: 3,
     defaultSide: 0,
     defaultTimer: { interval: 4, damage: 2 },
+  },
+  {
+    id: 'small-spider',
+    label: 'Small Spider (Enemy)',
+    kind: 'enemy',
+    species: 'small-spider',
+    defaultHp: 1,
+    defaultSide: 0,
+    defaultTimer: { interval: 4, damage: 1 },
+  },
+  {
+    id: 'toxic-demonic-spider',
+    label: 'Toxic Demonic Spider (Enemy)',
+    kind: 'enemy',
+    species: 'toxic-demonic-spider',
+    defaultHp: 2,
+    defaultSide: 0,
+    defaultTimer: { interval: 3, damage: 2 },
   },
   {
     id: 'skeleton-child',
@@ -140,8 +167,11 @@ export function findArena(idOrPath) {
 // built-in entry (selectable, findArena()-able, re-selectable after reload once persisted).
 export function registerArena(entry) {
   if (!entry || !entry.id || !entry.path) return null
-  const existing = ARENA_CATALOG.find((a) => a.id === entry.id)
-  if (existing) return existing
+  const existing = ARENA_CATALOG.find((a) => a.id === entry.id || a.path === entry.path)
+  if (existing) {
+    Object.assign(existing, entry)
+    return existing
+  }
   ARENA_CATALOG.push(entry)
   return entry
 }

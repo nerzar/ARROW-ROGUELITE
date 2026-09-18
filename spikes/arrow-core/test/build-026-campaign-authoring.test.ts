@@ -16,9 +16,11 @@ import {
   generateBoardForLevel,
   convertLevelToStep,
   changeLevelArena,
+  getArenaBaseline,
 } from '../viewer/visual-proto/campaign-model.js'
 import { getArenaCalibration, resolveArenaPresentation } from '../viewer/visual-proto/arena-calibration.js'
-import { ARENA_CATALOG, CREATURE_CATALOG, findArena, findCreature } from '../viewer/visual-proto/asset-catalog.js'
+import { ARENA_CATALOG, CREATURE_CATALOG, findArena, findCreature, registerArena } from '../viewer/visual-proto/asset-catalog.js'
+import { ENEMY_MANIFESTS } from '../viewer/visual-proto/assets.js'
 
 describe('BUILD-026: Campaign & Level Authoring Model', () => {
   it('creates a valid default campaign with square-only levels', () => {
@@ -199,5 +201,103 @@ describe('BUILD-026: Campaign & Level Authoring Model', () => {
     const aliasResolved = resolveArenaPresentation({ arena: '6x6-5' })
     expect(aliasResolved).not.toBeNull()
     expect(aliasResolved!.id).toBe('boss-shadow-moon')
+  })
+
+  it('BUILD-031: contains the full 10-creature catalog with valid labels and manifests', () => {
+    expect(CREATURE_CATALOG.length).toBe(10)
+
+    const expectedCreatureIds = [
+      'goblin-shaman',
+      'goblin-taunter',
+      'dire-wolf',
+      'green-slime',
+      'small-green-slime',
+      'small-goblin',
+      'spider-brute',
+      'small-spider',
+      'toxic-demonic-spider',
+      'skeleton-child',
+    ]
+
+    for (const id of expectedCreatureIds) {
+      const c = findCreature(id)
+      expect(c, `creature ${id} should exist`).toBeDefined()
+      expect(c.id).toBe(id)
+      expect(c.label.length).toBeGreaterThan(3)
+      expect(c.defaultHp).toBeGreaterThanOrEqual(1)
+      expect(c.defaultSide).toBe(0)
+      expect(ENEMY_MANIFESTS[c.species], `species ${c.species} must be in ENEMY_MANIFESTS`).toBeDefined()
+      expect(ENEMY_MANIFESTS[c.species].idle, `species ${c.species} must have an idle sprite`).toBeDefined()
+    }
+  })
+
+  it('BUILD-031: supports custom arena defaults stored in campaign.arenaDefaults', () => {
+    const campaign = createDefaultCampaign()
+    const arena = findArena('ironvow-6x6')
+
+    const baseBefore = getArenaBaseline(arena, campaign)
+    expect(baseBefore.actorScale!.top).toBe(0.55)
+
+    const customDefault = {
+      ...baseBefore,
+      actorScale: { top: 0.25, left: 0.8, right: 0.8 },
+      boardPlaneFrac: { tl: [0.1, 0.2], tr: [0.9, 0.2], br: [0.9, 0.9], bl: [0.1, 0.9] },
+    }
+    if (!campaign.arenaDefaults) campaign.arenaDefaults = {}
+    campaign.arenaDefaults[arena.id] = customDefault
+
+    const baseAfter = getArenaBaseline(arena, campaign)
+    expect(baseAfter.actorScale!.top).toBe(0.25)
+    expect(baseAfter.boardPlaneFrac.tl).toEqual([0.1, 0.2])
+
+    const lvl = createDefaultLevel(2, 6)
+    const newCalib = changeLevelArena(lvl, 'ironvow-6x6', campaign)
+    expect(lvl.presentation.arena).toBe('ironvow-6x6')
+    expect(newCalib.actorScale!.top).toBe(0.25)
+    expect(newCalib.boardPlaneFrac.tl).toEqual([0.1, 0.2])
+  })
+
+  it('BUILD-031: supports imported arena registration, default calibration, and level assignment', () => {
+    const campaign = createDefaultCampaign()
+
+    const imported = {
+      id: 'imported-dungeon-arena-12345',
+      label: 'Imported: dungeon-arena.png',
+      path: 'assets/arenas/imported/12345-dungeon-arena.png',
+      suggestedSize: 6,
+      calibrationId: null,
+    }
+
+    const reg = registerArena(imported)
+    expect(reg).not.toBeNull()
+    expect(findArena(imported.id).path).toBe(imported.path)
+    expect(findArena(imported.path).id).toBe(imported.id)
+
+    const initialBase = getArenaBaseline(imported, campaign)
+    expect(initialBase).toBeDefined()
+    expect(initialBase.boardPlaneFrac).toBeDefined()
+
+    const tunedCalib = {
+      id: imported.id,
+      background: imported.path,
+      boardPlaneFrac: { tl: [0.22, 0.33], tr: [0.77, 0.33], br: [0.88, 0.88], bl: [0.11, 0.88] },
+      anchors: { top: { x: 0.5, y: 0.3 }, left: { x: 0.15, y: 0.6 }, right: { x: 0.85, y: 0.6 } },
+      effectAnchors: { top: { x: 0.5, y: 0.28 }, left: { x: 0.15, y: 0.6 }, right: { x: 0.85, y: 0.6 } },
+      actorScale: { top: 0.15, left: 0.7, right: 0.7 },
+      spritePivot: { top: { dx: 0, dy: 0 }, left: { dx: 0, dy: 0 }, right: { dx: 0, dy: 0 } },
+    }
+
+    if (!campaign.arenaDefaults) campaign.arenaDefaults = {}
+    campaign.arenaDefaults[imported.id] = tunedCalib
+    campaign.arenaDefaults[imported.path] = tunedCalib
+    if (!campaign.customArenas) campaign.customArenas = []
+    campaign.customArenas.push({ ...imported, defaultCalibration: tunedCalib })
+
+    const lvl = createDefaultLevel(1, 5)
+    const calib = changeLevelArena(lvl, imported.id, campaign)
+    expect(lvl.presentation.arena).toBe(imported.id)
+    expect(lvl.presentation.background).toBe(imported.path)
+    expect(calib.boardPlaneFrac.tl).toEqual([0.22, 0.33])
+    expect(calib.actorScale!.top).toBe(0.15)
   })
 })

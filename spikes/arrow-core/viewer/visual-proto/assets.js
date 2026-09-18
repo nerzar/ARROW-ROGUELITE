@@ -82,16 +82,22 @@ export const WOLF_MANIFEST = Object.fromEntries(ENEMY_POSES.map((p) => [p, `${WO
 // source folders are either raw ungrouped batches or a labeled concept/reference sheet, not
 // individually usable sprites) -- idle-only, every other pose falls back to idle.
 const ENEMY_RUNTIME_GREEN_SLIME = { idle: 'idle.png', hit: 'stun-hit.png', defeat: 'death.png' }
+const ENEMY_RUNTIME_SMALL_GREEN_SLIME = { idle: 'idle.png', hit: 'hit-stun.png', defeat: 'death.png' }
 const ENEMY_RUNTIME_SMALL_GOBLIN = { idle: 'idle.png', hit: 'stun.png', defeat: 'death.png' }
 const ENEMY_RUNTIME_SPIDER_BRUTE = { idle: 'idle.png' }
+const ENEMY_RUNTIME_SMALL_SPIDER = { idle: 'idle.png' }
+const ENEMY_RUNTIME_TOXIC_DEMONIC_SPIDER = { idle: 'idle.png', hit: 'stun.png', defeat: 'death.png' }
 const ENEMY_RUNTIME_SKELETON_CHILD = { idle: 'idle.png' }
 
 function enemyManifest(base, runtime) {
   return Object.fromEntries(ENEMY_POSES.filter((p) => runtime[p]).map((p) => [p, `${base}${runtime[p]}`]))
 }
 export const GREEN_SLIME_MANIFEST = enemyManifest('assets/enemies/green-slime/', ENEMY_RUNTIME_GREEN_SLIME)
+export const SMALL_GREEN_SLIME_MANIFEST = enemyManifest('assets/enemies/small-green-slime/', ENEMY_RUNTIME_SMALL_GREEN_SLIME)
 export const SMALL_GOBLIN_MANIFEST = enemyManifest('assets/enemies/small-goblin/', ENEMY_RUNTIME_SMALL_GOBLIN)
 export const SPIDER_BRUTE_MANIFEST = enemyManifest('assets/enemies/spider-brute/', ENEMY_RUNTIME_SPIDER_BRUTE)
+export const SMALL_SPIDER_MANIFEST = enemyManifest('assets/enemies/small-spider/', ENEMY_RUNTIME_SMALL_SPIDER)
+export const TOXIC_DEMONIC_SPIDER_MANIFEST = enemyManifest('assets/enemies/toxic-demonic-spider/', ENEMY_RUNTIME_TOXIC_DEMONIC_SPIDER)
 export const SKELETON_CHILD_MANIFEST = enemyManifest('assets/enemies/skeleton-child/', ENEMY_RUNTIME_SKELETON_CHILD)
 
 /** ASSET-002: species -> ordinary-enemy pose manifest, for the campaign editor's per-enemy
@@ -110,8 +116,11 @@ export const SKELETON_CHILD_MANIFEST = enemyManifest('assets/enemies/skeleton-ch
 export const ENEMY_MANIFESTS = {
   'dire-wolf': WOLF_MANIFEST,
   'green-slime': GREEN_SLIME_MANIFEST,
+  'small-green-slime': SMALL_GREEN_SLIME_MANIFEST,
   'small-goblin': SMALL_GOBLIN_MANIFEST,
   'spider-brute': SPIDER_BRUTE_MANIFEST,
+  'small-spider': SMALL_SPIDER_MANIFEST,
+  'toxic-demonic-spider': TOXIC_DEMONIC_SPIDER_MANIFEST,
   'skeleton-child': SKELETON_CHILD_MANIFEST,
   'goblin-shaman': SHAMAN_MANIFEST,
   'goblin-taunter': BOSS_MANIFEST,

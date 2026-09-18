@@ -23,12 +23,12 @@ import { ARENA_CATALOG, CREATURE_CATALOG, findArena, findCreature, registerArena
 import {
   createDefaultCampaign, createDefaultLevel, generateBoardForLevel,
   getNextAvailableSide, convertLevelToStep, saveCampaign, loadCampaign,
-  changeLevelArena,
+  changeLevelArena, getArenaBaseline,
 } from './campaign-model.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
-  stagePick: $('stagePick'), bgPick: $('bgPick'), arenaPick: $('arenaPick'), gridSizePick: $('gridSizePick'),
+  stagePick: $('stagePick'), bgPick: $('bgPick'), saveArenaDefaultBtn: $('saveArenaDefaultBtn'), arenaPick: $('arenaPick'), gridSizePick: $('gridSizePick'),
   toggleGrid: $('toggleGrid'), toggleArrows: $('toggleArrows'), toggleSprites: $('toggleSprites'), toggleEffect: $('toggleEffect'),
   resetBtn: $('resetBtn'), saveStorageBtn: $('saveStorageBtn'), clearStorageBtn: $('clearStorageBtn'), copyBtn: $('copyBtn'), downloadBtn: $('downloadBtn'),
   newLevelBtn: $('newLevelBtn'), saveBadge: $('saveBadge'), playLevelBtn: $('playLevelBtn'), playCampaignBtn: $('playCampaignBtn'),
@@ -166,7 +166,11 @@ function applyCalibration(calib) {
 }
 
 function syncBgPick() {
-  const match = ARENA_CATALOG.find((a) => a.path === draft.background)
+  ensureBgPickOptions()
+  const currentLevel = campaign?.levels?.[currentLevelIndex]
+  const targetBg = draft?.background || currentLevel?.presentation?.background
+  const targetArena = currentLevel?.presentation?.arena || draft?.id
+  const match = ARENA_CATALOG.find((a) => (targetBg && a.path === targetBg) || (targetArena && (a.id === targetArena || a.path === targetArena)))
   if (match) ui.bgPick.value = match.path
 }
 
@@ -199,17 +203,23 @@ async function loadLevel(idx) {
 
   // 2. Resolve Calibration
   const arenaInfo = findArena(levelDef.presentation?.arena || levelDef.presentation?.background)
-  const expectedCalibId = arenaInfo.calibrationId || 'prologue-5x5-good'
   let calib = levelDef.presentation?.calibration
   if (typeof calib === 'string') {
     calib = getArenaCalibration(calib)
   }
-  // Stale check: if calib is missing, not an object, or belongs to a different arena id, load baseline
-  if (!calib || typeof calib !== 'object' || (calib.id && expectedCalibId && calib.id !== expectedCalibId)) {
-    calib = getArenaCalibration(expectedCalibId) || getArenaCalibration('prologue-5x5-good')
+  const isValid = calib && typeof calib === 'object' && calib.boardPlaneFrac && calib.anchors &&
+    ((calib.background && calib.background === arenaInfo.path) ||
+     (calib.id && (calib.id === arenaInfo.id || (arenaInfo.calibrationId && calib.id === arenaInfo.calibrationId))))
+
+  if (!isValid) {
+    calib = getArenaBaseline(arenaInfo, campaign)
   }
   // Ensure background path and id match selected arena
-  calib = { ...calib, id: calib.id || expectedCalibId, background: arenaInfo.path }
+  calib = {
+    ...deepClone(calib),
+    id: calib.id || arenaInfo.id || arenaInfo.calibrationId || 'prologue-5x5-good',
+    background: arenaInfo.path,
+  }
   applyCalibration(calib)
 
   // 3. Sync UI inputs
@@ -303,6 +313,9 @@ function renderEnemiesList() {
       const target = levelDef.encounter.enemies[idx]
       target.species = c.id
       target.label = c.label
+      target.hp = c.defaultHp
+      target.attackTimer = c.defaultTimer ? { ...c.defaultTimer } : null
+      renderEnemiesList()
       rebuildCurrentLevel()
     }
   })
@@ -541,7 +554,7 @@ function syncScaleInputs() {
 
 function wireScaleEvents() {
   function onScaleChange(side, val) {
-    val = Math.max(0.5, Math.min(2.0, Math.round(val * 100) / 100))
+    val = Math.max(0.1, Math.min(2.0, Math.round(val * 100) / 100))
     draft.actorScale[side] = val
     if (side === 'top') {
       ui.scaleTop.value = String(val)
@@ -616,9 +629,13 @@ function wirePivotEvents() {
 // that don't have an <option> yet, instead of a one-shot forEach — so imports and rehydrated
 // customArenas from a loaded campaign become selectable without a page reload.
 function ensureBgPickOptions() {
+  const currentVal = ui.bgPick.value
   const known = new Set(Array.from(ui.bgPick.options).map((o) => o.value))
   for (const a of ARENA_CATALOG) {
     if (!known.has(a.path)) ui.bgPick.append(new Option(a.label, a.path))
+  }
+  if (currentVal && Array.from(ui.bgPick.options).some((o) => o.value === currentVal)) {
+    ui.bgPick.value = currentVal
   }
 }
 ensureBgPickOptions()
@@ -627,7 +644,33 @@ ensureBgPickOptions()
 // into the shared ARENA_CATALOG + bgPick options, so a reload doesn't lose the ability to
 // re-select an imported arena for another level.
 function rehydrateCustomArenas() {
-  for (const entry of campaign?.customArenas ?? []) registerArena(entry)
+  for (const entry of campaign?.customArenas ?? []) {
+    registerArena(entry)
+    if (entry.defaultCalibration) {
+      if (!campaign.arenaDefaults) campaign.arenaDefaults = {}
+      campaign.arenaDefaults[entry.id] = entry.defaultCalibration
+      campaign.arenaDefaults[entry.path] = entry.defaultCalibration
+    }
+  }
+  // Also scan all campaign.levels in case an arena or background is referenced but not yet in customArenas
+  for (const lvl of campaign?.levels ?? []) {
+    const arenaVal = lvl.presentation?.arena
+    const bgVal = lvl.presentation?.background
+    if (bgVal && !ARENA_CATALOG.find((a) => a.path === bgVal || a.id === arenaVal)) {
+      const entry = {
+        id: arenaVal || `imported-${Date.now()}`,
+        label: `Imported: ${bgVal.split('/').pop()}`,
+        path: bgVal,
+        suggestedSize: lvl.board?.size ?? 5,
+        calibrationId: null,
+      }
+      registerArena(entry)
+      if (!campaign.customArenas) campaign.customArenas = []
+      if (!campaign.customArenas.find((a) => a.path === bgVal || a.id === entry.id)) {
+        campaign.customArenas.push(entry)
+      }
+    }
+  }
   ensureBgPickOptions()
 }
 
@@ -635,12 +678,15 @@ ui.bgPick.onchange = () => {
   const currentLevel = campaign.levels[currentLevelIndex]
   let newCalib
   if (currentLevel) {
-    newCalib = changeLevelArena(currentLevel, ui.bgPick.value)
+    newCalib = changeLevelArena(currentLevel, ui.bgPick.value, campaign)
   } else {
     const arenaInfo = findArena(ui.bgPick.value)
-    const calibId = arenaInfo.calibrationId || 'prologue-5x5-good'
-    const baseline = getArenaCalibration(calibId) || getArenaCalibration('prologue-5x5-good')
-    newCalib = { ...deepClone(baseline), id: calibId, background: arenaInfo.path }
+    const baseline = getArenaBaseline(arenaInfo, campaign)
+    newCalib = {
+      ...deepClone(baseline),
+      id: arenaInfo.id || arenaInfo.calibrationId || 'prologue-5x5-good',
+      background: arenaInfo.path,
+    }
   }
   applyCalibration(newCalib)
   renderer.resize(level, draft)
@@ -915,12 +961,48 @@ async function executeSave() {
 
 ui.saveStorageBtn.onclick = executeSave
 
+ui.saveArenaDefaultBtn.onclick = async () => {
+  const currentLevel = campaign.levels[currentLevelIndex]
+  const arenaInfo = findArena(draft.background || currentLevel?.presentation?.arena)
+  if (!arenaInfo) return
+
+  const exportCalib = buildExportObject()
+  if (!campaign.arenaDefaults) campaign.arenaDefaults = {}
+  campaign.arenaDefaults[arenaInfo.id] = deepClone(exportCalib)
+  campaign.arenaDefaults[arenaInfo.path] = deepClone(exportCalib)
+
+  const customEntry = campaign.customArenas?.find((a) => a.id === arenaInfo.id || a.path === arenaInfo.path)
+  if (customEntry) {
+    customEntry.defaultCalibration = deepClone(exportCalib)
+  }
+  arenaInfo.defaultCalibration = deepClone(exportCalib)
+  saveArenaCalibrationOverride(arenaInfo.id, exportCalib)
+
+  if (currentLevel) {
+    currentLevel.presentation = {
+      ...currentLevel.presentation,
+      arena: arenaInfo.id,
+      background: arenaInfo.path,
+      calibration: deepClone(exportCalib),
+    }
+  }
+
+  await executeSave()
+  ui.saveBadge.className = 'save-badge saved-file'
+  ui.saveBadge.textContent = `★ Default saved for ${arenaInfo.label}`
+  setTimeout(() => {
+    if (ui.saveBadge.textContent.startsWith('★ Default saved')) {
+      ui.saveBadge.textContent = 'Saved'
+    }
+  }, 3500)
+}
+
 ui.clearStorageBtn.onclick = async () => {
   const loaded = await loadCampaign()
   campaign = loaded.campaign
   rehydrateCustomArenas()
   updateStagePickOptions()
-  loadLevel(0)
+  loadLevel(currentLevelIndex < campaign.levels.length ? currentLevelIndex : 0)
   ui.saveBadge.className = 'save-badge saved-file'
   ui.saveBadge.textContent = `Reloaded (${loaded.source})`
 }
@@ -1055,6 +1137,7 @@ window.calibrationEditorDebug = {
   moveLevelDown: () => ui.btnMoveDown.click(),
   addEnemy: () => ui.authorAddEnemyBtn.click(),
   save: executeSave,
+  saveArenaDefault: () => ui.saveArenaDefaultBtn.click(),
   getLayout: () => renderer.debugLayout(),
   setArena: (idOrPath) => {
     const arena = findArena(idOrPath)

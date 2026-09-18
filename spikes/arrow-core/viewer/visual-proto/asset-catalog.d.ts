@@ -4,6 +4,7 @@ export interface ArenaCatalogItem {
   path: string
   suggestedSize: number
   calibrationId: string | null
+  defaultCalibration?: unknown
 }
 
 export interface CreatureCatalogItem {

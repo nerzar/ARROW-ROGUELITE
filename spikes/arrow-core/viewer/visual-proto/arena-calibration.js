@@ -396,12 +396,21 @@ const CALIBRATION_ALIASES = {
   '6x6-5': 'boss-shadow-moon',
 }
 
-/** Look up a calibration entry by id; returns null for unknown ids (never throws).
- * In a browser environment, merges any user-saved tuning override from localStorage. */
 export function getArenaCalibration(id) {
   const resolvedId = CALIBRATION_ALIASES[id] ?? id
   let c = ARENA_CALIBRATIONS[resolvedId]
-  if (!c) return null
+  if (!c) {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`${STORAGE_PREFIX}${id}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (parsed && typeof parsed === 'object') return parsed
+        }
+      } catch {}
+    }
+    return null
+  }
   if (typeof localStorage !== 'undefined') {
     try {
       const stored = localStorage.getItem(`${STORAGE_PREFIX}${id}`)

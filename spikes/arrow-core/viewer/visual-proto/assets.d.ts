@@ -23,6 +23,9 @@ export declare function bossSpeciesFor(bossId: string | undefined): BossSpecies
 export declare const WOLF_PACK_BASE: string
 export declare const WOLF_MANIFEST: Record<EnemyPose, string>
 
+export declare const ENEMY_MANIFESTS: Record<string, Record<string, string>>
+export declare function enemyManifestFor(species: string | undefined): Record<string, string>
+
 export type ImagePack = Record<string, HTMLImageElement | null>
 export declare function loadAssets(manifest?: Record<string, string>): Promise<Record<string, HTMLImageElement | null>>
 export declare function loadBossPack(manifest?: Record<string, string>): Promise<ImagePack>
