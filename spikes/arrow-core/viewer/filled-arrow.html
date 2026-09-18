@@ -44,16 +44,16 @@
     </div>
     <div id="wrap"><canvas id="board"></canvas></div>
     <div id="msg"></div>
-    <div class="muted">Каждая стрелка — <b>один цельный filled-контур</b> в board-space (shaft + скруглённые изгибы + head), затем вся фигура проецируется <b>гомографией</b> на экран. Gameplay/hitbox без изменений (canExit/ownerAt). Клик — выпустить стрелку. Клавиши: 1/2/3 — материал, R — reset.</div>
+    <div class="muted">Каждая стрелка — <b>один цельный filled-контур</b> в board-space (shaft + скруглённые изгибы + head), затем вся фигура проецируется <b>гомографией</b> на экран. Gameplay/hitbox без изменений (canExit/ownerAt). Клик — выпустить стрелку. Клавиши: 1/2/3 — warm-набор, [ / ] — все материалы, R — reset.</div>
   </div>
   <aside>
     <fieldset>
-      <legend>Материал — одна геометрия, live (1/2/3)</legend>
+      <legend>Материал — одна геометрия, live</legend>
       <div class="row">
-        <label class="mat"><input id="mSolid" type="radio" name="mat"> warm-solid</label>
-        <label class="mat"><input id="mBevel" type="radio" name="mat"> warm-bevel</label>
-        <label class="mat"><input id="mMagic" type="radio" name="mat"> warm-magic</label>
+        <label>материал <select id="mat"></select></label>
+        <span id="matName" class="muted"></span>
       </div>
+      <div class="muted">Клавиши: 1/2/3 — warm-набор, [ / ] — листать все 13.</div>
     </fieldset>
     <fieldset>
       <legend>Геометрия (board-space, доли cell)</legend>

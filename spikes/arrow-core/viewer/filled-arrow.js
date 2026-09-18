@@ -20,12 +20,13 @@ import {
   invertH,
   solveHomography,
 } from './filled-arrow-geom.js'
+import { MATERIALS, findMaterial } from './filled-arrow-materials.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
   canvas: $('board'), msg: $('msg'), info: $('info'),
   preset: $('preset'), seed: $('seed'),
-  matSolid: $('mSolid'), matBevel: $('mBevel'), matMagic: $('mMagic'),
+  mat: $('mat'), matName: $('matName'),
   shaft: $('shaft'), shaftV: $('shaftV'),
   bend: $('bend'), bendV: $('bendV'),
   bendStyle: $('bendStyle'),
@@ -133,7 +134,12 @@ function paintArrow(a, geo, H, now) {
   if (!free) ctx.globalAlpha = 0.45
   if (params.material === 'solid') paintSolid(path)
   else if (params.material === 'bevel') paintBevel(path, geo, bbox)
-  else paintMagic(path, geo, bbox, now)
+  else if (params.material === 'magic') paintMagic(path, geo, bbox, now)
+  else {
+    const m = findMaterial(params.material)
+    if (m) m.paint(ctx, path, bbox, geo, now, a.id)
+    else paintSolid(path)
+  }
   if (isHover || isFlash) {
     ctx.strokeStyle = a.id === flash.blocked ? '#e53935' : a.id === flash.blocker ? '#fb8c00' : 'rgba(60,40,10,0.65)'
     ctx.lineWidth = Math.max(2, geo.cell * 0.06)
@@ -231,7 +237,13 @@ function frame(now) {
   raf = 0
   shots = shots.filter((s) => now - s.t0 < 380)
   render(now)
-  if (params.material === 'magic' || shots.length) kick()
+  if (isAnimated() || shots.length) kick()
+}
+
+function isAnimated() {
+  if (params.material === 'magic') return true
+  const m = findMaterial(params.material)
+  return !!m?.animated
 }
 
 function render(now = performance.now()) {
@@ -288,12 +300,24 @@ function drawShot(sh, g, H, now) {
   ctx.globalAlpha = 1
 }
 
+function materialLabel(id) {
+  if (id === 'solid') return 'warm-solid · база'
+  if (id === 'bevel') return 'warm-bevel · фаска'
+  if (id === 'magic') return 'warm-magic · чары'
+  const m = findMaterial(id)
+  return m ? `${m.name} · ${m.vibe}` : id
+}
+
+function allMaterialIds() {
+  return ['solid', 'bevel', 'magic', ...MATERIALS.map((m) => m.id)]
+}
+
 function renderPanel() {
   const lines = [
     `board ${ui.preset.value} seed ${ui.seed.value} (${level.width}x${level.height}, ${level.arrows.length} стрел)`,
     `осталось: ${board.remaining} · свободных: ${board.freeCount}${board.cleared ? ' · ВСЕ ВЫШЛИ' : ''}`,
     `геометрия: ONE filled path в board-space → homography на экран`,
-    `материал: ${params.material} (1/2/3) · shaft ${params.shaftFull.toFixed(2)} · bend ${params.bendStyle} ${params.bend.toFixed(2)} · tilt ${params.tilt.toFixed(2)}`,
+    `материал: ${materialLabel(params.material)} · shaft ${params.shaftFull.toFixed(2)} · bend ${params.bendStyle} ${params.bend.toFixed(2)} · tilt ${params.tilt.toFixed(2)}`,
   ]
   ui.info.textContent = lines.join('\n')
 }
@@ -352,14 +376,17 @@ ui.canvas.addEventListener('click', (ev) => tap(arrowAt(ev)))
 
 function setMaterial(m) {
   params.material = m
-  ui.matSolid.checked = m === 'solid'
-  ui.matBevel.checked = m === 'bevel'
-  ui.matMagic.checked = m === 'magic'
+  ui.mat.value = m
+  ui.matName.textContent = materialLabel(m)
   kick()
 }
-ui.matSolid.onchange = () => setMaterial('solid')
-ui.matBevel.onchange = () => setMaterial('bevel')
-ui.matMagic.onchange = () => setMaterial('magic')
+ui.mat.onchange = () => setMaterial(ui.mat.value)
+
+function cycleMaterial(dir) {
+  const ids = allMaterialIds()
+  const i = ids.indexOf(params.material)
+  setMaterial(ids[(i + dir + ids.length) % ids.length])
+}
 
 function syncLabels() {
   ui.shaftV.textContent = params.shaftFull.toFixed(2)
@@ -381,12 +408,15 @@ window.addEventListener('keydown', (ev) => {
   if (k === '1') setMaterial('solid')
   else if (k === '2') setMaterial('bevel')
   else if (k === '3') setMaterial('magic')
+  else if (k === '[') cycleMaterial(-1)
+  else if (k === ']') cycleMaterial(1)
   else if (k === 'r') start()
   else return
   ev.preventDefault()
 })
 
 for (const n of PRESET_NAMES) ui.preset.append(new Option(n, n))
+for (const id of allMaterialIds()) ui.mat.append(new Option(materialLabel(id), id))
 ui.preset.value = 'medium'
 ui.seed.value = '1'
 ui.shaft.value = String(params.shaftFull)
