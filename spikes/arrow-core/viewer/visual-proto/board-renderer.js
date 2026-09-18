@@ -409,7 +409,12 @@ export function createBoardRenderer(canvas, stageEl) {
       const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * charCell : 0
       const deathT = now - fx.deathT
       const dying = t.dead && deathT >= 0 && deathT < 550
-      const deathP = dying ? clamp01(deathT / 550) : t.dead ? 1 : 0
+      // FIX: a boss is the level's final target, not a mob that should vanish -- the fade-to-
+      // fully-transparent "terminal hold" below (correct for an ordinary enemy: its slot empties)
+      // left the boss's podium empty for the ~150ms between the fade finishing and the win overlay
+      // appearing, and its defeat pose (with the settle/squash transform below) was never actually
+      // seen fully visible. A boss never fades -- it stays fully opaque, defeat pose + settle only.
+      const deathP = t.isBoss ? 0 : dying ? clamp01(deathT / 550) : t.dead ? 1 : 0
       if (t.dead && deathP >= 1 && !t.isBoss) return // fully dead regular enemy: slot stays empty
 
       const towardBoard = { x: -DX[t.side], y: -DY[t.side] }
