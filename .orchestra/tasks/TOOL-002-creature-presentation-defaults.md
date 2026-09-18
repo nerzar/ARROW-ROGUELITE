@@ -175,7 +175,26 @@ pre-TOOL-002 render path.
 
 ## USER PLAYTEST
 
-Not yet done by the user — needs your own look, specifically:
-- Prologue Stage 5 (Goblin Shaman) in a real playthrough, per the FOUND note above.
-- Pose Editor: try setting a real pivot/scale for a species you care about and confirm it reads
-  right in-game, not just "it moved."
+User played Prologue Stage 5 live and found a real bug from the FOUND note above: the Goblin
+Shaman's defeat pose was essentially never seen — reported as "death animation doesn't play".
+
+Root cause (`board-renderer.js`'s `drawTarget`): the shared per-target death fade
+(`globalAlpha 1 - deathP`) is correct for an ordinary enemy (slot should empty), but a boss's
+`dead` flag (`s.won`) stays true for the rest of the encounter, so 550ms after the winning tap
+the boss sat at `alpha 0` — fully invisible — for the ~150ms before the win overlay
+(`scheduleWin`'s 700ms delay) covered the screen anyway. Confirmed via `window.visualDebug`
+(pose state correctly reached `defeat`, `defeat.png` loaded 200 OK) before finding the alpha
+math.
+
+Fixed: a boss never fades (`deathP` forced to 0 for `t.isBoss`); it stays fully opaque, defeat
+pose + the existing settle/squash transform only. Ordinary-enemy death fade unchanged. User
+confirmed direction (not left as "already fine") before the fix. Build/typecheck/tests
+(299/299) still pass. Pushed as a separate commit (`05c06a4`) on top of the DONE result.
+
+User also live-tuned Goblin Shaman's species scale (0.4 -> 0.6) and Prologue Stage 5's own
+actorScale/spritePivot to match, through the Pose Editor + Campaign Editor while playtesting —
+committed as project content (`9739ce6`), confirming the species-default -> scene-calibration
+precedence works end-to-end for a real user, not just my own test values.
+
+Still needs: user's own look at the fixed defeat behavior (branch pushed, dev server on 5211
+already serves the new code — just reload).
