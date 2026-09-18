@@ -89,7 +89,7 @@ AGREED FOR NOW.
 
 ### 2. BUILD-035 — Projectile Flight v1
 
-READY.
+ACCEPTED AND MERGED (INT-BUILD-035).
 
 Стрела после выхода из puzzle:
 - сначала продолжает исходное направление;

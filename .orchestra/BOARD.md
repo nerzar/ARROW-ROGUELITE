@@ -25,7 +25,6 @@ BOARD хранит не только одну текущую задачу, а **
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
 | VFX-001 — Combat Feel Lab | READY | `spike/VFX-001-combat-feel-lab` | Отдельный визуальный стенд: trail, impact, particles, damage number, hit reaction, visual hit-stop, shake, death/boss/reward FX. Сначала пользователь выбирает глазами, потом решаем интеграцию/архитектуру. |
-| BUILD-035 — Projectile Flight v1 | READY | `build/BUILD-035-projectile-flight-v1` | Стрела сначала летит по исходному направлению выхода из board, затем плавно доворачивает к hit-anchor текущей цели. Только presentation, без изменения combat/damage/target selection. |
 | UI-001 — Game Shell Cleanup | READY | `fix/UI-001-game-shell-cleanup` | Скрываемый admin/debug UI, убрать кашу в левом верхнем углу, scene dropdown всегда показывает фактически активную runtime scene. Это обычный game-shell fix, не mobile-задача. |
 | REF-001 — Browser Combat UI / VFX References | READY | `research/REF-001-browser-combat-ui-vfx-references` | Посмотреть браузерные игры ради HUD animations, hit/damage feedback, cast/attack telegraphs, boss/death/reward presentation и собрать конкретные приёмы для вдохновения. |
 
