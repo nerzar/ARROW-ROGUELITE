@@ -86,14 +86,22 @@ describe('BUILD-027: Square Prologue Campaign', () => {
 
     let sawPhase1 = false
     let sawPhase2 = false
+    let sawCastInterrupt = false
     for (const a of minD.sequence) {
       if (enc.phaseIndex === 0) sawPhase1 = true
       if (enc.phaseIndex === 1) sawPhase2 = true
-      enc.apply(a)
+      const res = a.kind === 'tap' ? enc.tap(a.id) : enc.rotate(a.turn)
+      if (a.kind === 'tap' && (res as any).castInterrupted) {
+        sawCastInterrupt = true
+      }
     }
     expect(sawPhase1).toBe(true)
     expect(sawPhase2).toBe(true)
+    expect(sawCastInterrupt).toBe(true)
     expect(enc.won).toBe(true)
+    // Anti-cheat / regression: must be a genuine boss kill (HP reduced to 0), NOT just board-clear-alive
+    expect(enc.hits).toBe(enc.totalHp)
+    expect(enc.hp).toBe(0)
     expect(enc.playerHp).toBe(10)
   })
 
