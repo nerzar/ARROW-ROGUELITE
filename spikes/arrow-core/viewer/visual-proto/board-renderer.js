@@ -11,7 +11,7 @@ import { speciesHudOffset, speciesHudScale, speciesPivotDelta, speciesScale, spe
 import {
   ACTOR_BASE_CELL_FRAC,
   charSize, effectGround, faceRect,
-  hudBoxes, podiumSlot, spriteMirror,
+  hudBoxes, podiumSlot, SHADOW_RX_FRAC, SHADOW_RY_CELL_FRAC, SHADOW_RY_MIN_PX, spriteMirror,
 } from './arena-layout.js'
 import {
   backdropCornersPx, cellToScreen, createBoardPlane, fitGrid, gridLineToScreen, localCellPx, screenToCell,
@@ -590,7 +590,7 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.globalAlpha = (1 - deathP * 0.5) * 1
       ctx.fillStyle = col.groundShadow
       ctx.beginPath()
-      ctx.ellipse(shadowOffPx.x, charH / 2 + shadowOffPx.y, charW * 0.42, Math.max(4, charCell * 0.11), 0, 0, Math.PI * 2)
+      ctx.ellipse(shadowOffPx.x, charH / 2 + shadowOffPx.y, charW * SHADOW_RX_FRAC, Math.max(SHADOW_RY_MIN_PX, charCell * SHADOW_RY_CELL_FRAC), 0, 0, Math.PI * 2)
       ctx.fill()
       ctx.restore()
 
@@ -666,17 +666,19 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.restore()
       }
 
-      // VIS-007: HUD is a separate plate near the character -- same content (name / HP /
-      // ATTACK-CAST / THROW lines + HP bar + countdown badge), positioned by the arena
-      // layout OUTSIDE the sprite: above the head everywhere except the S slot (below the
-      // feet), always away from the board. It never sizes or clips the character, and two
-      // simultaneous targets (e.g. cp-e4's two enemies) can never draw over each other.
+      // VIS-007: HUD is a separate plate near the character -- HP / ATTACK-CAST / THROW
+      // lines + HP bar + countdown badge, positioned by the arena layout OUTSIDE the sprite:
+      // above the head everywhere except the S slot (below the feet), always away from the
+      // board. It never sizes or clips the character, and two simultaneous targets (e.g.
+      // cp-e4's two enemies) can never draw over each other.
+      // CAL-005 follow-up: no name/label line. It only ever showed authoring-debug text
+      // (enemy ids, "urgent"/"slow", boss phase labels like "Phase 1: Center/TOP (North)") --
+      // gameplay decisions need HP + timers, not that. Numeric lines are never truncated.
       // Layout, not z-index: nothing belonging to the HUD may overlap the board footprint.
       const fontPx = Math.max(10, Math.floor(charCell * (t.isBoss ? 0.3 : 0.25))) * hudScale
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       const lines = [
-        { text: t.label ?? t.id, bold: true, color: col.text },
         { text: t.dead ? 'убит' : t.fled ? (fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!') : `HP ${t.hp}/${t.hpMax}`, bold: false, color: t.dead || t.fled ? col.muted : (t.hp / t.hpMax <= 0.25 ? col.danger : col.text) },
       ]
       const isCast = t.attackKind === 'cast'
@@ -687,18 +689,6 @@ export function createBoardRenderer(canvas, stageEl) {
         lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
       }
       const lineH = fontPx * 1.15
-      // VIS-007: the name/label line never stretches the plate beyond ~1.8 character
-      // widths (a long boss phase label must not become a full-width bar) -- truncate
-      // with an ellipsis. Numeric lines (HP/IN N) are never truncated.
-      ctx.font = `700 ${fontPx}px system-ui`
-      const labelMaxW = charW * 1.8
-      if (ctx.measureText(lines[0].text).width > labelMaxW) {
-        let label = lines[0].text
-        while (label.length > 1 && ctx.measureText(`${label}…`).width > labelMaxW) {
-          label = label.slice(0, -1)
-        }
-        lines[0].text = `${label}…`
-      }
       let maxW = 0
       for (const ln of lines) {
         ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`

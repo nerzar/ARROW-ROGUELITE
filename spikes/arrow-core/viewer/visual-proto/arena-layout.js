@@ -37,6 +37,17 @@ export const SIDE_SLOT_DIST = 4.6
 
 export const HUD_GAP_PX = 6
 
+// CAL-005 follow-up: the HP bar is deliberately short (a third of the character width) --
+// a full-width bar fought the plate for attention and read as a second plate, not a meter.
+export const HP_BAR_FRAC = 1 / 3
+
+// CAL-005 follow-up: ground-shadow ellipse proportions, shared by the runtime
+// (board-renderer.js) and the Pose Editor mock so they stay identical. Small on purpose
+// (a third of the old size) -- it must read as contact, not as a second character.
+export const SHADOW_RX_FRAC = 0.14 // of character width (== old 0.42 / 3)
+export const SHADOW_RY_CELL_FRAC = 0.037 // of the actor cell (== old 0.11 / 3)
+export const SHADOW_RY_MIN_PX = 2
+
 export function charSize(isBoss) {
   return isBoss ? { ...BOSS_CHAR } : { ...SIDE_CHAR }
 }
@@ -141,7 +152,7 @@ export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, max
   // Omitted/zero reproduces exactly the geometry this function always computed.
   const ox = offset?.x ?? 0
   const oy = offset?.y ?? 0
-  const barW = Math.max(10, char.w - 14)
+  const barW = Math.max(10, (char.w - 14) * HP_BAR_FRAC)
   const bar = {
     x: slot.x - barW / 2 + ox,
     y: (down ? slot.y + char.h / 2 + gap : slot.y - char.h / 2 - gap - barH) + oy,

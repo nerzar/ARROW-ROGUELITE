@@ -7,7 +7,7 @@
 import { getCreatureCatalog } from './asset-catalog.js'
 import { ENEMY_ANCHOR, ENEMY_POSES } from './enemy-visual-state.js'
 import { BOSS_ANCHOR, BOSS_POSES } from './boss-visual-state.js'
-import { hudBoxes } from './arena-layout.js'
+import { hudBoxes, SHADOW_RX_FRAC, SHADOW_RY_CELL_FRAC, SHADOW_RY_MIN_PX } from './arena-layout.js'
 import { DEFAULT_SPECIES_PIVOT } from './species-presentation.js'
 
 const $ = (id) => document.getElementById(id)
@@ -256,9 +256,10 @@ function layoutPreview() {
     if (h) el.style.height = `${Math.round(h)}px`
   }
   // Shadow mock: footprint bottom + species shadow offset (independent of art pivot).
-  const shW = fp.w * 0.84
+  // Same proportions as the runtime ellipse (SHADOW_* shared constants).
+  const shW = fp.w * SHADOW_RX_FRAC * 2
   ui.shadowMock.style.width = `${Math.round(shW)}px`
-  ui.shadowMock.style.height = `${Math.max(8, Math.round(fp.h * 0.045))}px`
+  ui.shadowMock.style.height = `${Math.max(SHADOW_RY_MIN_PX * 2, Math.round((fp.h / 6) * SHADOW_RY_CELL_FRAC * 2))}px`
   ui.shadowMock.style.left = `${Math.round(fp.cx + shadowOffset.x * fp.w - shW / 2)}px`
   ui.shadowMock.style.top = `${Math.round(fp.bottom + shadowOffset.y * fp.h - 4)}px`
   // HUD mock: the real hudBoxes math on the footprint, slot = footprint center (stage coords).
@@ -267,7 +268,7 @@ function layoutPreview() {
   const hud = hudBoxes({
     slot: { x: fp.cx, y: fp.y + fp.h / 2 },
     char: { x: fp.x, y: fp.y, w: fp.w, h: fp.h },
-    side: 0, fontPx, lineH: fontPx * 1.15, lineCount: 3,
+    side: 0, fontPx, lineH: fontPx * 1.15, lineCount: 2, // HP + ATTACK IN (no name line, same as runtime)
     barH: Math.max(5, fp.h * 0.03) * hudSize, maxTextW: fp.w * 0.55 * hudSize, cell: (fp.h / 6) * hudSize,
     offset: { x: hudOffset.x * fp.w, y: hudOffset.y * fp.h },
   })
@@ -430,7 +431,7 @@ function wireOffsetPair(rangeEl, numEl, get, set) {
   })
   numEl.addEventListener('input', () => {
     const v = Number(numEl.value)
-    if (Number.isFinite(v)) set(Math.min(0.5, Math.max(-0.5, v)))
+    if (Number.isFinite(v)) set(v) // no clamp: offsets are intentionally unbounded
     renderOffsetInputs()
     layoutPreview()
     markUnsaved()

@@ -7,6 +7,10 @@ export declare const ACTOR_BASE_CELL_FRAC: number
 export declare const BOSS_SLOT_DIST: number
 export declare const SIDE_SLOT_DIST: number
 export declare const HUD_GAP_PX: number
+export declare const HP_BAR_FRAC: number
+export declare const SHADOW_RX_FRAC: number
+export declare const SHADOW_RY_CELL_FRAC: number
+export declare const SHADOW_RY_MIN_PX: number
 export declare function charSize(isBoss: boolean): CharSize
 export declare function slotDist(isBoss: boolean): number
 export interface Pt { x: number; y: number }
