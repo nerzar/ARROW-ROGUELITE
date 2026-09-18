@@ -296,9 +296,14 @@ export function createBoardRenderer(canvas, stageEl) {
 
   function collectTargets(s, def) {
     if (def.enemies) {
+      // ASSET-002: `species` isn't part of the engine's own EnemyDef/`s.enemies` shape (the
+      // authoring tool's own catalog concept only) -- read it off the matching raw `def.enemies`
+      // entry instead, so drawTarget can pick the right ordinary-enemy pose pack. Missing/unknown
+      // species resolves to undefined here and falls back to Dire Wolf's pack at the call site.
       return s.enemies.map((e) => ({
         id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead,
         countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
+        species: def.enemies.find((raw) => raw.id === e.id)?.species,
         isBoss: false,
       }))
     }
@@ -465,7 +470,11 @@ export function createBoardRenderer(canvas, stageEl) {
       const bossImg = bossPack ? resolveBossImage(bossPack, bossPose) : null
       const wolfVisual = !t.isBoss ? view.wolf?.visuals?.get(key) ?? null : null
       const wolfPose = !t.isBoss ? wolfVisual?.pose ?? 'idle' : null
-      const wolfPack = !t.isBoss ? view.wolf?.pack ?? null : null
+      // ASSET-002: per-enemy species pack (view.wolf.packsBySpecies, keyed by asset-catalog.js's
+      // CREATURE_CATALOG species ids) takes priority over the single shared `view.wolf.pack` --
+      // falls back to it (Dire Wolf, today's only pre-ASSET-002 ordinary-enemy pack) for any
+      // enemy with no/unknown species, so every existing encounter renders exactly as before.
+      const wolfPack = !t.isBoss ? view.wolf?.packsBySpecies?.[t.species] ?? view.wolf?.pack ?? null : null
       const wolfImg = wolfPack ? resolveWolfImage(wolfPack, wolfPose) : null
       const img = bossImg ?? wolfImg ?? resolveTargetImage(assets, t)
       const bossSince = t.isBoss && view.boss?.visual ? now - view.boss.visual.startedAt : -1e9

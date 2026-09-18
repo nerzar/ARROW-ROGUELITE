@@ -24,6 +24,37 @@ export const ARENA_CATALOG = [
     suggestedSize: 5,
     calibrationId: null,
   },
+  // ASSET-002: generated arenas from magicarrowassets/arenas/, brought in project-local + given
+  // their own calibration entry (arena-calibration.js) so a square5..square10 level can pick a
+  // real baked-grid background instead of only the two pre-existing ones above.
+  {
+    id: 'grimskull-5x5',
+    label: 'Grimskull Throne (baked 5x5 grid)',
+    path: 'assets/arenas/prologue-act1/grimskull-5x5.png',
+    suggestedSize: 5,
+    calibrationId: 'grimskull-5x5',
+  },
+  {
+    id: 'ironvow-6x6',
+    label: 'Ironvow Bastion (baked 6x6 grid)',
+    path: 'assets/arenas/prologue-act1/ironvow-6x6.png',
+    suggestedSize: 6,
+    calibrationId: 'ironvow-6x6',
+  },
+  {
+    id: 'autumnfall-8x7',
+    label: 'Autumnfall Ruins (baked 8x7 grid)',
+    path: 'assets/arenas/prologue-act1/autumnfall-8x7.png',
+    suggestedSize: 7,
+    calibrationId: 'autumnfall-8x7',
+  },
+  {
+    id: 'demonforge-10x8',
+    label: 'Demonforge Gate (baked 10x8 grid)',
+    path: 'assets/arenas/prologue-act1/demonforge-10x8.png',
+    suggestedSize: 9,
+    calibrationId: 'demonforge-10x8',
+  },
 ]
 
 export const CREATURE_CATALOG = [

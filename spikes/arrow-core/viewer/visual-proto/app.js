@@ -6,7 +6,7 @@
 import {
   findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
+import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
@@ -64,6 +64,12 @@ let bossPack = bossPacks['goblin-shaman']
 let bossSpecies = 'goblin-shaman'
 // VIS-006: Dire Wolf pack for ordinary enemies (same null-on-missing contract).
 const wolfPack = await loadWolfPack()
+// ASSET-002: one pack per ordinary-enemy species (asset-catalog.js's CREATURE_CATALOG ids),
+// preloaded upfront like bossPacks above -- board-renderer.js's drawTarget picks the right one per
+// enemy via its own `species` field, falling back to `wolfPack` (Dire Wolf) when unset/unknown.
+const enemyPacksBySpecies = Object.fromEntries(
+  await Promise.all(Object.entries(ENEMY_MANIFESTS).map(async ([species, manifest]) => [species, await loadWolfPack(manifest)])),
+)
 const wolfPosesLoaded = ENEMY_POSES.filter((p) => wolfPack[p]).length
 applyDomAssets(assets)
 
@@ -556,7 +562,7 @@ function frame(now) {
   const animating = renderer.frame(now, {
     s: run.encounter, def, level, assets, hint,
     boss: bossVisual ? { pack: bossPack, visual: bossVisual } : null,
-    wolf: wolfVisuals ? { pack: wolfPack, visuals: wolfVisuals } : null,
+    wolf: wolfVisuals ? { pack: wolfPack, packsBySpecies: enemyPacksBySpecies, visuals: wolfVisuals } : null,
     // BUILD-022: board alignment dots/outline are debug-only -- a normal playthrough shows only
     // puzzle content (arrows/glow/selection/shots) directly on the arena's own stone surface.
     debug: !ui.debugPanel.classList.contains('hidden'),

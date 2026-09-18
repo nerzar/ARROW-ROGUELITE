@@ -10,7 +10,7 @@
 //  - Direct launch into playable game for single level or full campaign playtest.
 
 import { EncounterState, generateLevel, PRESETS } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
+import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import {
   ARENA_CALIBRATIONS, clearArenaCalibrationOverride, getArenaCalibration,
   hasArenaCalibrationOverride, saveArenaCalibrationOverride,
@@ -116,6 +116,11 @@ let selected = null
 const renderer = createBoardRenderer(ui.canvas, ui.stage)
 const assets = await loadAssets(ASSET_MANIFEST)
 const wolfPack = await loadWolfPack()
+// ASSET-002: same per-species preload as app.js, so the campaign editor's own preview shows the
+// real chosen creature, not always Dire Wolf.
+const enemyPacksBySpecies = Object.fromEntries(
+  await Promise.all(Object.entries(ENEMY_MANIFESTS).map(async ([species, manifest]) => [species, await loadWolfPack(manifest)])),
+)
 const bossPacks = {
   'goblin-shaman': await loadBossPack(BOSS_MANIFESTS['goblin-shaman']),
   'goblin-taunter': await loadBossPack(BOSS_MANIFESTS['goblin-taunter']),
@@ -857,7 +862,7 @@ function loop(now) {
     s: encounterState, def, level: frameLevel, assets,
     hint: null,
     boss: (bossVisual && showSprites) ? { pack: bossPack, visual: bossVisual } : null,
-    wolf: (wolfVisuals && showSprites) ? { pack: wolfPack, visuals: wolfVisuals } : null,
+    wolf: (wolfVisuals && showSprites) ? { pack: wolfPack, packsBySpecies: enemyPacksBySpecies, visuals: wolfVisuals } : null,
     debug: ui.toggleGrid.checked,
   })
 }
