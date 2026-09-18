@@ -19,7 +19,7 @@ import { createBoardRenderer } from './board-renderer.js'
 import { appearEnemyVisual, readEnemySnapshot, tickEnemyVisual } from './enemy-visual-state.js'
 import { appearBossVisual, readBossSnapshot, tickBossVisual } from './boss-visual-state.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
-import { ARENA_CATALOG, CREATURE_CATALOG, findArena, findCreature } from './asset-catalog.js'
+import { ARENA_CATALOG, CREATURE_CATALOG, findArena, findCreature, registerArena } from './asset-catalog.js'
 import {
   createDefaultCampaign, createDefaultLevel, generateBoardForLevel,
   getNextAvailableSide, convertLevelToStep, saveCampaign, loadCampaign,
@@ -32,6 +32,7 @@ const ui = {
   toggleGrid: $('toggleGrid'), toggleArrows: $('toggleArrows'), toggleSprites: $('toggleSprites'), toggleEffect: $('toggleEffect'),
   resetBtn: $('resetBtn'), saveStorageBtn: $('saveStorageBtn'), clearStorageBtn: $('clearStorageBtn'), copyBtn: $('copyBtn'), downloadBtn: $('downloadBtn'),
   newLevelBtn: $('newLevelBtn'), saveBadge: $('saveBadge'), playLevelBtn: $('playLevelBtn'), playCampaignBtn: $('playCampaignBtn'),
+  importArenaBtn: $('importArenaBtn'), importArenaInput: $('importArenaInput'), importArenaStatus: $('importArenaStatus'),
   authorLevelTitle: $('authorLevelTitle'), authorBoardSize: $('authorBoardSize'), authorBoardSeed: $('authorBoardSeed'), rollSeedBtn: $('rollSeedBtn'),
   authorBlockedTap: $('authorBlockedTap'), btnDupLevel: $('btnDupLevel'), btnDelLevel: $('btnDelLevel'), btnMoveUp: $('btnMoveUp'), btnMoveDown: $('btnMoveDown'),
   authorEnemiesList: $('authorEnemiesList'), authorAddEnemyBtn: $('authorAddEnemyBtn'),
@@ -611,7 +612,25 @@ function wirePivotEvents() {
 // Toolbar and Authoring Actions Wiring
 
 // Arena picker
-ARENA_CATALOG.forEach((a) => ui.bgPick.append(new Option(a.label, a.path)))
+// BUILD-029: appends any ARENA_CATALOG entries (built-in or user-imported via registerArena)
+// that don't have an <option> yet, instead of a one-shot forEach — so imports and rehydrated
+// customArenas from a loaded campaign become selectable without a page reload.
+function ensureBgPickOptions() {
+  const known = new Set(Array.from(ui.bgPick.options).map((o) => o.value))
+  for (const a of ARENA_CATALOG) {
+    if (!known.has(a.path)) ui.bgPick.append(new Option(a.label, a.path))
+  }
+}
+ensureBgPickOptions()
+
+// BUILD-029: re-registers arenas the user previously imported (stored on the campaign itself)
+// into the shared ARENA_CATALOG + bgPick options, so a reload doesn't lose the ability to
+// re-select an imported arena for another level.
+function rehydrateCustomArenas() {
+  for (const entry of campaign?.customArenas ?? []) registerArena(entry)
+  ensureBgPickOptions()
+}
+
 ui.bgPick.onchange = () => {
   const currentLevel = campaign.levels[currentLevelIndex]
   let newCalib
@@ -628,6 +647,101 @@ ui.bgPick.onchange = () => {
   positionHandles()
   refreshPanels()
   markUnsaved()
+}
+
+// BUILD-029: Import Arena — pick a local image, write it into the project as a real asset
+// (via the dev-server), register it in the same ARENA_CATALOG the built-in arenas live in, and
+// apply it to the current level using the existing arena-change/calibration path so the user
+// can immediately drag corners/anchors to calibrate it by hand.
+function readFileAsDataUrl(file) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const reader = new FileReader()
+    reader.onload = () => resolvePromise(String(reader.result))
+    reader.onerror = () => rejectPromise(reader.error ?? new Error('failed to read file'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function slugifyArenaName(name) {
+  const base = String(name).replace(/\.[a-zA-Z0-9]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return base || 'arena'
+}
+
+function setImportStatus(kind, text) {
+  ui.importArenaStatus.className = kind ? `import-status ${kind}` : 'import-status'
+  ui.importArenaStatus.textContent = text
+}
+
+async function importArenaFile(file) {
+  setImportStatus('', `Importing "${file.name}"…`)
+  const dataUrl = await readFileAsDataUrl(file)
+  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
+
+  let path = null
+  let savedToFile = false
+  try {
+    const res = await fetch('/api/assets/import-arena', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, dataBase64: base64 }),
+    })
+    const data = await res.json().catch(() => null)
+    if (res.ok && data?.ok && data.path) {
+      path = data.path
+      savedToFile = true
+    }
+  } catch {
+    // dev-server unreachable — fall through to the explicit browser-only fallback below.
+  }
+
+  // Explicit fallback (BUILD-026 precedent): if the project file couldn't be written, keep the
+  // arena usable this session via an inline dataURL rather than silently failing, but say so.
+  if (!path) path = dataUrl
+
+  const currentBoardSize = campaign?.levels?.[currentLevelIndex]?.board?.size ?? 5
+  const entry = {
+    id: `imported-${slugifyArenaName(file.name)}-${Date.now()}`,
+    label: savedToFile ? `Imported: ${file.name}` : `Imported (session only): ${file.name}`,
+    path,
+    suggestedSize: currentBoardSize,
+    calibrationId: null,
+  }
+  registerArena(entry)
+  ensureBgPickOptions()
+
+  if (!campaign.customArenas) campaign.customArenas = []
+  if (savedToFile) {
+    // Only persist entries that point at a real project file — an inline dataURL fallback would
+    // bloat campaign.json with embedded image bytes, so that case stays session-only by design.
+    campaign.customArenas.push(entry)
+  }
+
+  ui.bgPick.value = entry.path
+  ui.bgPick.onchange()
+
+  setImportStatus(
+    savedToFile ? 'ok' : 'warn',
+    savedToFile
+      ? `Imported "${file.name}" -> now drag the board corners/anchors to calibrate, then Save.`
+      : `Import server unavailable — using "${file.name}" for this browser session only (not written to a project file). Calibrate now; Save will not keep the image itself.`,
+  )
+  markUnsaved()
+}
+
+ui.importArenaBtn.onclick = () => ui.importArenaInput.click()
+ui.importArenaInput.onchange = async () => {
+  const file = ui.importArenaInput.files?.[0]
+  ui.importArenaInput.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    setImportStatus('warn', 'Please choose an image file (PNG/JPEG/WEBP).')
+    return
+  }
+  try {
+    await importArenaFile(file)
+  } catch (err) {
+    setImportStatus('warn', `Import failed: ${err.message ?? err}`)
+  }
 }
 
 // Stage / Level selector
@@ -804,6 +918,7 @@ ui.saveStorageBtn.onclick = executeSave
 ui.clearStorageBtn.onclick = async () => {
   const loaded = await loadCampaign()
   campaign = loaded.campaign
+  rehydrateCustomArenas()
   updateStagePickOptions()
   loadLevel(0)
   ui.saveBadge.className = 'save-badge saved-file'
@@ -905,6 +1020,7 @@ wirePivotEvents()
 
 const loadedCampaignInfo = await loadCampaign()
 campaign = loadedCampaignInfo.campaign
+rehydrateCustomArenas()
 updateStagePickOptions()
 
 const hashParams = new URLSearchParams(location.hash.slice(1))
@@ -945,4 +1061,7 @@ window.calibrationEditorDebug = {
     ui.bgPick.value = arena.path
     ui.bgPick.onchange()
   },
+  // BUILD-029: native file-picker dialogs can't be automated headlessly, so tests/automation
+  // drive the same import path directly with a constructed File.
+  importArenaFile,
 }

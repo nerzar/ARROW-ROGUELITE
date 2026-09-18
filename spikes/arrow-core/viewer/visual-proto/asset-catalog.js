@@ -135,6 +135,17 @@ export function findArena(idOrPath) {
   return ARENA_CATALOG.find((a) => a.id === idOrPath || a.path === idOrPath) ?? ARENA_CATALOG[0]
 }
 
+// BUILD-029: Registers a runtime-discovered arena (e.g. imported by the user from a local file)
+// into the same catalog the editor/runtime already read from, so it behaves exactly like any
+// built-in entry (selectable, findArena()-able, re-selectable after reload once persisted).
+export function registerArena(entry) {
+  if (!entry || !entry.id || !entry.path) return null
+  const existing = ARENA_CATALOG.find((a) => a.id === entry.id)
+  if (existing) return existing
+  ARENA_CATALOG.push(entry)
+  return entry
+}
+
 export function findCreature(id) {
   return CREATURE_CATALOG.find((c) => c.id === id) ?? CREATURE_CATALOG[2]
 }

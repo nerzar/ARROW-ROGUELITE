@@ -13,6 +13,16 @@
 html, body { height: 100%; margin: 0; }
 body { font: 13px/1.4 system-ui, sans-serif; color: var(--ink); background: #111; }
 
+/* BUILD-029: <select> text color follows --ink (near-white in dark mode), but the native
+   options popup otherwise falls back to the OS color-scheme's own background, which can leave
+   near-white text on a near-white popup. Pin option background/color explicitly so the list is
+   always readable regardless of OS theme. */
+select { color-scheme: only dark; }
+option { background-color: var(--bg-b); color: var(--ink); }
+@media (prefers-color-scheme: light) {
+  select { color-scheme: only light; }
+}
+
 .editor-shell { display: flex; flex-direction: column; height: 100%; }
 
 .topbar {
@@ -122,6 +132,15 @@ canvas#arena { position: absolute; inset: 0; width: 100%; height: 100%; }
 .save-badge.saved-file { background: rgba(47, 181, 108, 0.2); color: #4fe38c; border: 1px solid rgba(47,181,108,0.4); }
 .save-badge.saved-storage { background: rgba(255, 180, 50, 0.2); color: #ffca4f; border: 1px solid rgba(255,180,50,0.4); }
 .save-badge.unsaved { background: rgba(255, 80, 80, 0.2); color: #ff7777; border: 1px solid rgba(255,80,80,0.4); }
+
+/* BUILD-029: Import Arena feedback bar */
+.import-status {
+  font-size: 11.5px; padding: 0 10px; overflow: hidden; max-height: 0; transition: max-height 0.15s, padding 0.15s;
+  background: var(--panel); border-bottom: 1px solid transparent;
+}
+.import-status:not(:empty) { max-height: 3em; padding: 6px 10px; border-bottom-color: var(--panel-border); }
+.import-status.ok { color: #4fe38c; }
+.import-status.warn { color: #ffca4f; }
 
 .author-btn-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
 .author-btn-row button {

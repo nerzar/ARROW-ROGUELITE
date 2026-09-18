@@ -84,6 +84,10 @@ export function createDefaultCampaign() {
       createDefaultLevel(1, 5),
       createDefaultLevel(2, 6),
     ],
+    // BUILD-029: arenas imported from a local file by the user, written to a real project
+    // asset and persisted here so they round-trip through Save/Load exactly like a built-in
+    // ARENA_CATALOG entry.
+    customArenas: [],
   }
 }
 

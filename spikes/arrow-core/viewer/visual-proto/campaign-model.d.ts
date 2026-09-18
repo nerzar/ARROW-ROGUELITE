@@ -1,5 +1,6 @@
 import type { GenerateLevelResult, Level, RunStep } from '../../src/index.js'
 import type { ArenaCalibration } from './arena-calibration.js'
+import type { ArenaCatalogItem } from './asset-catalog.js'
 
 export interface AuthoredEnemyDef {
   id: string
@@ -43,6 +44,7 @@ export interface AuthoredCampaign {
   id: string
   title: string
   levels: AuthoredLevelDef[]
+  customArenas?: ArenaCatalogItem[]
 }
 
 export interface SaveCampaignResult {

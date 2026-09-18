@@ -24,3 +24,4 @@ export declare function getArenaCatalog(): readonly ArenaCatalogItem[]
 export declare function getCreatureCatalog(): readonly CreatureCatalogItem[]
 export declare function findArena(idOrPath: string): ArenaCatalogItem
 export declare function findCreature(id: string): CreatureCatalogItem
+export declare function registerArena(entry: ArenaCatalogItem): ArenaCatalogItem | null

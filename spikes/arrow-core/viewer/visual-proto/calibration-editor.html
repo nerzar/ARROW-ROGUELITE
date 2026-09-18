@@ -17,6 +17,8 @@
     <button id="playLevelBtn" class="play-btn" title="Play current level in game">▶ Play Level</button>
     <button id="playCampaignBtn" class="play-btn" title="Play full campaign sequence">▶ Play Campaign</button>
     <label>arena <select id="bgPick"></select></label>
+    <button id="importArenaBtn" title="Import a local image file as a new arena for this level">📥 Import Arena</button>
+    <input type="file" id="importArenaInput" accept="image/png,image/jpeg,image/webp" style="display:none">
     <label title="Legacy debug preview" style="display:none">debug <select id="arenaPick"><option value="">— none —</option></select></label>
     <label style="display:none">grid <select id="gridSizePick"></select></label>
     <label class="chk"><input type="checkbox" id="toggleGrid" checked> grid</label>
@@ -30,6 +32,7 @@
     <button id="downloadBtn" title="Download campaign JSON file">Download JSON</button>
     <a href="./index.html" style="color:inherit; font-weight:600; text-decoration:none; margin-left:6px" title="Back to playable game">← Playable game</a>
   </header>
+  <div id="importArenaStatus" class="import-status"></div>
 
   <div class="body">
     <div class="stage-col">

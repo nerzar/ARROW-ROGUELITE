@@ -47,6 +47,46 @@ createServer(async (req, res) => {
     return
   }
 
+  // BUILD-029: API: Import a locally picked arena image into the real project file tree,
+  // so "Import Arena" writes a real asset instead of only a browser-side dataURL.
+  if (req.method === 'POST' && url.pathname === '/api/assets/import-arena') {
+    const chunks = []
+    let size = 0
+    let tooLarge = false
+    req.on('data', (chunk) => {
+      size += chunk.length
+      if (size > 15 * 1024 * 1024) { tooLarge = true; req.destroy(); return }
+      chunks.push(chunk)
+    })
+    req.on('end', async () => {
+      if (tooLarge) {
+        res.writeHead(413, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ ok: false, error: 'image too large (max 15MB)' }))
+        return
+      }
+      try {
+        const { filename, dataBase64 } = JSON.parse(Buffer.concat(chunks).toString('utf-8'))
+        const ext = extname(String(filename ?? '')).toLowerCase()
+        const allowedExt = new Set(['.png', '.jpg', '.jpeg', '.webp'])
+        if (!allowedExt.has(ext)) throw new Error(`unsupported image type "${ext || '(none)'}"`)
+        const safeBase = String(filename).replace(/[/\\]/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '_')
+        const finalName = `${Date.now()}-${safeBase}`
+        const dir = join(root, 'viewer', 'visual-proto', 'assets', 'arenas', 'imported')
+        await mkdir(dir, { recursive: true })
+        const targetFile = normalize(join(dir, finalName))
+        if (!targetFile.startsWith(dir)) throw new Error('invalid file name')
+        await writeFile(targetFile, Buffer.from(String(dataBase64), 'base64'))
+        const relPath = `assets/arenas/imported/${finalName}`
+        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+        res.end(JSON.stringify({ ok: true, path: relPath }))
+      } catch (err) {
+        res.writeHead(400, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ ok: false, error: String(err.message ?? err) }))
+      }
+    })
+    return
+  }
+
   if (url.pathname === '/' || url.pathname === '/viewer' || url.pathname === '/viewer/') {
     res.writeHead(302, { location: '/viewer/visual-proto/' }).end()
     return
