@@ -1,6 +1,6 @@
 # TASK: VIS-014 — Polish Fantasy Effect Arrow
 
-STATUS: READY
+STATUS: DONE
 TYPE: SPIKE / VISUAL POLISH
 SIZE: S
 AGENT: Claude / visual polish
@@ -132,3 +132,26 @@ Do not merge. User visually accepts/rejects.
 
 Short RESULT / VERIFY / FOUND.
 Include exact URL/query/debug control for effect intensity.
+
+### RESULT
+
+- Arrowhead direction now comes from the board's actual projected tangent (`board-renderer.js`'s `headTangent`, via a new `board-plane.js` `cellPointToScreen` helper), not a flat rotated DX/DY vector — stays aligned under perspective and Rotate.
+- Shaft path now trims to the head's own base point (not the logical cell center), so the rounded shaft cap never shows through/under the head on any state, including partially-transparent blocked/pinned heads. Head is also slightly smaller/narrower.
+- `fantasy-effect` hover no longer draws the old thick grey ring; only the magic overlay runs on hover. Red/orange/amber/green rings (mistake/blocker/pin-denied/hint) are untouched.
+- Magic highlight is now one short, rounded-cap, warm champagne (`#f0cd8c`) segment that glides the shaft length and loops off the end — no dashes/beads, no white toothpaste look.
+- Halo and sparks toned down (halo alpha 0.30→0.22, sparks 3→2 particles) and everything (halo/highlight/sparks) is scaled together by a new live `effectIntensity` (0..1).
+- Live effect-intensity control: query param `?fx=`, debug-panel slider ("Effect intensity (spike)"), and `window.visualDebug.effectIntensity()` / `setEffectIntensity(v)` — default `0.25`, no reload needed.
+- Base state colors (free gold / aimed brighter gold / blocked quiet taupe / pinned rock) were already single-family and restrained — left untouched, no separate change needed.
+- Found and fixed a real bug in `normalizeEffectIntensity`: `Number(null)`/`Number('')` are both `0`, so an unset query param silently forced the effect fully invisible instead of the intended 0.25 default — now unset explicitly falls back to the default.
+
+### VERIFY
+
+- `npm run build`, `npm run typecheck`, `npx vitest run` — all green (25 files / 302 tests), from a dedicated worktree (`.worktrees/VIS-014`) after the shared checkout got switched to another branch mid-task.
+- Browser (`viewer/visual-proto/?arrowStyle=fantasy-effect`): baseline head reads as one clean piece (no visible shaft stub), confirmed via pixel-cropped zoom.
+- Same check after `Rotate` (multiple 90° steps, `act1-e1` 6x7 board): heads on up/down/left-pointing arrows near board edges stay aligned, no crooked heads.
+- Hover: no grey ring; at `fx=1` the halo/traveling highlight/spark are all visibly warm and subtle (not neon/white); at default `fx=0.25` the effect is barely-there in a still frame but the traveling highlight reads clearly once moving, per the brief's target.
+- No gameplay files touched (`spikes/arrow-core/src/**` untouched) — presentation-only, confirmed via diff.
+
+### FOUND
+
+- The repo's shared checkout got switched to `build/BUILD-031-editor-authoring-polish` by something outside this task mid-session (uncommitted work was auto-stashed by git, not lost). Per user instruction, finished the task in a dedicated worktree (`.worktrees/VIS-014`) instead of touching the shared checkout again. New `.claude/launch.json` entry `vis-014-arrow-effect-polish` (port 5207) points at that worktree.
