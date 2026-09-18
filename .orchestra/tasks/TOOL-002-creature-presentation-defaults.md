@@ -1,12 +1,13 @@
 # TASK: TOOL-002 — Creature Presentation Defaults
 
-STATUS: READY
+STATUS: DONE
 TYPE: TOOL / RUNTIME INTEGRATION
 SIZE: M
 AGENT: Claude / frontend + visual tooling
 BASE_BRANCH: build/BUILD-031-editor-authoring-polish
 BRANCH: tool/TOOL-002-creature-presentation-defaults
 START_SHA: 92534550a17b8d344cdc0e458e467de8234bfbfd
+RESULT_SHA: 627e093
 
 ## First action
 
@@ -90,3 +91,91 @@ Document the final precedence/order between:
 - arena/side calibration.
 
 Do not merge.
+
+## RESULT
+
+Salvaged `.worktrees/TOOL-001`'s uncommitted follow-up polish (gallery grid, pose-slot strip,
+"Current values" panel, saved Goblin Shaman pose assignment) as its own commit on
+`tool/TOOL-001-creature-pose-editor`, pushed to origin.
+
+Merged that branch onto BUILD-031 (`92534550`). One real conflict (`small-spider/idle.png`, two
+different images — kept BUILD-031's), plus a non-conflicting-but-duplicate situation
+`git merge` didn't flag: both branches had independently re-added the same 3 ASSET-003 species
+(small-spider/toxic-demonic-spider/small-green-slime) to `asset-catalog.js`/`assets.js` with
+different data (duplicate `CREATURE_CATALOG` entries; `const`/`export const` redeclared, a
+SyntaxError). Kept BUILD-031's versions throughout (matching the task's compatibility
+requirement); dropped TOOL-001's duplicate copies; kept TOOL-001's actual new code
+(`applyPoseOverrides`, wired into `app.js`/`calibration-editor.js`).
+
+Added `species-presentation.js`: a runtime map `species -> {pivot, scale}`, populated by
+`assets.js`'s `applyPoseOverrides()` from `creature-poses.json`. Two accessors:
+`speciesPivotDelta(species)` (ground-point delta vs. the Pose Editor's own no-op default pivot)
+and `speciesScale(species)` (drawn-image multiplier, default 1). `board-renderer.js`'s
+`drawBossArt`/`drawWolfArt` now take these as a new middle layer.
+
+**Precedence (outermost wins, addition is order-independent so this is really "all three add
+up, calibration is what the user tunes last"):**
+
+```
+ground point = ANCHOR.offsets[pose]   (enemy-visual-state.js/boss-visual-state.js, per-pose,
+                                        shared across all species of that kind)
+             + speciesPivotDelta(species)   (NEW — this task; 0 if unconfigured)
+             + scene spritePivot            (arena-calibration.js, per-scene TOP/LEFT/RIGHT;
+                                              unchanged, still the last thing the user drags)
+
+drawn size = fit(image, footprint) * speciesScale(species)   (NEW — this task; 1 if unconfigured)
+  where footprint = arenaBaseCell * actorScaleOverride[side] * defaultArenaSideScale
+                     (unchanged — scene/per-side actorScale is a fully separate axis, still
+                     0.1..2.0, still what the TOP/LEFT/RIGHT scale sliders control)
+```
+
+A species with nothing saved in the Pose Editor contributes `{dx:0,dy:0}`/`1` — bit-for-bit the
+pre-TOOL-002 render path.
+
+## VERIFY
+
+- `npm run build`, `npm run typecheck`, `npm test`: 299/299 pass (291 pre-existing + 8 new in
+  `test/tool-002-species-presentation.test.ts`, covering the no-op/default/merge/malformed-input
+  contract of the new module).
+- Browser (own worktree preview, port 5211, not the shared checkout's server):
+  1. Saved a test pivot/scale for Dire Wolf via the save API.
+  2. Reloaded Pose Editor — values persisted ("Loaded saved poses", correct pivot/scale shown).
+  3. Campaign Editor preview — Dire Wolf visibly bigger and repositioned.
+  4. Play Level (real runtime) — same bigger/repositioned Dire Wolf.
+  5. Scene's own TOP actor-scale slider still visibly resized it further on top (composition
+     confirmed, not overridden).
+  6. Small Goblin (no saved defaults) on the same level rendered unaffected.
+  7. Removed the Dire Wolf test values afterward — picking real per-species defaults is a visual
+     call for the user via the Pose Editor, not something to hardcode from a verification pass.
+  8. Goblin Shaman (the one species that already had a real saved pivot/scale from the TOOL-001
+     session, previously inert) now renders using it in the actual Prologue boss stage
+     (`index.html?mode=authored&stage=4` -> Play Level) — a small, correctly-anchored robed
+     figure on the archway podium, not broken/invisible/oversized.
+
+## FOUND
+
+- Goblin Shaman's saved `scale: 0.4` / pivot (from the original TOOL-001 session) was **inert
+  before this task** and is now **live** — this is the intended effect of the task, but it does
+  change the already-accepted BUILD-031/Prologue boss's rendered size/position for the first
+  time. Looked correct in a manual check (see VERIFY #8) but this is a visual call — please look
+  at it in your own Prologue playtest, not just take my read of one screenshot.
+- The Pose Editor's save endpoint (`serve.mjs`, pre-existing TOOL-001 code, untouched here)
+  writes every species' copied pose frames to `assets/enemies/<species>/`, including bosses —
+  so Goblin Shaman's frames live under `assets/enemies/goblin-shaman/`, not
+  `assets/bosses/goblin-shaman/` where `SHAMAN_PACK_BASE` points. Harmless today because
+  `applyPoseOverrides()` merges full paths (not filenames) into `BOSS_MANIFESTS`, so it still
+  resolves correctly — but it does mean boss art now lives in two different folder conventions.
+  Not fixed here (out of this task's scope); worth a follow-up if it gets confusing.
+- Small-spider ships 4 usable source-folder frames (idle/attackReady/attack/hit) per the old
+  ASSET-003 commit's own analysis, but BUILD-031's re-implementation only wired `idle`. Kept
+  BUILD-031's version untouched per the "preserve BUILD-031" instruction; the other 3 frames are
+  still on disk (`assets/enemies/small-spider/`) if someone wants to wire them up later.
+- `.claude/launch.json` gained a `tool-002-creature-presentation-defaults` entry (port 5211,
+  pointing at this worktree) so this branch has its own dev-server preview.
+
+## USER PLAYTEST
+
+Not yet done by the user — needs your own look, specifically:
+- Prologue Stage 5 (Goblin Shaman) in a real playthrough, per the FOUND note above.
+- Pose Editor: try setting a real pivot/scale for a species you care about and confirm it reads
+  right in-game, not just "it moved."
