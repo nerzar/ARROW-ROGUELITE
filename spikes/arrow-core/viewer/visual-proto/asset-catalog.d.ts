@@ -15,6 +15,7 @@ export interface CreatureCatalogItem {
   defaultSide: number
   defaultTimer?: { interval: number; damage: number } | null
   hasCast?: boolean
+  sourceFolder?: string
 }
 
 export declare const ARENA_CATALOG: readonly ArenaCatalogItem[]

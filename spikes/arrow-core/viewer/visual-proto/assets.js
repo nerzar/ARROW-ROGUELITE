@@ -148,6 +148,31 @@ export function enemyManifestFor(species) {
   return ENEMY_MANIFESTS[species] ?? WOLF_MANIFEST
 }
 
+/** TOOL-001: merges the Creature Pose Editor's saved, project-local pose manifest on top of the
+ * hardcoded per-species manifests above -- this is what makes the editor's Save button actually
+ * change what the game renders, without requiring a code edit for every pose reassignment.
+ * Same "register at runtime" shape as BUILD-029's registerArena(): mutates ENEMY_MANIFESTS/
+ * BOSS_MANIFESTS in place, so every existing consumer (which already reads those objects by
+ * reference) picks it up automatically. Missing/unreadable/empty file -> silent no-op, since a
+ * fresh checkout with no authored overrides yet must render exactly as it did before this tool
+ * existed. Callers must `await` this before building any pack from ENEMY_MANIFESTS/BOSS_MANIFESTS. */
+export async function applyPoseOverrides(url = 'creature-poses.json') {
+  let data
+  try {
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) return
+    data = await res.json()
+  } catch {
+    return
+  }
+  for (const [species, entry] of Object.entries(data ?? {})) {
+    const poses = entry?.poses
+    if (!poses || typeof poses !== 'object') continue
+    ENEMY_MANIFESTS[species] = { ...(ENEMY_MANIFESTS[species] ?? {}), ...poses }
+    if (BOSS_MANIFESTS[species]) BOSS_MANIFESTS[species] = { ...BOSS_MANIFESTS[species], ...poses }
+  }
+}
+
 /** Enemy/boss id -> manifest key, for the three VS-001 scenes' known cast (cp-e4, cp-e5,
  * rock-spike). A future encounter with an unlisted id still gets *a* portrait, not a blank panel,
  * via SIDE_FALLBACK_SLOT below -- this is bookkeeping for placeholder-vs-real art, not a design

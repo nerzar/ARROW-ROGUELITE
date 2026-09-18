@@ -1,0 +1,35 @@
+/* TOOL-001: page-specific styles only -- shared tokens/topbar/side-panel/handle styles come from
+   calibration-editor.css (deliberately reused, not duplicated). */
+
+.preview-img {
+  position: absolute; left: 50%; bottom: 12%; max-width: 55%; max-height: 70%;
+  transform: translate(-50%, 0) scale(var(--preview-scale, 1)); transform-origin: 50% 100%;
+  image-rendering: -webkit-optimize-contrast;
+  filter: drop-shadow(0 10px 14px rgba(0,0,0,0.45));
+}
+.preview-img.empty { display: none; }
+
+.pose-slot {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+  border: 1px solid var(--panel-border); background: rgba(0,0,0,0.18); margin-bottom: 6px; cursor: pointer;
+}
+.pose-slot:hover { border-color: var(--selected); }
+.pose-slot.active { border-color: var(--actor); box-shadow: 0 0 0 1px var(--actor); }
+.pose-slot .pose-thumb {
+  width: 34px; height: 34px; border-radius: 4px; background: rgba(127,127,127,0.15);
+  object-fit: contain; flex-shrink: 0;
+}
+.pose-slot .pose-name { font-weight: 700; font-size: 12px; width: 90px; flex-shrink: 0; }
+.pose-slot .pose-file { font-size: 11px; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.pose-slot .pose-clear { background: transparent; border: none; color: #ff7777; cursor: pointer; font-size: 12px; padding: 0 4px; flex-shrink: 0; }
+.pose-slot .pose-clear:hover { color: #ff4444; }
+
+.source-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 46vh; overflow-y: auto; }
+.source-thumb {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px;
+  border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.15); cursor: pointer;
+}
+.source-thumb:hover { border-color: var(--selected); }
+.source-thumb.assigned { border-color: var(--actor); box-shadow: 0 0 0 1px var(--actor); }
+.source-thumb img { width: 100%; aspect-ratio: 1; object-fit: contain; background: rgba(127,127,127,0.1); border-radius: 4px; }
+.source-thumb .source-thumb-label { font-size: 9.5px; color: var(--ink-dim); text-align: center; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
