@@ -13,39 +13,49 @@ START_SHA: 952d6361b5159aa0067960c1146fc4ede9d8378f
 
 ## 1. Исправить выступающий наконечник
 
-Сейчас filled-arrow tip выступает примерно на 0.62 клетки за последнюю ячейку и заметно вылезает за край доски на крайних рядах.
+Уточнённая геометрия:
+- центр последней клетки = 4.5;
+- край доски = 5.0;
+- текущий tip = 5.12;
+- реальный выход за board = 0.12 cell;
+- старый stroke-kite заканчивался примерно на 4.92.
+
+То есть проблема не «0.62 клетки за board». 0.62 — текущий reach от центра последней клетки.
+
+Пользователь решил этот визуальный дефект исправить сейчас.
 
 Нужно:
-- уменьшить forward reach наконечника до примерно старого масштаба (~0.42 cell) или эквивалентного визуально значения;
-- сохранить цельную filled-геометрию и текущие пропорции head/shaft;
-- не расширять gameplay hitbox за board;
-- проверить крайние стрелы во всех 4 направлениях;
+- развязать `tipReach` и `headLen`, если сейчас они фактически связаны;
+- оставить длину головы `headLen ≈ 0.62`, чтобы не укорачивать принятую форму Muse;
+- сделать forward reach таким, чтобы tip не вылезал за board на крайней клетке. Базовый целевой вариант: `tipReach = 0.50` от центра последней клетки;
+- сохранить цельную filled-геометрию и текущие пропорции shaft/head максимально близко к BUILD-034;
+- не расширять gameplay hitbox;
+- проверить крайние стрелы N/E/S/W;
 - после Rotate визуал и click/ownerAt должны оставаться согласованными.
 
 Не менять gameplay ради компенсации геометрии.
 
-## 2. Вернуть/подключить уже существующую страницу material gallery
+## 2. Подключить существующую страницу material gallery
 
-Страница УЖЕ существует в BUILD-032/033:
-
+Страница уже существует в BUILD-032/033 как:
 `viewer/filled-arrow.html`
+с UI-кодом `viewer/filled-arrow.js`.
 
-Ранее открывалась как:
-`http://localhost:5177/viewer/filled-arrow.html`
-
-Не создавать новую страницу с нуля.
+На BUILD-034 этих двух файлов нет, поэтому их нужно ПЕРЕНЕСТИ из BUILD-032/033, а не создавать новый UI с нуля.
 
 Нужно:
-- перенести/подключить существующие `filled-arrow.html` + нужный UI-код поверх BUILD-034;
-- адаптировать страницу так, чтобы она использовала актуальные `filled-arrow-geom.js` и `filled-arrow-materials.js` BUILD-034;
-- по возможности переиспользовать общий render helper BUILD-034, а не держать расходящуюся копию material logic;
-- сохранить удобный material selector и geometry controls существующей страницы;
+- перенести существующие `filled-arrow.html` и нужную UI-логику;
+- перецелить импорты на актуальные BUILD-034 модули в `viewer/visual-proto/`;
+- использовать общие `filled-arrow-geom.js` и `filled-arrow-materials.js`;
+- НЕ возвращать локальные копии `paintSolid` / `paintBevel` / `paintMagic` из старой демки;
+- все материалы, включая warm-*, брать через общий material registry / `findMaterial`;
+- сохранить удобный material selector, hotkeys и geometry controls существующей страницы;
 - показать все 15 текущих материалов;
-- сохранить быстрые hotkeys/selector, если они уже работают;
+- собственную demo-homography/tilt страницы можно оставить как preview-функцию, но geometry/material registry должны быть общими с playable;
 - дать рабочий URL на новом dev server;
-- при маленькой правке добавить переход между playable и gallery.
+- если это маленькая правка — добавить переход playable ↔ gallery.
 
-Собственную demo-homography/tilt можно оставить только там, где она нужна именно для preview-страницы; material registry и geometry должны быть общими с playable.
+Галерея нужна именно для быстрого сравнения материалов и геометрии; финальный материал пользователь выбирает сам.
 
 ## Boundaries
 
@@ -58,12 +68,13 @@ START_SHA: 952d6361b5159aa0067960c1146fc4ede9d8378f
 
 ## Verify
 
-- tip больше не выглядит чрезмерно выступающим на границах board;
+- tip не выходит за board на крайней клетке;
 - крайние стрелы N/E/S/W визуально корректны;
 - Rotate не ломает геометрию;
 - playable Prologue запускается;
-- существующая `viewer/filled-arrow.html` снова открывается;
+- `viewer/filled-arrow.html` открывается;
 - gallery переключает все 15 материалов;
+- warm-* в gallery идут через общий registry, без дублирующих painter-функций;
 - gallery и playable используют один material registry / filled geometry;
 - tests + typecheck + build.
 
@@ -73,7 +84,7 @@ START_SHA: 952d6361b5159aa0067960c1146fc4ede9d8378f
 - branch + SHA;
 - URL playable;
 - URL `viewer/filled-arrow.html`;
-- какое значение/правило стало у tip reach;
+- итоговые `tipReach` и `headLen`;
 - RESULT / VERIFY / FOUND.
 
 Commit + push, без merge в main.
