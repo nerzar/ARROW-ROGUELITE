@@ -11,8 +11,8 @@ WORKING_TITLE: yes
 
 REPOSITORY: nerzar/ARROW-ROGUELITE
 STABLE_BRANCH: main
-INTEGRATION_BRANCH: not-set-yet
-CURRENT_PLAYABLE_BASE: build/BUILD-025-unified-prologue-playtest
+INTEGRATION_BRANCH: ad-hoc `integration/*` под конкретное сведение
+CURRENT_PLAYABLE_BASE: main
 
 Текущую активную задачу и ветку смотреть в `BOARD.md`.
 
@@ -20,9 +20,11 @@ CURRENT_PLAYABLE_BASE: build/BUILD-025-unified-prologue-playtest
 
 Сейчас проект находится не в стадии абстрактного research/spike, а в стадии **стабилизации playable Prologue**.
 
+Игровой трек сведён в `main`: tooling (Campaign Editor, Pose Editor) и story-контент интегрированы, Prologue проходится целиком.
+
 Главный практический приоритет:
 
-> пользователь должен сам открыть текущий build, удобно откалибровать сцену, пройти Prologue целиком и после этого решить, что менять дальше.
+> выбрать финальный вид стрелы из вариантов на `build/BUILD-032-filled-arrow-renderer` / `build/BUILD-033-arrow-materials-pack`, подключить его в `main` и после этого решить, что менять дальше.
 
 Пока это не production-MVP и не финальная архитектура. Но базовая механика уже доказана достаточно, чтобы текущий цикл строился вокруг живого playtest, а не вокруг новых исследований «на всякий случай».
 
@@ -39,9 +41,12 @@ CURRENT_PLAYABLE_BASE: build/BUILD-025-unified-prologue-playtest
 - arena calibration + ручной calibration editor;
 - независимые board geometry, actor anchors/scale и effect anchors;
 - browser/local override калибровки для ручного playtest;
-- end-of-Prologue completion state и reward flow.
+- end-of-Prologue completion state и reward flow;
+- Campaign Editor (авторинг этапов, каталог существ, Arena Default, импорт арен, persistence);
+- Pose Editor (позы существа, species pivot/scale как default presentation);
+- STORY-001: Goblin King получает попадания, уходит в flee вместо смерти, пазл дочищается.
 
-Текущие arrow visuals временные и пользователем как финальное визуальное решение не приняты.
+Текущие arrow visuals временные и пользователем как финальное визуальное решение не приняты. Renderer-основой для стрел считается BUILD-032; более ранние visual experiments (VIS-010/011/013/014/016, FIX-030) — история, сохранены тегами `archive/2026-09/*`.
 
 ## Игровое ядро — решения, которые нельзя терять
 
