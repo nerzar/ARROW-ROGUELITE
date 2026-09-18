@@ -31,6 +31,19 @@ START_SHA: a0de83d74c001cd5f98a9f556b9ca227622419a7
    Новые presentation defaults должны сохраняться рядом с текущими species pivot/scale и после reload давать тот же результат.
    Существующие сохранённые данные должны оставаться совместимыми.
 
+## Existing local authoring data to protect
+
+В worktree BUILD-034 сейчас есть незакоммиченные изменения, созданные через Pose Editor:
+- `creature-poses.json`: Goblin Shaman scale/pivot и Dire Wolf pose/pivot;
+- `assets/enemies/dire-wolf/idle.png`.
+
+Это НЕ считается автоматически принятым контентом CAL-005.
+
+Перед любым cleanup:
+- не откатывать и не терять эти файлы;
+- сначала сохранить snapshot/отдельный commit/ref;
+- при работе CAL-005 использовать их только как возможный исходный authoring data после проверки, а не тащить молча в результат.
+
 ## Boundaries
 
 - Не менять combat/gameplay.
