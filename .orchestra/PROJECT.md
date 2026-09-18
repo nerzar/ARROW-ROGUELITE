@@ -27,11 +27,13 @@ CURRENT_PLAYABLE_BASE: main
 - presentation мобов через CAL-005 сведён в main;
 - мобильный landscape вручную проверен пользователем и в целом работает без отдельного порта.
 
-Текущий практический приоритет:
+Текущий ближний план хранится в BOARD и сейчас состоит из нескольких уже согласованных независимых задач:
+- VFX-001 — подобрать combat feel на отдельном стенде;
+- BUILD-035 — Projectile Flight v1;
+- UI-001 — привести game shell в порядок;
+- REF-001 — собрать браузерные HUD/VFX/animation references.
 
-> сначала выбрать хорошие боевые VFX/анимационные приёмы на отдельном стенде VFX-001, затем интегрировать только то, что пользователь реально принял.
-
-Не строить заранее большую VFX-архитектуру и не раздувать roadmap автоматическими задачами.
+Не строить заранее большую VFX-архитектуру и не превращать согласованный roadmap в бесконечный backlog. Но уже принятые пользователем планы нельзя терять только потому, что они ещё не стали RUNNING.
 
 ## Что уже есть в текущей playable-линии
 
@@ -85,9 +87,29 @@ AGREED FOR NOW.
 
 Полная generic VFX-система со scheduler/particles/camera/etc. сейчас остаётся IDEA, а не принятой задачей.
 
-### 2. Browser game visual reference pass
+### 2. BUILD-035 — Projectile Flight v1
 
-PLANNED, отдельный task ещё не создан.
+READY.
+
+Стрела после выхода из puzzle:
+- сначала продолжает исходное направление;
+- затем плавно доворачивает к текущему hit-anchor цели;
+- не меняет target selection, damage или combat state.
+
+Это presentation-only задача. Траекторию держать расширяемой под будущие Ricochet/Piercing, но сами эти механики сейчас не реализовывать.
+
+### 3. UI-001 — Game Shell Cleanup
+
+READY.
+
+Отдельно от mobile polish исправить уже подтверждённые проблемы обычной игровой версии:
+- возможность скрыть административные/debug controls и получить clean game view;
+- убрать кашу в левом верхнем углу;
+- scene dropdown всегда показывает фактически активную runtime scene.
+
+### 4. Browser game visual reference pass / REF-001
+
+READY, task-card создан.
 
 Пользователь хочет смотреть похожие браузерные игры как источник вдохновения для:
 - HUD animations;
@@ -100,7 +122,7 @@ PLANNED, отдельный task ещё не создан.
 
 Цель — анализ приёмов и вдохновение, не копирование чужого арта/кода.
 
-### 3. MOB-001 — Mobile/Game UI Polish
+### 5. MOB-001 — Mobile/Game UI Polish
 
 DEFERRED BY USER.
 
@@ -108,13 +130,13 @@ DEFERRED BY USER.
 
 Мобильный landscape уже проверен вручную примерно на 740×360 и более крупных viewport: базовая композиция, board и арена работают.
 
-Когда пользователь вернётся к mobile polish, план уже зафиксирован:
-- game mode с возможностью скрыть административные/debug controls;
-- убрать кашу в левом верхнем углу;
-- scene dropdown должен показывать реально активную сцену;
+Когда пользователь вернётся к mobile polish, там остаются только mobile-specific вещи:
 - safe-area;
 - небольшой responsive polish player HUD;
-- touch-проверка.
+- touch-size/real-phone проверка;
+- точечные viewport fixes по факту.
+
+Общие admin/scene/top-left проблемы вынесены в UI-001 и не должны ждать mobile.
 
 AGREED FOR NOW mobile direction:
 - одна web/TypeScript codebase;
@@ -126,9 +148,9 @@ AGREED FOR NOW mobile direction:
 
 Это направление, а не автоматически принятый backlog:
 
-1. короткий Act I vertical slice;
-2. проверить roguelite rewards/progression на коротком run;
-3. усилить combat feel: выбранные VFX, затем audio;
+1. ACT-I-002: развить уже существующие первые три Act I encounters в короткий настоящий vertical slice;
+2. RUN-002: проверить roguelite rewards/progression на коротком run;
+3. интегрировать только выбранные пользователем VFX, затем добавить combat audio;
 4. после приятного vertical slice — VK production:
    - VK SDK;
    - saves;
@@ -139,7 +161,7 @@ AGREED FOR NOW mobile direction:
    - слабые телефоны;
 5. затем расширять контент/мету.
 
-Ни один из этих пунктов не становится task без отдельного решения пользователя.
+Это согласованное направление. Конкретная task-card создаётся, когда понятен scope очередного шага; отсутствие карточки не означает, что сам согласованный план исчез.
 
 ## Игровое ядро — решения, которые нельзя терять
 
@@ -158,6 +180,9 @@ AGREED FOR NOW / текущий gameplay canon:
 - Stone Pin pinned-tap: без HP damage, без world turn, timers не двигаются;
 - после boss пролога игрок получает shared Rotate reward;
 - shared Rotate pool переносится дальше и не восстанавливается самовольно между encounters;
+- Act I развивает multi-side combat и ведёт к boss reward Ricochet;
+- позже run должен раскрыть Serpent Form;
+- ещё позже — Chain;
 - позднее допускается управляемый power-gating: не каждый encounter обязан проходиться базовым набором без run/meta-power или помощи.
 
 ## Зафиксированные персонажи/визуальные роли
