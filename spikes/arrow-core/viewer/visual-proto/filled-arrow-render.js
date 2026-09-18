@@ -31,13 +31,13 @@ export const ARROW_SHAPE = { ...GEOM_DEFAULTS }
  *   tipPx  -- the point stops this many px before the board edge (0.5 cell from the head centre)
  *   tailPx -- the shaft starts this many px further back, so the arrow doesn't just get shorter
  */
-export const ARROW_INSET_PX = { tipPx: 5, tailPx: 8 }
+export const ARROW_INSET_PX = { tipPx: 10, tailPx: 8 }
 
 /** Overall size of the figure, as a fraction of the BUILD-032 silhouette. The spine is pinned to
  * cell centres by the grid, so "smaller" means a slimmer shaft and a proportionally smaller head:
  * shaftFull / headLen / headHalf all scale together, which keeps the accepted head-to-shaft
  * proportions intact. 1 = exactly BUILD-032. */
-export const ARROW_SCALE = 0.92
+export const ARROW_SCALE = 0.874
 
 /** Resolve the px insets against a concrete px-per-cell into the cell-unit knobs the geometry
  * builder wants. Clamped so a very small cell can never invert the head or eat the whole shaft. */
