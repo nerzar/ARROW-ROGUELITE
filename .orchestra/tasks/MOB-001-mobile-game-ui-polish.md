@@ -1,11 +1,17 @@
 # TASK: MOB-001 — Mobile/Game UI Polish
 
-STATUS: READY
+STATUS: DEFERRED
 TYPE: FIX
 SIZE: M
 BASE_BRANCH: main
 BRANCH: fix/MOB-001-mobile-game-ui-polish
 START_SHA: 72b4e17eb4bbb03fb896fbc13e9b40d27e53f79b
+
+## Deferred
+
+Не запускать до явной команды пользователя. Пользователь решил, что сейчас для mobile polish рано.
+
+Когда задача будет разморожена, архитектор должен сначала обновить BASE/START_SHA на свежий `main`; не начинать реализацию с текущего старого START_SHA вслепую.
 
 ## Goal
 
