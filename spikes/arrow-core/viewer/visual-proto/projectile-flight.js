@@ -18,7 +18,7 @@
 // Extension point for Ricochet/Pierce/Serpent (NOT implemented here): flightPoint already
 // takes a resolved {from, dir, target, straightLen} spec -- a future form can chain several
 // specs (leg per target) without changing this module's contract.
-export const FLIGHT_MS = 520
+export const FLIGHT_MS = 415
 export const STRAIGHT_FRAC = 0.35
 // Acceleration feel: phase A distance grows as t^LAUNCH_POWER (sharp jerk, ramps up);
 // phase B eases fast-start/soft-arrival so the leg never stalls mid-way and settles into

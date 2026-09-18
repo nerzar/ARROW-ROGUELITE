@@ -124,7 +124,7 @@ export function createBoardRenderer(canvas, stageEl) {
   // 'lob' = standard figure on a raised arc trajectory. Trajectory sync (FLIGHT_MS hit
   // timing) is identical for every style.
   const FLIGHT_STYLES = ['standard', 'heavy', 'needle', 'crit', 'lob']
-  let flightStyle = 'standard'
+  let flightStyle = 'needle'
   // BUILD-034: how arrows are painted. 'filled' = the new single-shape board-space renderer
   // (default); 'stroke' = the legacy polyline+kite renderer, kept as debug/fallback. The material
   // only applies to 'filled'. Neither choice touches gameplay: hitTest/ownerAt/canExit are
