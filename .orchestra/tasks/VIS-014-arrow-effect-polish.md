@@ -143,6 +143,7 @@ Include exact URL/query/debug control for effect intensity.
 - Live effect-intensity control: query param `?fx=`, debug-panel slider ("Effect intensity (spike)"), and `window.visualDebug.effectIntensity()` / `setEffectIntensity(v)` — default `0.25`, no reload needed.
 - Base state colors (free gold / aimed brighter gold / blocked quiet taupe / pinned rock) were already single-family and restrained — left untouched, no separate change needed.
 - Found and fixed a real bug in `normalizeEffectIntensity`: `Number(null)`/`Number('')` are both `0`, so an unset query param silently forced the effect fully invisible instead of the intended 0.25 default — now unset explicitly falls back to the default.
+- **User caught a real remaining defect after first delivery**: blocked/pinned heads still visibly showed the shaft through the head (looked "glued on crooked"). Root cause was alpha blending, not geometry: the head's kite fill used `alpha<1` (0.75/0.9) for blocked/pinned, so the shaft's own wide round-capped layers underneath partially bled through at the neck. Confirmed via pixel row-scan: a free (alpha=1) head showed a clean instant width jump at its base; a blocked head showed a blurry ~7px ramp instead. Fixed by making both kite passes always fully opaque — state is conveyed by color alone, per the task's own "do not rely on partial transparency to hide it" guidance.
 
 ### VERIFY
 
