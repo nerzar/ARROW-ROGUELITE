@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOOL-001 Creature Pose Editor</title>
+<link rel="stylesheet" href="./calibration-editor.css">
+<link rel="stylesheet" href="./pose-editor.css">
+</head>
+<body>
+<div class="editor-shell">
+  <header class="topbar">
+    <strong>TOOL-001</strong> Creature Pose Editor
+    <label>Creature <select id="speciesPick"></select></label>
+    <button id="saveBtn" class="primary-btn" title="Copy the assigned frames into the project and save the pose manifest">💾 Save</button>
+    <span id="saveBadge" class="save-badge">Ready</span>
+    <span class="grow"></span>
+    <a href="./calibration-editor.html" style="color:inherit; font-weight:600; text-decoration:none; margin-left:6px" title="Back to Campaign Editor">← Campaign Editor</a>
+    <a href="./index.html" style="color:inherit; font-weight:600; text-decoration:none; margin-left:6px" title="Back to playable game">← Playable game</a>
+  </header>
+  <div id="statusLine" class="import-status"></div>
+
+  <div class="body">
+    <div class="stage-col">
+      <div class="stage" id="stage">
+        <div class="bg-layer" id="bgLayer"></div>
+        <img id="previewImg" class="preview-img" alt="">
+        <div class="handles-layer" id="handlesLayer">
+          <div class="handle actor" id="pivotHandle" tabindex="0" title="Foot pivot — drag or use arrow keys">●</div>
+        </div>
+      </div>
+      <p class="hint">
+        Previewing pose <strong id="activePoseLabel">idle</strong>. Drag the amber dot to set the
+        foot pivot for this creature (used as its default ground anchor), or use arrow keys —
+        Shift+arrow = 10px. Scale below resizes the preview only, to help judge proportions.
+      </p>
+      <div class="scale-controls" style="width: min(520px, 90%)">
+        <div class="scale-row">
+          <label>Scale</label>
+          <input type="range" id="scaleRange" min="0.4" max="2" step="0.01" value="1">
+          <input type="number" id="scaleNum" min="0.4" max="2" step="0.01" value="1">
+        </div>
+      </div>
+
+      <section class="pose-slot-section">
+        <h3>Pose slots</h3>
+        <p class="small muted">Click a slot to make it the active/previewed pose, then pick a
+          source frame from the gallery on the right to assign it. Slots left at "— none —" fall
+          back to idle at runtime.</p>
+        <div id="poseSlotList" class="pose-slot-strip"></div>
+      </section>
+    </div>
+
+    <aside class="side-panel">
+      <section>
+        <h3>Current values</h3>
+        <table class="values-table" id="valuesTable">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Species id</td><td id="valSpeciesId">—</td></tr>
+          <tr><td>Active pose</td><td id="valActivePose">—</td></tr>
+          <tr><td>Pivot X (frac)</td><td id="valPivotX">—</td></tr>
+          <tr><td>Pivot Y (frac)</td><td id="valPivotY">—</td></tr>
+          <tr><td>Scale</td><td id="valScale">—</td></tr>
+          <tr><td>Poses assigned</td><td id="valAssignedCount">—</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h3>Source frames</h3>
+        <p class="small muted" id="sourceFolderHint"></p>
+        <div id="sourceGallery" class="source-gallery"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+<script type="module" src="./pose-editor.js"></script>
+</body>
+</html>

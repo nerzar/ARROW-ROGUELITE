@@ -10,7 +10,7 @@
 //  - Direct launch into playable game for single level or full campaign playtest.
 
 import { EncounterState, generateLevel, PRESETS } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
+import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import {
   ARENA_CALIBRATIONS, clearArenaCalibrationOverride, getArenaCalibration,
   hasArenaCalibrationOverride, saveArenaCalibrationOverride,
@@ -117,6 +117,9 @@ let selected = null
 
 const renderer = createBoardRenderer(ui.canvas, ui.stage)
 const assets = await loadAssets(ASSET_MANIFEST)
+// TOOL-001: merge any tool-authored pose reassignments before building packs below, so the
+// editor's own preview reflects them immediately (same reason app.js does this too).
+await applyPoseOverrides()
 const wolfPack = await loadWolfPack()
 // ASSET-002: same per-species preload as app.js, so the campaign editor's own preview shows the
 // real chosen creature, not always Dire Wolf.

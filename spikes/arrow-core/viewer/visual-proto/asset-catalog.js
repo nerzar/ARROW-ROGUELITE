@@ -66,6 +66,7 @@ export const CREATURE_CATALOG = [
     defaultHp: 4,
     defaultSide: 0,
     hasCast: true,
+    sourceFolder: 'goblin-shaman',
   },
   {
     id: 'goblin-taunter',
@@ -75,6 +76,7 @@ export const CREATURE_CATALOG = [
     defaultHp: 6,
     defaultSide: 0,
     hasCast: false,
+    sourceFolder: 'goblin-king', // TOOL-001: catalog id != source folder name
   },
   {
     id: 'dire-wolf',
@@ -84,6 +86,7 @@ export const CREATURE_CATALOG = [
     defaultHp: 2,
     defaultSide: 0,
     defaultTimer: { interval: 3, damage: 2 },
+    sourceFolder: 'dire_wolf', // TOOL-001: catalog id != source folder name (underscore)
   },
   {
     id: 'green-slime',
@@ -93,15 +96,7 @@ export const CREATURE_CATALOG = [
     defaultHp: 1,
     defaultSide: 0,
     defaultTimer: null,
-  },
-  {
-    id: 'small-green-slime',
-    label: 'Small Green Slime (Enemy)',
-    kind: 'enemy',
-    species: 'small-green-slime',
-    defaultHp: 1,
-    defaultSide: 0,
-    defaultTimer: null,
+    sourceFolder: 'green-slime',
   },
   {
     id: 'small-goblin',
@@ -111,6 +106,7 @@ export const CREATURE_CATALOG = [
     defaultHp: 2,
     defaultSide: 0,
     defaultTimer: { interval: 4, damage: 1 },
+    sourceFolder: 'small-goblin',
   },
   {
     id: 'spider-brute',
@@ -120,24 +116,7 @@ export const CREATURE_CATALOG = [
     defaultHp: 3,
     defaultSide: 0,
     defaultTimer: { interval: 4, damage: 2 },
-  },
-  {
-    id: 'small-spider',
-    label: 'Small Spider (Enemy)',
-    kind: 'enemy',
-    species: 'small-spider',
-    defaultHp: 1,
-    defaultSide: 0,
-    defaultTimer: { interval: 4, damage: 1 },
-  },
-  {
-    id: 'toxic-demonic-spider',
-    label: 'Toxic Demonic Spider (Enemy)',
-    kind: 'enemy',
-    species: 'toxic-demonic-spider',
-    defaultHp: 2,
-    defaultSide: 0,
-    defaultTimer: { interval: 3, damage: 2 },
+    sourceFolder: 'spider-brute',
   },
   {
     id: 'skeleton-child',
@@ -147,6 +126,40 @@ export const CREATURE_CATALOG = [
     defaultHp: 1,
     defaultSide: 0,
     defaultTimer: null,
+    sourceFolder: 'skeleton-child',
+  },
+  // ASSET-003: complete the creature library -- these 3 source folders
+  // (magicarrowassets/creatures/small-spider, toxic-demonic-spider, small-green-slime) had usable
+  // isolated art but no catalog entry at all, so they were never selectable in the editor.
+  {
+    id: 'small-spider',
+    label: 'Small Spider (Enemy)',
+    kind: 'enemy',
+    species: 'small-spider',
+    defaultHp: 1,
+    defaultSide: 0,
+    defaultTimer: { interval: 4, damage: 1 },
+    sourceFolder: 'small-spider',
+  },
+  {
+    id: 'toxic-demonic-spider',
+    label: 'Toxic Demonic Spider (Enemy)',
+    kind: 'enemy',
+    species: 'toxic-demonic-spider',
+    defaultHp: 3,
+    defaultSide: 0,
+    defaultTimer: { interval: 3, damage: 2 },
+    sourceFolder: 'toxic-demonic-spider',
+  },
+  {
+    id: 'small-green-slime',
+    label: 'Small Green Slime (Enemy)',
+    kind: 'enemy',
+    species: 'small-green-slime',
+    defaultHp: 1,
+    defaultSide: 0,
+    defaultTimer: null,
+    sourceFolder: 'small-green-slime',
   },
 ]
 

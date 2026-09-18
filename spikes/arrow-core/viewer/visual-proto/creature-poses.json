@@ -1,0 +1,27 @@
+{
+  "goblin-shaman": {
+    "poses": {
+      "idle": "assets/enemies/goblin-shaman/idle.png",
+      "taunt": "assets/enemies/goblin-shaman/taunt.png",
+      "cast": "assets/enemies/goblin-shaman/cast.png",
+      "stunned": "assets/enemies/goblin-shaman/stunned.png",
+      "angry": "assets/enemies/goblin-shaman/angry.png",
+      "defeat": "assets/enemies/goblin-shaman/defeat.png",
+      "back": "assets/enemies/goblin-shaman/back.png"
+    },
+    "sourceFiles": {
+      "idle": "idle.png",
+      "taunt": "taunt.png",
+      "cast": "cast.png",
+      "stunned": "stunned - hit.png",
+      "angry": "angry.png",
+      "defeat": "defeat.png",
+      "back": "back.png"
+    },
+    "pivot": {
+      "x": 0.5088495575221239,
+      "y": 0.8088126843657817
+    },
+    "scale": 0.4
+  }
+}

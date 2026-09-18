@@ -6,7 +6,7 @@
 import {
   findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
-import { ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
+import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
@@ -51,6 +51,9 @@ async function fetchJson(url) {
 
 const renderer = createBoardRenderer(ui.canvas, ui.stage)
 const assets = await loadAssets(ASSET_MANIFEST)
+// TOOL-001: merge any tool-authored pose reassignments before building any pack below, so the
+// playable runtime renders exactly what the Creature Pose Editor's Save wrote.
+await applyPoseOverrides()
 // VIS-005/VIS-008: per-pose boss packs, one per species (missing files -> null -> idle ->
 // placeholder fallback, same contract for both). `bossPack` (used for rendering/debug buttons)
 // is picked per scene in loadScene() via bossSpeciesFor(def.boss.id) -- boss-visual-state.js
