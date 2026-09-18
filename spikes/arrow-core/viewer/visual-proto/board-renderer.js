@@ -23,9 +23,9 @@ import {
 // the usual resolveWolfImage pose->idle chain.
 const FLEE_HIT_DELAY_MS = 260
 const FLEE_EXIT_MS = 850
-// How far the moon drifts during its own turn (fractions of character width), reached
-// after FLEE_BACK_SLIDE_MS and then held — the turn itself lasts until the next tap.
-const FLEE_BACK_DRIFT = 0.35
+// Moon drift during its own turn, in screen px outward from the podium: ramps up over
+// FLEE_BACK_SLIDE_MS, then holds — the turn itself lasts until the next tap.
+const FLEE_BACK_DRIFT_PX = 20
 const FLEE_BACK_SLIDE_MS = 1200
 
 // FIX-023: an ARENA_CALIBRATIONS entry's {top,left,right} anchor group (either `anchors` or
@@ -496,12 +496,12 @@ export function createBoardRenderer(canvas, stageEl) {
             fleeOy = DY[t.side] * p * charW * 1.2
           } else if (fx.fleeBackT >= 0) {
             // Own turn of the moon: slow outward drift (capped), no fade yet.
-            const drift = Math.min((now - fx.fleeBackT) / FLEE_BACK_SLIDE_MS, 1) * FLEE_BACK_DRIFT
+            const drift = Math.min((now - fx.fleeBackT) / FLEE_BACK_SLIDE_MS, 1) * FLEE_BACK_DRIFT_PX
             fleePose = 'back'
             fleeSince = now - fx.fleeBackT
             fleeStage = 'back'
-            fleeOx = DX[t.side] * drift * charW
-            fleeOy = DY[t.side] * drift * charW
+            fleeOx = DX[t.side] * drift
+            fleeOy = DY[t.side] * drift
           } else {
             fleePose = 'taunt'
             fleeSince = effT
