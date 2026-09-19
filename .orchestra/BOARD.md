@@ -30,6 +30,10 @@ BOARD хранит не только одну текущую задачу, а **
 - WAVE-001: волны врагов с телеграфом (`arrival.afterKill`/`onTurn`), debug-fixture, campaign не тронута.
 - ITEM-001: run-инвентарь, действие `item` (Bow/Shield/Flask), reward draft 1-из-3 (золото/heal/rotate/предмет), солвер видит предметы. UI — плейсхолдер, ждёт ART-011/012/014.
 - ART-010/ART-010B: exploration визуального языка UI (docs/референсы) — принято к сведению, финальное направление ещё не выбрано пользователем.
+- ITEM-002: Frost Dart / Pocket Gyro / War Horn + 3 реликвии (Waste Conversion/Keystone Release/Safety Fuse).
+- PRESENT-001: презентация способностей врагов (shift/stagger/heal-искра/лут/щит/pin), presentation-only.
+- ART-012B/BUILD-036: одобренный HUD (player/enemy card, rotate-кнопка) в проде.
+- FIX-034: intro-текст энкаунтера больше не обещает THROW/PINNED для heal/shift-мобов (Матрона).
 
 Стрелочный renderer/material трек закончен. Старые BUILD-032/033 и VIS/FIX arrow-эксперименты — история/источники отдельных идей.
 
@@ -39,13 +43,10 @@ BOARD хранит не только одну текущую задачу, а **
 |---|---|---|---|
 | ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
 | ART-011 — Reward Choice Screen Exploration | DONE / USER REVIEW | `art/ART-011-reward-choice-screen` | 4 варианта reward screen готовы; выбрать направление перед production-интеграцией. |
-| ART-012 — Player HUD Exploration | READY | `art/ART-012-player-hud` | 2–4 варианта HUD: HP, Rotate, active items/charges/statuses. Anchor-screen, не перекрывать board/arena. |
-| PRESENT-001 — Презентация способностей врагов | DONE / AWAITING REVIEW+MERGE | `build/PRESENT-001-ability-presentation` | Shift/stagger/heal/loot/shield/pin presentation готова на ветке, 392/392 зелёные; нужен живой просмотр и интеграция. |
 | ASSET-009 — Иконки предметов v1 | READY (арт пользователя) | `art/ASSET-009-item-icons-v1` | 6 активных + 3 реликвии, 512 px, фиксированные пути под ITEM-001/002. |
 | ASSET-010 — Спрайты лут-цели | READY (арт пользователя) | `art/ASSET-010-loot-target-sprites` | species `loot-chest`, 5 поз под текущий пайплайн; заменяет гоблина-носильщика в «Обозе». |
 | ASSET-011 — Портрет героя | READY (арт пользователя) | `art/ASSET-011-hero-portrait` | portrait / portrait-hurt / full для HUD и reward-экранов. |
-| ASSET-012 — HUD-элементы: плашка волны, Rotate, пипсы, слот | READY после ART-012 | `art/ASSET-012-hud-elements` | Маленькие production-элементы под WAVE-001/ITEM-001. |
-| FIX-034 — Stone Pin / Matron | BLOCKED — AFTER GEMINI MERGE | `fix/FIX-034-matron-stone-pin-block` | Не запускать: нужный Matron/Stone Pin skill ещё не в main. После интеграции Gemini-ветки сначала воспроизвести баг на новом main, потом фиксить. Devin/Fable запускался на неверной базе. |
+| ASSET-012 — HUD-элементы: плашка волны, Rotate, пипсы, слот | READY (ART-012/BUILD-036 приняты) | `art/ASSET-012-hud-elements` | Маленькие production-элементы под WAVE-001/ITEM-001, поверх уже принятого approved HUD. |
 | ART-011B — Approved Reward Reference Pass | READY | `art/ART-011B-approved-reward-reference` | Взять пользовательский `reward-approved.png`, положить его в канонические refs и сделать один cleaned-up reward mockup вместо свободного exploration. |
 
 Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
@@ -56,15 +57,14 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task/направление | Статус | Что именно хотим |
 |---|---|---|
-| ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + 3 реликвии | DONE / AWAITING REVIEW+MERGE | Набор до 6 активных + 3 пассивных готов на `build/ITEM-002-items-v1-set`; 431 тест зелёный, нужен пользовательский live-check и интеграция. |
-| MAP-001 — Goblin Country Route Map v1 | IN PROGRESS (Gemini / Antigravity) | Stacked после ITEM-002 на `build/MAP-001-goblin-country-route`; route graph battle/shop/boss + save/load + fallback linear flow. |
+| MAP-001 — Goblin Country Route Map v1 | MECHANIC OK / VISUAL REJECTED | Route graph/save-load механика годная (см. ниже), но текущий node-map UI от Gemini — неутверждённый визуал, только placeholder/dev-only. Не мержить без отдельного одобрения визуала. |
 | SHOP-001 — Goblin Merchant v1 | PLANNED / VERTICAL SLICE | Торговец как shop-node: тратим уже существующее run-gold на item/heal/Rotate; stock и цены data-driven, баланс позже. |
-| ART-019 — Goblin Country Map + Merchant Visual Direction | PLANNED | Визуальный язык карты маршрута и торговца в текущем premium-fantasy стиле, без generic parchment/RPG UI. |
+| ART-019 — Goblin Country Map + Merchant Visual Direction | PLANNED | Иллюстрированная карта Страны гоблинов, где игрок выбирает точки/маршрут прямо на карте — не абстрактная node-схема. Нужна ДО принятия MAP-001 визуально. |
 | MAP-002 — Events / Points of Interest | PLANNED AFTER MAP-001 | Небоевые узлы на карте: event / POI / rest / optional challenge; 3–5 коротких data-driven событий для первой версии. |
-| VFX-004 — Friendly-fire feedback | PLANNED AFTER CURRENT UI/PRESENT MERGE | При столкновении стрелы со стрелой и уроне игроку — отдельный читаемый impact + player damage feedback, без изменения rules. |
+| VFX-004 — Friendly-fire feedback | PLANNED | При столкновении стрелы со стрелой и уроне игроку — отдельный читаемый impact + player damage feedback, без изменения rules. |
 | PORTAL-001 — Monster Spawner Portal | PLANNED | Новый target: портал со spawn countdown, выпускает монстров пока жив; после уничтожения новые spawn'ы прекращаются. |
 | RUN-003 — XP / Level Up v1 | PLANNED / DECISION BEFORE FINAL BALANCE | XP за encounters -> level-up -> маленький выбор бонуса (Rotate/charges/HP/utility). Решить, входит ли в первый slice, до финального balance pass. |
-| ITEM-003 — Arrow-boost consumables / abilities | PLANNED LATER | 2–3 тестовых эффекта, усиливающих сами puzzle-projectiles: damage/element/pierce/ricochet/control. После ITEM-002. |
+| ITEM-003 — Arrow-boost consumables / abilities | PLANNED LATER | 2–3 тестовых эффекта, усиливающих сами puzzle-projectiles: damage/element/pierce/ricochet/control. |
 | LD-008 — Act I под предметы и волны | PLANNED (ITEM-001/WAVE-001 приняты, можно заводить) | Новый критерий честности (`baseline / booster-helpful / power-gated` по GAME-CONCEPT §13), ≥4 волновых боя, 9x9 в конце акта. Заменяет RUN-002. |
 | ART-013 — Victory / Reward / Boss Popup Set | PLANNED / NEAR-TERM | Единое семейство Victory / reward gained / boss intro-warning / unlock popups; пользователь отдельно подтвердил popups как ближайший нужный слой. |
 | ART-014 — Item / Weapon Presentation | PLANNED | Карточка предмета/оружия, rarity, свойства, визуал лута — в стиле Reward Screen. |
