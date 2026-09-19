@@ -59,6 +59,13 @@ import { BoardTopology } from './topology.js'
  * solver/`wouldHit` use instead of `board.freeArrows()` directly. See EXP-013-REPORT.md for the full
  * turn-order rationale (existing pins tick/expire *before* a new one can be created the same turn) and
  * the no-softlock argument.
+ *
+ * COMBAT-001 keeps the same per-enemy countdown machinery but stops treating Stone Throw as the
+ * only possible `EnemyAbility`: the ability is now a minimal discriminated union (`stone_throw` |
+ * `shield`, see `abilityKind`) with one tiny handler path per kind. The second kind, Shield, is a
+ * debug/framework proof, NOT accepted Act I content: on its own countdown the enemy raises a
+ * one-shot shield, the next projectile hit on that enemy is absorbed (no HP damage, no interrupt)
+ * and the shield drops. Attack timers are untouched by either ability.
  */
 
 /**
@@ -130,20 +137,51 @@ export interface BossPhase {
 export type AbilityTargetPolicy = 'free-arrow'
 
 /**
- * EXP-013 (experiment): a board-affecting ability on its own countdown, independent of
- * `attackTimer`. The only resolution implemented is Stone Throw: pin the selected arrow for
- * `pinDuration` world turns. Deliberately minimal — not a generic ability/scripting system.
+ * COMBAT-001: minimal enemy-ability framework. An ability is its own countdown, independent of
+ * `attackTimer`, plus exactly one tiny resolution per `kind` — deliberately not a generic
+ * ability/scripting system. `kind` absent means legacy `'stone_throw'` so pre-framework
+ * encounter JSON and tests keep working unchanged.
  */
-export interface EnemyAbility {
+export type AbilityKind = 'stone_throw' | 'shield'
+
+/** EXP-013 Stone Throw: pin the selected arrow for `pinDuration` world turns. */
+export interface StoneThrowAbility {
   /** Stable id, e.g. for viewer labels and logs. */
   id: string
-  /** `THROW IN N`; ticks on every legal world turn (alongside `attackTimer`, not instead of it). */
+  kind?: 'stone_throw'
+  /** Ticks on every legal world turn (alongside `attackTimer`, not instead of it). */
   interval: number
   /** How the affected arrow is chosen. */
   targetPolicy: AbilityTargetPolicy
   /** World turns the pinned arrow stays illegal to tap before becoming playable again. */
   pinDuration: number
   label?: string
+}
+
+/**
+ * COMBAT-001 Shield (debug/framework proof, not accepted content): when the countdown fires the
+ * enemy raises a one-shot shield; the next projectile hit on that enemy is absorbed (no HP
+ * damage, no interrupt) and drops the shield. No pin/targeting fields — a shield has no target.
+ */
+export interface ShieldAbility {
+  /** Stable id, e.g. for viewer labels and logs. */
+  id: string
+  kind: 'shield'
+  /** Ticks on every legal world turn (alongside `attackTimer`, not instead of it). */
+  interval: number
+  label?: string
+}
+
+export type EnemyAbility = StoneThrowAbility | ShieldAbility
+
+/** Resolution kind of an ability; absent `kind` is the legacy Stone Throw shape. */
+export const abilityKind = (a: EnemyAbility): AbilityKind => a.kind ?? 'stone_throw'
+
+/** One-line ability description for reports/viewer/debug HUD (`THROW IN N` / `SHIELD IN N`). */
+export function describeAbility(a: EnemyAbility): string {
+  if (abilityKind(a) === 'shield') return `SHIELD IN ${a.interval} (one-shot, absorbs next hit)`
+  const s = a as StoneThrowAbility
+  return `THROW IN ${s.interval} (${s.targetPolicy}, pin ${s.pinDuration} turns)`
 }
 
 /**
@@ -265,6 +303,10 @@ export type TapResult =
       pinExpired?: number[]
       /** EXP-013, `enemies` mode only: new pins an ability created this turn. */
       pinnedThisTurn?: { id: number; turnsLeft: number }[]
+      /** COMBAT-001, `enemies` mode only: enemy ids that raised their one-shot shield this turn. */
+      shieldRaised?: { id: string }[]
+      /** COMBAT-001, `enemies` mode only: enemy ids whose shield absorbed this turn's hit (no HP damage). */
+      shieldConsumed?: { id: string }[]
       /** STORY-001, `enemies` mode only: enemies that fled the arena this turn (scripted
        * `flee` event fired — taunt beat for the presentation layer). Empty when none fled. */
       fled?: { id: string; label?: string }[]
@@ -292,6 +334,8 @@ interface TimerSnapshot {
   pinTurnsLeft: number[]
   /** EXP-013, enemies mode only: one entry per `def.enemies[i]` — that enemy's `THROW IN N`. */
   enemyAbilityCountdown?: number[]
+  /** COMBAT-001, enemies mode only: one entry per `def.enemies[i]` — that enemy's shield is up. */
+  enemyShield?: boolean[]
 }
 
 type Entry = ({ kind: 'tap'; id: number; hit: boolean } | { kind: 'rotate'; turn: Turn }) & { timerBefore: TimerSnapshot }
@@ -325,6 +369,8 @@ export class EncounterState {
   private pinTurnsLeft: number[] = []
   /** EXP-013, enemies mode only: `def.enemies[i]`'s `THROW IN N`; Infinity if that enemy has no ability. */
   private enemyAbilityCountdown: number[] = []
+  /** COMBAT-001, enemies mode only: `def.enemies[i]`'s one-shot shield is currently up. */
+  private enemyShield: boolean[] = []
   private playerHpValue: number
   /** The HP this encounter started with (constructor param), needed to replay it exactly in clone(). */
   readonly playerHpStart: number
@@ -353,6 +399,7 @@ export class EncounterState {
       this.enemyHitsThisCycle = def.enemies.map(() => 0)
       this.enemyCastInterrupted = def.enemies.map(() => false)
       this.enemyAbilityCountdown = def.enemies.map((e) => e.ability?.interval ?? Infinity)
+      this.enemyShield = def.enemies.map(() => false)
     } else {
       let hp = 0
       let granted = 0
@@ -483,8 +530,10 @@ export class EncounterState {
     label?: string
     /** EXP-011: this enemy's current attack type, or undefined if it has no attackTimer. */
     attackKind?: AttackKind
-    /** EXP-013: this enemy's `THROW IN N`, or undefined if it has no ability. */
+    /** EXP-013: this enemy's ability countdown, or undefined if it has no ability. */
     abilityCountdown?: number
+    /** COMBAT-001: this enemy's one-shot shield is currently up (absorbs the next hit). */
+    shielded: boolean
   }[] {
     if (!this.def.enemies) return []
     return this.def.enemies.map((e, i) => {
@@ -501,6 +550,7 @@ export class EncounterState {
         label: e.label,
         attackKind: at ? (at.kind ?? 'normal') : undefined,
         abilityCountdown: e.ability ? this.enemyAbilityCountdown[i] : undefined,
+        shielded: this.enemyShield[i] ?? false,
       }
     })
   }
@@ -588,6 +638,7 @@ export class EncounterState {
         enemyHitsThisCycle: [...this.enemyHitsThisCycle],
         enemyCastInterrupted: [...this.enemyCastInterrupted],
         enemyAbilityCountdown: [...this.enemyAbilityCountdown],
+        enemyShield: [...this.enemyShield],
         pinTurnsLeft,
       }
     }
@@ -608,6 +659,7 @@ export class EncounterState {
       this.enemyHitsThisCycle = t.enemyHitsThisCycle!
       this.enemyCastInterrupted = t.enemyCastInterrupted!
       this.enemyAbilityCountdown = t.enemyAbilityCountdown!
+      this.enemyShield = t.enemyShield!
     } else {
       this.countdown = t.countdown!
       this.hitsThisCycle = t.hitsThisCycle!
@@ -651,7 +703,11 @@ export class EncounterState {
    * arrow is illegal to tap (see EXP-013-REPORT.md for the worked example and the rationale for
    * placing this before ability resolution, not after, unlike the brief's initial sketch order).
    */
-  private advancePinsAndAbilities(): { pinExpired: number[]; pinnedThisTurn: { id: number; turnsLeft: number }[] } {
+  private advancePinsAndAbilities(): {
+    pinExpired: number[]
+    pinnedThisTurn: { id: number; turnsLeft: number }[]
+    shieldRaised: { id: string }[]
+  } {
     const pinExpired: number[] = []
     for (let id = 0; id < this.pinTurnsLeft.length; id++) {
       if (this.pinTurnsLeft[id] <= 0) continue
@@ -659,6 +715,7 @@ export class EncounterState {
       if (this.pinTurnsLeft[id] <= 0) pinExpired.push(id)
     }
     const pinnedThisTurn: { id: number; turnsLeft: number }[] = []
+    const shieldRaised: { id: string }[] = []
     const defs = this.def.enemies!
     for (let i = 0; i < defs.length; i++) {
       if (this.enemyHp[i] <= 0 || this.isFled(i)) continue
@@ -667,15 +724,24 @@ export class EncounterState {
       this.enemyAbilityCountdown[i]--
       if (this.enemyAbilityCountdown[i] > 0) continue
       this.enemyAbilityCountdown[i] = ability.interval
-      const target = this.selectAbilityTarget(ability)
+      if (abilityKind(ability) === 'shield') {
+        // One-shot shield: raise it unless one is already up (no stacking — fizzle keeps the
+        // old shield, the countdown still reset above and retries next cycle).
+        if (!this.enemyShield[i]) {
+          this.enemyShield[i] = true
+          shieldRaised.push({ id: defs[i].id })
+        }
+        continue
+      }
+      const target = this.selectAbilityTarget(ability as StoneThrowAbility)
       if (target >= 0) {
-        this.pinTurnsLeft[target] = ability.pinDuration
-        pinnedThisTurn.push({ id: target, turnsLeft: ability.pinDuration })
+        this.pinTurnsLeft[target] = (ability as StoneThrowAbility).pinDuration
+        pinnedThisTurn.push({ id: target, turnsLeft: (ability as StoneThrowAbility).pinDuration })
       }
       // target < 0: fizzle -- no safe arrow to pin this cycle. The countdown still reset above, so
       // the ability simply tries again next cycle rather than retrying every turn.
     }
-    return { pinExpired, pinnedThisTurn }
+    return { pinExpired, pinnedThisTurn, shieldRaised }
   }
 
   /**
@@ -689,7 +755,7 @@ export class EncounterState {
    * is safe. This is the one place a future `targetPolicy` (telegraphed-specific / random-safe /
    * longest-arrow / direction-specific) would add a case, without touching anything else in this class.
    */
-  private selectAbilityTarget(ability: EnemyAbility): number {
+  private selectAbilityTarget(ability: StoneThrowAbility): number {
     switch (ability.targetPolicy) {
       case 'free-arrow': {
         const candidates = this.playableArrows()
@@ -817,10 +883,17 @@ export class EncounterState {
     const timerBefore = this.timerSnapshot()
     const arenaDir = this.arenaDir(id)
     const targetIdx = this.targetIndexAt(arenaDir)
+    // COMBAT-001: a raised shield absorbs exactly one projectile hit — HP is untouched and the
+    // shield drops. The projectile still reached the enemy (`hit: true`, `hitDamage: 0`), but for
+    // timer purposes this turn counts as a non-hit on that enemy: a blocked hit never interrupts.
+    const shielded = targetIdx >= 0 && this.enemyShield[targetIdx]
+    if (shielded) this.enemyShield[targetIdx] = false
+    const shieldConsumed = shielded ? [{ id: this.def.enemies![targetIdx].id }] : []
+    const hitTargetIdx = shielded ? -1 : targetIdx
     const hit = targetIdx >= 0
-    const hpBefore = hit ? this.enemyHp[targetIdx] : 0
-    if (hit) this.enemyHp[targetIdx] = Math.max(0, this.enemyHp[targetIdx] - 1)
-    const hitDamage = hit ? hpBefore - this.enemyHp[targetIdx] : 0
+    const hpBefore = hit && !shielded ? this.enemyHp[targetIdx] : 0
+    if (hit && !shielded) this.enemyHp[targetIdx] = Math.max(0, this.enemyHp[targetIdx] - 1)
+    const hitDamage = hit && !shielded ? hpBefore - this.enemyHp[targetIdx] : 0
     this.log.push({ kind: 'tap', id, hit, timerBefore })
     // STORY-001: a hit target could never have been fled before this tap (targetIndexAt skips
     // fled), so a fled check right after the decrement is exactly "fled this turn".
@@ -834,10 +907,11 @@ export class EncounterState {
     let enemyAttacks: { id: string; damage: number }[] = []
     let pinExpired: number[] = []
     let pinnedThisTurn: { id: number; turnsLeft: number }[] = []
+    let shieldRaised: { id: string }[] = []
     if (!this.won) {
       // Not everyone required is dead yet (and the board isn't cleared alive): the world keeps
       // ticking for every enemy still standing, same rule as the boss's per-turn advance.
-      const res = this.advanceEnemiesTurn(targetIdx)
+      const res = this.advanceEnemiesTurn(hitTargetIdx)
       interrupted = res.interrupted
       castInterrupted = res.castInterrupted
       attacked = res.attacked
@@ -846,11 +920,12 @@ export class EncounterState {
       const pinRes = this.advancePinsAndAbilities()
       pinExpired = pinRes.pinExpired
       pinnedThisTurn = pinRes.pinnedThisTurn
+      shieldRaised = pinRes.shieldRaised
     }
     return {
       ok: true, arenaDir, hit, hitDamage, phaseBefore: 0, phaseAfter: 0, granted: 0,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
-      pinExpired, pinnedThisTurn, fled,
+      pinExpired, pinnedThisTurn, shieldRaised, shieldConsumed, fled,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
   }
@@ -946,14 +1021,17 @@ export class EncounterState {
    * EXP-013: also includes `pinTurnsLeft`/`enemyAbilityCountdown` -- `board.key()` only encodes the
    * alive set (geometric truth) and has no notion of pins, so two states with the same alive set but
    * a different pinned arrow (different playable-arrow set) MUST NOT collide here, or the solver
-   * would treat a pinned and an unpinned board as the same search node. */
+   * would treat a pinned and an unpinned board as the same search node.
+   * COMBAT-001: also includes `enemyShield` — a shielded and an unshielded enemy take a different
+   * number of future hits to kill. */
   key(): string {
     const pin = this.pinTurnsLeft.join(',')
     if (this.def.enemies) {
       const cd = this.enemyCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
       const ci = this.enemyCastInterrupted.map((b) => (b ? 1 : 0)).join(',')
       const ac = this.enemyAbilityCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
-      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${pin}|${this.playerHpValue}`
+      const sh = this.enemyShield.map((b) => (b ? 1 : 0)).join(',')
+      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${pin}|${this.playerHpValue}`
     }
     const c = Number.isFinite(this.countdown) ? this.countdown : 'inf'
     return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}`
@@ -983,13 +1061,25 @@ function checkAttackTimer(at: AttackTimer, label: string): void {
 }
 
 const ABILITY_TARGET_POLICIES: readonly AbilityTargetPolicy[] = ['free-arrow']
+const ABILITY_KINDS: readonly AbilityKind[] = ['stone_throw', 'shield']
 
 function checkAbility(a: EnemyAbility, label: string): void {
   if (typeof a.id !== 'string' || a.id.length === 0) throw new Error(`${label}: ability.id must be a non-empty string`)
+  if (a.kind !== undefined && !ABILITY_KINDS.includes(a.kind)) {
+    throw new Error(`${label}: unknown ability.kind ${String(a.kind)}`)
+  }
   if (!Number.isInteger(a.interval) || a.interval < 1) throw new Error(`${label}: ability.interval must be a positive integer`)
-  if (!Number.isInteger(a.pinDuration) || a.pinDuration < 1) throw new Error(`${label}: ability.pinDuration must be a positive integer`)
-  if (!ABILITY_TARGET_POLICIES.includes(a.targetPolicy)) {
-    throw new Error(`${label}: unknown ability.targetPolicy ${String(a.targetPolicy)}`)
+  if (abilityKind(a) === 'shield') {
+    // A shield has no target: pin fields must not sneak in under a shield kind.
+    const s = a as unknown as Record<string, unknown>
+    if (s['targetPolicy'] !== undefined) throw new Error(`${label}: shield ability must not set targetPolicy`)
+    if (s['pinDuration'] !== undefined) throw new Error(`${label}: shield ability must not set pinDuration`)
+    return
+  }
+  const st = a as StoneThrowAbility
+  if (!Number.isInteger(st.pinDuration) || st.pinDuration < 1) throw new Error(`${label}: ability.pinDuration must be a positive integer`)
+  if (!ABILITY_TARGET_POLICIES.includes(st.targetPolicy)) {
+    throw new Error(`${label}: unknown ability.targetPolicy ${String(st.targetPolicy)}`)
   }
 }
 

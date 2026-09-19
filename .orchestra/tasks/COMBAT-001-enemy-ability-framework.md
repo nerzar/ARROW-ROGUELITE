@@ -80,6 +80,6 @@ Viewer должен иметь достаточно state/result данных, �
 
 ## Итог
 
-RESULT:
-VERIFY:
-FOUND:
+RESULT: Minimal enemy-ability framework done. `EnemyAbility` is now a discriminated union (`stone_throw` | `shield`, absent `kind` = legacy stone so old JSON/tests are untouched) with one tiny handler path per kind in `spikes/arrow-core/src/encounter.ts`. Shield proof: own countdown raises a one-shot shield, next hit on that enemy is absorbed (`hit:true`, `hitDamage:0`, no interrupt), shield drops, attack timers keep their rules. Shield state is in snapshot/key/undo/solver trace/`enemies[]` (`shielded`) and in the debug HUD (`SHIELD IN N` / `SHIELD UP`, `?enc=shield-spike` in rock-spike viewer). New debug fixture `encounters/shield-spike.json` (same seed-15 board as rock-spike, solver-proven winnable). No Prologue/Act I content, balance, Rotate rules, or VFX touched.
+VERIFY: `npm test` — 33 files / 378 tests green (15 new in `test/enemy-shield.test.ts`: timing, absorb-one-hit, no-stack fizzle, interrupt independence, key/undo, stone+shield coexistence, validation, shield-spike winnability); `npm run typecheck` green; `npm run build` green. Manual replay of `shield-spike.json` vs built dist: SHIELD-IN 3→2→1 then SHIELD-UP readable in state; first hit absorbed (hp 4→4, shield drops); next hit deals 1 (hp→3); `findWin` proven.
+FOUND: None blocking. Note: with `interval: 1` an unconsumed shield refires every turn, so every second hit is absorbed — correct per "countdown lives its own life", just intense tuning, not a bug. Viewer shows shield as text only (no art/VFX per card).

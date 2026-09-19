@@ -4,6 +4,7 @@
 // helpers), with EXP-013 additions: THROW IN N next to ATTACK IN N, a rock marker + remaining-turns
 // text on pinned arrows, and "PINNED / BLOCKED BY ROCK" / "ROCK THROWN" / "UNPINNED" feedback.
 import {
+  describeAbility,
   DIR_NAMES,
   DX,
   DY,
@@ -60,7 +61,17 @@ function resetLocalUi() {
   ui.canvas.style.opacity = '1'
   ui.wrap.classList.remove('hit')
   const names = s.enemies.map((e) => `${e.label ?? e.id} ${SIDE_RU[e.side]}`).join(', ')
-  ui.msg.textContent = `Враг: ${names}. Следи за THROW IN N рядом с ним — когда он бросает камень, одна свободная стрелка временно PINNED.`
+  const abs = def.enemies.filter((e) => e.ability).map((e) => `${e.label ?? e.id}: ${describeAbility(e.ability)}`).join('; ')
+  ui.msg.textContent = `Враг: ${names}.${abs ? ` Способности — ${abs}.` : ''}`
+  const help = $('encHelp')
+  if (help) {
+    help.textContent = def.enemies.some((e) => (e.ability?.kind ?? 'stone_throw') === 'shield')
+      ? 'Щит поднимается по countdown и поглощает ровно одно попадание без урона, затем падает. Счётчик SHIELD IN тикает каждый world turn.'
+      : 'Камень по countdown временно PINNED одну свободную стрелку.'
+  }
+  const title = $('encTitle')
+  if (title) title.textContent = `${def.title ?? def.id} · ${encName}.json`
+  document.title = def.title ?? def.id
   const rep = validateEncounter(level, def, { playerHp: maxHp })
   ui.report.textContent = formatEncounterReport(rep)
   afterAction()
@@ -107,6 +118,12 @@ function tap(id) {
   if (r.pinExpired && r.pinExpired.length) {
     text += ` · снова доступна: #${r.pinExpired.join(', #')}`
   }
+  if (r.shieldRaised && r.shieldRaised.length) {
+    text += ` · <span class="rock">ЩИТ ПОДНЯТ: ${r.shieldRaised.map((sh) => sh.id).join(', ')}</span>`
+  }
+  if (r.shieldConsumed && r.shieldConsumed.length) {
+    text += ` · щит поглотил попадание (урона нет): ${r.shieldConsumed.map((sh) => sh.id).join(', ')}`
+  }
   if (r.won) text = `Победа. ${text}`
   else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
   ui.msg.innerHTML = r.playerDead ? `<span class="bad">${text}</span>` : text
@@ -115,6 +132,8 @@ function tap(id) {
       (r.enemyAttacked ? `  ENEMY -${r.enemyDamage} (player ${r.playerHp})` : '') +
       (r.pinnedThisTurn && r.pinnedThisTurn.length ? `  ROCK THROWN: #${r.pinnedThisTurn.map((p) => `${p.id}(${p.turnsLeft}t)`).join(', #')}` : '') +
       (r.pinExpired && r.pinExpired.length ? `  UNPINNED: #${r.pinExpired.join(', #')}` : '') +
+      (r.shieldRaised && r.shieldRaised.length ? `  SHIELD UP: ${r.shieldRaised.map((sh) => sh.id).join(', ')}` : '') +
+      (r.shieldConsumed && r.shieldConsumed.length ? `  SHIELD BLOCKED: ${r.shieldConsumed.map((sh) => sh.id).join(', ')} (no damage)` : '') +
       (r.won ? '  WIN' : ''),
   )
   afterAction()
@@ -292,7 +311,7 @@ function drawEnemies(col, now) {
     ctx.textBaseline = 'middle'
     const attackLabel = en.attackKind === 'cast' ? 'CAST IN' : 'ATTACK IN'
     const attackText = Number.isFinite(en.countdown) && !en.dead ? `  ${attackLabel} ${en.countdown}` : ''
-    const abilityText = en.abilityCountdown !== undefined && Number.isFinite(en.abilityCountdown) && !en.dead ? `  THROW IN ${en.abilityCountdown}` : ''
+    const abilityText = abilityCountdownText(en)
     const label = en.dead ? 'убит' : `HP ${en.hp}/${en.hpMax}${attackText}${abilityText}`
     const ly = side === 2 ? cy - thick / 2 - 0.4 * g.cell : side === 0 ? cy + thick / 2 + 0.4 * g.cell : cy - long / 2 - 0.4 * g.cell
     ctx.fillStyle = Number.isFinite(en.countdown) && en.countdown <= 1 && !en.dead ? col.hp : col.text
@@ -415,8 +434,9 @@ function renderPanel() {
   for (const en of s.enemies) {
     const atLabel = en.attackKind === 'cast' ? 'CAST IN' : 'ATTACK IN'
     const at = en.dead ? '' : Number.isFinite(en.countdown) ? `, ${atLabel} ${en.countdown}` : ', пассивен'
-    const ab = en.dead || en.abilityCountdown === undefined ? '' : `, THROW IN ${en.abilityCountdown}`
-    lines.push(`  ${en.label ?? en.id} (${SIDE_RU[en.side]}): ${en.dead ? 'убит' : `HP ${en.hp}/${en.hpMax}${at}${ab}`}`)
+    const ab = en.dead || en.abilityCountdown === undefined ? '' : `, ${abilityCountdownText(en).trim()}`
+    const sh = !en.dead && en.shielded ? ', 🛡SHIELD UP' : ''
+    lines.push(`  ${en.label ?? en.id} (${SIDE_RU[en.side]}): ${en.dead ? 'убит' : `HP ${en.hp}/${en.hpMax}${at}${ab}${sh}`}`)
   }
   const pinned = s.pinnedArrows
   lines.push('', `pinned arrows: ${pinned.length ? pinned.map((p) => `#${p.id} (${p.turnsLeft}t)`).join(', ') : '—'}`)
@@ -476,7 +496,19 @@ window.addEventListener('keydown', (ev) => {
   ev.preventDefault()
 })
 
-const raw = await fetchJson('../encounters/rock-spike.json')
+/** COMBAT-001: kind-aware ability countdown label for the debug HUD (no art, text only). */
+function abilityCountdownText(en) {
+  if (en.abilityCountdown === undefined || !Number.isFinite(en.abilityCountdown) || en.dead) return ''
+  const dd = def.enemies.find((e) => e.id === en.id)
+  const kind = dd?.ability?.kind ?? 'stone_throw'
+  const base = kind === 'shield' ? `SHIELD IN ${en.abilityCountdown}` : `THROW IN ${en.abilityCountdown}`
+  return `  ${base}${en.shielded ? ' 🛡SHIELD UP' : ''}`
+}
+
+// COMBAT-001: the same debug shell serves every single-ability debug fixture:
+// rock-spike.html renders rock-spike.json, rock-spike.html?enc=shield-spike renders shield-spike.json.
+const encName = new URLSearchParams(location.search).get('enc') || 'rock-spike'
+const raw = await fetchJson(`../encounters/${encName}.json`)
 const parsed = encounterFromJson(raw)
 level = parsed.level
 def = parsed.file.encounter

@@ -1,0 +1,31 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": {
+    "preset": "easy",
+    "seed": 15,
+    "levelHash": "dea1bfde"
+  },
+  "encounter": {
+    "id": "shield_spike",
+    "title": "COMBAT-001 debug — Shield (seed 15)",
+    "enemies": [
+      {
+        "id": "shieldbearer",
+        "side": "N",
+        "hp": 4,
+        "attackTimer": { "interval": 5, "damage": 1 },
+        "ability": {
+          "id": "shield",
+          "kind": "shield",
+          "interval": 3,
+          "label": "shield"
+        },
+        "label": "shieldbearer"
+      }
+    ],
+    "rotate": { "allow": [] },
+    "blockedTapDamage": 1,
+    "notes": "COMBAT-001 spike/experiment, NOT accepted design, separate from prologue/Act I content. Same easy 6x7 seed 15 board as rock-spike.json (11 arrows, N4 E1 S4 W2; initially free N2 E1 S1 W1). One enemy on N (shieldbearer, 4 hp, ATTACK IN 5 dmg 1 -- gentle, damage is not the point of this spike) with Shield: SHIELD IN 3. Demonstrates: at world turn 3 the ability fires and raises a one-shot shield; the next projectile hit on the shieldbearer is absorbed (no HP damage, no interrupt) and drops the shield; the following hit damages normally. No Rotate in this debug encounter."
+  }
+}

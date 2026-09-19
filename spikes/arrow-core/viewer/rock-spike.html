@@ -34,7 +34,7 @@
 </head>
 <body>
 <header>
-  <strong>EXP-013 debug — Stone Throw / rock-spike.json</strong>
+  <strong id="encTitle">EXP-013 debug — Stone Throw / rock-spike.json</strong>
   <span class="hp">HP <span id="hpText"></span> <span class="pips" id="hpPips"></span></span>
   <button id="restart">restart</button>
   <button id="undo" title="Z / Backspace">undo</button>
@@ -48,7 +48,7 @@
       <canvas id="arena"></canvas>
     </div>
     <div id="msg"></div>
-    <div class="muted">Клик по стрелке — выпустить её. Серая стрелка с меткой <span class="rock">камня</span> — PINNED, её нельзя тапнуть, пока не истекут ходы (число рядом). Клавиши: Z — undo, H — hint.</div>
+    <div class="muted">Клик по стрелке — выпустить её. Клавиши: Z — undo, H — hint. <span id="encHelp">Серая стрелка с меткой <span class="rock">камня</span> — PINNED, её нельзя тапнуть, пока не истекут ходы (число рядом).</span></div>
   </div>
   <aside>
     <pre id="status"></pre>
