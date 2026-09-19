@@ -245,6 +245,9 @@ export interface EnemyFlee {
 export interface EnemyDef {
   /** Stable id, e.g. for viewer labels and attack attribution. */
   id: string
+  /** WAVE-001: enter at the end of a world turn once all specified conditions are met.
+   * If the side is occupied, wait; eligible enemies claim it in definition order. */
+  arrival?: { afterKill?: string; onTurn?: number }
   /** Arena side this enemy is vulnerable from. */
   side: Dir
   /** Hits (hit-units) this enemy absorbs before it dies. */
@@ -374,6 +377,8 @@ export type TapResult =
       rewards?: { id: string; heal: number; rotate: number }[]
       /** ACT-I-003, `enemies` mode only: temporary targets whose window closed this turn. */
       expired?: { id: string; label?: string }[]
+      /** WAVE-001: enemies entering after this turn's attacks/abilities have resolved. */
+      arrived?: { id: string }[]
       /** COMBAT-001, `enemies` mode only: enemy ids whose shield absorbed this turn's hit (no HP damage). */
       shieldConsumed?: { id: string }[]
       /** STORY-001, `enemies` mode only: enemies that fled the arena this turn (scripted
@@ -407,6 +412,7 @@ interface TimerSnapshot {
   enemyShield?: boolean[]
   /** LD-007 shift, enemies mode only: one entry per `def.enemies[i]` — current arena side. */
   enemySide?: Dir[]
+  enemyPending?: boolean[]
   /** ACT-I-003 */
   worldTurn: number
   bonusRotate: number
@@ -447,6 +453,7 @@ export class EncounterState {
   private enemyShield: boolean[] = []
   /** LD-007 shift, enemies mode only: `def.enemies[i]`'s CURRENT arena side (starts at `def.side`). */
   private enemySide: Dir[] = []
+  private enemyPending: boolean[] = []
   /** ACT-I-003: legal world turns elapsed (taps, plus Rotates when `rotate.advancesTurn`). */
   private worldTurn = 0
   /** ACT-I-003: Rotate charges earned from kill rewards in a non-pool encounter. */
@@ -484,6 +491,7 @@ export class EncounterState {
       this.enemyAbilityCountdown = def.enemies.map((e) => e.ability?.interval ?? Infinity)
       this.enemyShield = def.enemies.map(() => false)
       this.enemySide = def.enemies.map((e) => e.side)
+      this.enemyPending = def.enemies.map((e) => e.arrival !== undefined)
     } else {
       let hp = 0
       let granted = 0
@@ -605,6 +613,9 @@ export class EncounterState {
     hp: number
     hpMax: number
     dead: boolean
+    pending: boolean
+    arrivesIn?: number
+    arrivesAfter?: string
     /** STORY-001: this enemy already taunted and left the arena (scripted `flee` fired).
      * Fled is not dead: it takes no more hits, attacks, or abilities, but a mandatory fled
      * enemy still blocks the all-mandatory-dead win — only a full board clear ends it. */
@@ -632,6 +643,9 @@ export class EncounterState {
         hp: Math.max(0, this.enemyHp[i]),
         hpMax: e.hp,
         dead: this.enemyHp[i] <= 0,
+        pending: this.enemyPending[i],
+        arrivesIn: this.enemyPending[i] && e.arrival?.onTurn !== undefined ? Math.max(0, e.arrival.onTurn - this.worldTurn) : undefined,
+        arrivesAfter: this.enemyPending[i] ? e.arrival?.afterKill : undefined,
         fled: this.isFled(i),
         expired: this.isExpired(i),
         turnsLeft: e.expiresAfter !== undefined ? Math.max(0, e.expiresAfter - this.worldTurn) : undefined,
@@ -682,9 +696,26 @@ export class EncounterState {
     const e = this.def.enemies![i].expiresAfter
     return e !== undefined && this.worldTurn >= e
   }
-  /** Left the arena one way or another (fled or expired): untargetable, silent, ability-less. */
+  /** Absent (pending, fled or expired): untargetable, silent, ability-less. */
   private isGone(i: number): boolean {
-    return this.isFled(i) || this.isExpired(i)
+    return this.enemyPending[i] || this.isFled(i) || this.isExpired(i)
+  }
+
+  private resolveArrivals(): { id: string }[] {
+    const arrived: { id: string }[] = []
+    const defs = this.def.enemies!
+    for (let i = 0; i < defs.length; i++) {
+      if (!this.enemyPending[i] || this.isExpired(i)) continue
+      const { afterKill, onTurn } = defs[i].arrival!
+      if (onTurn !== undefined && this.worldTurn < onTurn) continue
+      if (afterKill !== undefined && this.enemyHp[defs.findIndex((e) => e.id === afterKill)] > 0) continue
+      if (this.targetIndexAt(this.enemySide[i]) >= 0) continue
+      this.enemyPending[i] = false
+      this.enemyCountdown[i] = defs[i].attackTimer?.interval ?? Infinity
+      this.enemyAbilityCountdown[i] = defs[i].ability?.interval ?? Infinity
+      arrived.push({ id: defs[i].id })
+    }
+    return arrived
   }
 
   /** Enemies mode: the first alive enemy standing on `side`, or -1 (at most one is expected per side
@@ -739,6 +770,7 @@ export class EncounterState {
         enemyAbilityCountdown: [...this.enemyAbilityCountdown],
         enemyShield: [...this.enemyShield],
         enemySide: [...this.enemySide],
+        enemyPending: [...this.enemyPending],
         pinTurnsLeft,
         worldTurn: this.worldTurn,
         bonusRotate: this.bonusRotate,
@@ -767,6 +799,7 @@ export class EncounterState {
       this.enemyAbilityCountdown = t.enemyAbilityCountdown!
       this.enemyShield = t.enemyShield!
       this.enemySide = t.enemySide!
+      this.enemyPending = t.enemyPending!
     } else {
       this.countdown = t.countdown!
       this.hitsThisCycle = t.hitsThisCycle!
@@ -1079,6 +1112,7 @@ export class EncounterState {
     let shieldRaised: { id: string }[] = []
     let healed: { id: string; target: string; amount: number }[] = []
     const expired: { id: string; label?: string }[] = []
+    let arrived: { id: string }[] = []
     if (!this.won) {
       // Not everyone required is dead yet (and the board isn't cleared alive): the world keeps
       // ticking for every enemy still standing, same rule as the boss's per-turn advance.
@@ -1100,11 +1134,12 @@ export class EncounterState {
       this.def.enemies!.forEach((e, i) => {
         if (!before[i] && this.isExpired(i) && this.enemyHp[i] > 0 && !this.isFled(i)) expired.push({ id: e.id, label: e.label })
       })
+      arrived = this.resolveArrivals()
     }
     return {
       ok: true, arenaDir, hit, hitDamage, phaseBefore: 0, phaseAfter: 0, granted: 0,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
-      pinExpired, pinnedThisTurn, shieldRaised, shifted, healed, rewards, expired, shieldConsumed, fled,
+      pinExpired, pinnedThisTurn, shieldRaised, shifted, healed, rewards, expired, shieldConsumed, fled, arrived,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
   }
@@ -1167,6 +1202,7 @@ export class EncounterState {
         this.advanceTurn(false)
       }
       this.worldTurn++
+      if (this.def.enemies) this.resolveArrivals()
     }
     return true
   }
@@ -1215,7 +1251,8 @@ export class EncounterState {
       const ac = this.enemyAbilityCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
       const sh = this.enemyShield.map((b) => (b ? 1 : 0)).join(',')
       const sd = this.enemySide.join(',')
-      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${sd}|${pin}|${this.playerHpValue}|${this.worldTurn}|${this.bonusRotate}`
+      const pending = this.enemyPending.map((b) => b ? 1 : 0).join(',')
+      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${sd}|${pin}|${this.playerHpValue}|${this.worldTurn}|${this.bonusRotate}|${pending}`
     }
     const c = Number.isFinite(this.countdown) ? this.countdown : 'inf'
     return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}`
@@ -1297,6 +1334,13 @@ export function checkEncounter(def: EncounterDef): void {
     })
   } else {
     def.enemies!.forEach((e, i) => {
+      if (typeof e.id !== 'string' || !e.id || def.enemies!.findIndex((other) => other.id === e.id) !== i) throw new Error(`enemy ${i}: id must be non-empty and unique`)
+      if (e.arrival !== undefined) {
+        const a = e.arrival
+        if (!a || typeof a !== 'object' || (a.afterKill === undefined && a.onTurn === undefined)) throw new Error(`enemy ${i}: arrival needs afterKill or onTurn`)
+        if (a.onTurn !== undefined && (!Number.isInteger(a.onTurn) || a.onTurn < 1)) throw new Error(`enemy ${i}: arrival.onTurn must be a positive integer`)
+        if (a.afterKill !== undefined && !def.enemies!.some((other) => other.id === a.afterKill)) throw new Error(`enemy ${i}: arrival.afterKill references unknown id ${a.afterKill}`)
+      }
       if (![0, 1, 2, 3].includes(e.side)) throw new Error(`enemy ${i}: bad side`)
       if (!Number.isInteger(e.hp) || e.hp < 1) throw new Error(`enemy ${i}: hp must be a positive integer`)
       if (e.attackTimer) checkAttackTimer(e.attackTimer, `enemy ${i}`)
@@ -1320,6 +1364,17 @@ export function checkEncounter(def: EncounterDef): void {
         }
       }
     })
+    const visited = new Set<string>()
+    const visiting = new Set<string>()
+    const visitArrival = (e: EnemyDef): void => {
+      if (visiting.has(e.id)) throw new Error(`arrival.afterKill dependency cycle at ${e.id}`)
+      if (visited.has(e.id)) return
+      visiting.add(e.id)
+      if (e.arrival?.afterKill !== undefined) visitArrival(def.enemies!.find((other) => other.id === e.arrival!.afterKill)!)
+      visiting.delete(e.id)
+      visited.add(e.id)
+    }
+    def.enemies!.forEach(visitArrival)
   }
   if (!Array.isArray(def.rotate?.allow) || def.rotate.allow.some((t) => t !== 1 && t !== -1)) {
     throw new Error('rotate.allow must list 1 (cw) and/or -1 (ccw)')

@@ -38,6 +38,7 @@ const ui = {
 // BUILD-025/CAL-004: canon Prologue sequence -- now shared with calibration-editor.js via
 // ./prologue-steps.js (imported above) so both always agree on the same 5 steps.
 const STANDALONE_SCENES = [
+  { key: 'wave-001', title: 'Debug · WAVE-001 · Две волны', file: '../../encounters/wave-001.json' },
   { key: 'act1-e1', title: 'Act I #1 · Двуручный рубеж (seed 22)', file: '../../encounters/act1-e1.json' },
   { key: 'act1-e2', title: 'Act I #2 · Взаимный замок (seed 112)', file: '../../encounters/act1-e2.json' },
   { key: 'act1-e3', title: 'Act I #3 · Кастер и свита (seed 25)', file: '../../encounters/act1-e3.json' },
@@ -138,6 +139,7 @@ function syncScenePick() {
 function tickAndSyncWolves(now) {
   if (!wolfVisuals || !run) return
   for (const e of run.encounter.enemies ?? []) {
+    if (e.pending) continue
     const snap = readEnemySnapshot(e)
     let v = wolfVisuals.get(e.id)
     if (!v) {
@@ -340,7 +342,8 @@ function loadActiveStep() {
     ? ` 👑 ${fleeGuests.map((e) => e.label ?? e.id).join(', ')} нельзя убить: после ${fleeGuests[0].flee.afterHits} попаданий он дразнит, затем показывает зад и сбегает — бой продолжится, чисти board до конца.`
     : ''
   ui.msgLine.textContent = def.enemies
-    ? `Враги одновременно: ${run.encounter.enemies.map((e) => e.label ?? e.id).join(', ')}.` +
+    ? `На арене: ${run.encounter.enemies.filter((e) => !e.pending).map((e) => e.label ?? e.id).join(', ') || 'ожидание волны'}.` +
+      (def.enemies.some((e) => e.arrival) ? ' Следующие враги указаны над свободными подиумами.' : '') +
       (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '') + fleeIntro
     : `Цель: ${def.boss?.id ?? 'boss'}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
@@ -403,6 +406,7 @@ function tap(id) {
   renderer.setFlash({ blocked: -1, blocker: -1 })
   renderer.onTapResult(level, id, r, before)
   const after = renderer.collectTargets(s, def)
+  renderer.markArrivals(before, after, r.hit ? FLIGHT_MS : 0)
   renderer.markDeaths(before, after)
   // STORY-001: advance previously-fled enemies one beat first (taunt -> back -> away),
   // then stamp new flees — a fresh flee always plays the full sequence from the taunt.
@@ -435,7 +439,7 @@ function tap(id) {
         if (!v) continue
         if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
         else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
-        else if (r.hit && e.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+        else if (r.hit && before.find((b) => b.id === e.id && !b.pending && !b.dead && !b.fled)?.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
       }
       tickAndSyncWolves(now)
     }
@@ -503,6 +507,7 @@ function tap(id) {
     `${formatAction({ kind: 'tap', id })}  ${r.hit ? 'HIT' : 'miss'}  hp ${s.hp}` +
       (r.enemyAttacked ? `  ENEMY (player ${r.playerHp})` : '') +
       (r.castInterrupted ? '  CAST INTERRUPTED' : '') +
+      (r.arrived?.length ? `  ARRIVED: ${r.arrived.map((e) => e.id).join(', ')}` : '') +
       (r.fled && r.fled.length ? `  FLED: ${r.fled.map((f) => f.id).join(', ')}` : '') +
       (fledBack.length ? `  FLED-BACK: ${fledBack.join(', ')}` : '') +
       (fledAway.length ? `  FLED-AWAY: ${fledAway.join(', ')}` : '') +
@@ -531,11 +536,14 @@ function rotate(turn) {
     flashPlayerHit()
     renderer.onRotateEnemyAttack()
   }
-  renderer.markDeaths(before, renderer.collectTargets(s, def))
+  const after = renderer.collectTargets(s, def)
+  renderer.markDeaths(before, after)
+  renderer.markArrivals(before, after)
+  const arrived = after.filter((e) => !e.pending && before.find((b) => b.id === e.id)?.pending)
   // VIS-006: a rotate can tick enemy timers (telegraphs may arm); re-sync baselines only.
   tickAndSyncWolves(performance.now())
   setMsg(text, false)
-  pushLog(`${formatAction({ kind: 'rotate', turn })}  → ${s.rotation * 90}°`)
+  pushLog(`${formatAction({ kind: 'rotate', turn })}  → ${s.rotation * 90}°` + (arrived.length ? `  ARRIVED: ${arrived.map((e) => e.id).join(', ')}` : ''))
   renderPanel()
   kick()
   if (s.playerDead) scheduleGameOver()

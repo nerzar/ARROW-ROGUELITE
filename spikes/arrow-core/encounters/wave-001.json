@@ -1,0 +1,17 @@
+{
+  "format": "arrow-core-encounter",
+  "v": 1,
+  "board": { "preset": "easy", "seed": 22, "levelHash": "6e96e567" },
+  "encounter": {
+    "id": "wave_001",
+    "title": "Debug · WAVE-001 · Две волны",
+    "enemies": [
+      { "id": "scout", "label": "Разведчик", "species": "goblin-grunt", "side": "W", "hp": 2, "attackTimer": { "interval": 3, "damage": 1 } },
+      { "id": "guard", "label": "Страж", "species": "skeleton-child", "side": "E", "hp": 3, "arrival": { "afterKill": "scout" }, "attackTimer": { "interval": 3, "damage": 1 } },
+      { "id": "wolf", "label": "Волк", "species": "dire-wolf", "side": "N", "hp": 1, "arrival": { "onTurn": 4 }, "attackTimer": { "interval": 2, "damage": 1 } }
+    ],
+    "rotate": { "allow": [], "advancesTurn": false },
+    "blockedTapDamage": 1,
+    "notes": "Debug only: initial W scout, second wave E after scout kill and N after turn 4. Production campaign unchanged."
+  }
+}
