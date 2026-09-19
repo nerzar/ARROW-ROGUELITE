@@ -1,9 +1,9 @@
 # TASK: FIX-036 — Одобренный HUD-кард выезжает за рамки
 
-STATUS: READY
+STATUS: DONE
 TYPE: FIX
 SIZE: S
-AGENT:
+AGENT: Codex
 BASE_BRANCH: main
 BRANCH: fix/FIX-036-hud-card-overflow
 
@@ -61,8 +61,11 @@ BRANCH: fix/FIX-036-hud-card-overflow
 
 ## Итог
 
-RESULT:
+RESULT: Approved HUD overlays now stay inside their source PNG frames: enemy/boss chips use the
+safe 0.80/0.82 right anchors, and the player HP fill/text end at 80.15% of the player frame instead
+of overflowing to 90.35%.
 
-VERIFY:
+VERIFY: `npm test` (450/450), `npm run typecheck`, `npm run build`; live browser at 1366x768 and
+1920x1080 on player HUD, Matron (ATK + HEAL + THR), ordinary Goblin Grunt, and Goblin King boss.
 
-FOUND:
+FOUND: none.
