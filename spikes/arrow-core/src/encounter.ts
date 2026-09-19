@@ -312,6 +312,8 @@ export interface EncounterDef {
   /** ACT-I-003: HP restored (capped at the run's max) when this encounter is completed, claimed
    * once by `RunState.advance()` like `winRotateReward`. A "rest" beat between fights. */
   winHeal?: number
+  /** ITEM-001: force an item card in the post-encounter draft (boss / milestone fights). */
+  rewardItem?: boolean
   notes?: string
 }
 

@@ -717,6 +717,7 @@ function showOverlay(kind) {
         if (run.rotateCharges > 0) {
           body += ` Rotate осталось: ${run.rotateCharges}.`
         }
+        body += ` Золото: ${run.gold}.`
         if (run.inventory.length) body += ` Предметы: ${run.inventory.map((it) => ITEMS[it.id].label).join(', ')}.`
         ui.overlayBody.textContent = body
         ui.overlayNext.textContent = 'Следующий этап →'

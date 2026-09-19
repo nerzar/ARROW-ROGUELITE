@@ -36,14 +36,24 @@ export interface RunConfig {
   startingItems?: ItemId[]
   /** ITEM-001: seed for the deterministic reward draft (default 1). */
   runSeed?: number
-  /** ITEM-001: number of offers per draft (default 3). */
-  rewardChoices?: number
   /** ITEM-001: step ids after which no reward is offered (e.g. the first prologue tutorials). */
   noRewardAfter?: string[]
+  /** ITEM-001 (user rule 2026-09-19): items are rare — chance that the draft's third card is an
+   * item instead of a big gold pile (default 0.3). A step's `def.rewardItem` forces it. */
+  itemChance?: number
+  /** ITEM-001: gold of the common card = base + perStep * stepIndex (defaults 8 / 2). */
+  goldBase?: number
+  goldPerStep?: number
 }
 
-/** ITEM-001: one card of the post-encounter draft. */
+/**
+ * ITEM-001: one card of the post-encounter draft. The draft is always three cards:
+ *   1. gold (the ordinary reward, always present);
+ *   2. +HP or +Rotate (heal only while HP is below max);
+ *   3. an item (rare, `itemChance`, or forced by `def.rewardItem`) — else a bigger gold pile.
+ */
 export type RewardOffer =
+  | { kind: 'gold'; amount: number }
   | { kind: 'item'; id: ItemId }
   | { kind: 'heal'; hp: number }
   | { kind: 'rotate'; charges: number }
@@ -58,6 +68,7 @@ export interface RunSave {
   entryHp: number
   entryRotate: number
   inventory: ItemInstance[]
+  gold?: number
 }
 
 export class RunState {
@@ -80,6 +91,9 @@ export class RunState {
   private rewardTaken = false
   /** ITEM-001: a chosen heal reward, applied to the HP the next step starts with. */
   private pendingHeal = 0
+  /** ITEM-001: run gold (nothing to spend it on yet — the shop is a later task). */
+  private goldValue = 0
+  private entryGold = 0
   private encounterState: EncounterState
 
   constructor(config: RunConfig, steps: readonly RunStep[]) {
@@ -148,26 +162,34 @@ export class RunState {
   rewardOffers(): RewardOffer[] {
     if (!this.rewardPending) return []
     if (this.offers) return this.offers
-    const rng = createRng(deriveSeed(this.config.runSeed ?? 1, hashString(this.steps[this.idx].id)))
-    const pool: RewardOffer[] = []
-    for (const id of ITEM_IDS) if (!this.hasItem(id)) pool.push({ kind: 'item', id })
-    if (this.encounterState.playerHp < this.config.playerMaxHp) pool.push({ kind: 'heal', hp: REWARD_HEAL })
-    pool.push({ kind: 'rotate', charges: REWARD_ROTATE })
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = rng.int(i + 1)
-      const t = pool[i]
-      pool[i] = pool[j]
-      pool[j] = t
-    }
-    this.offers = pool.slice(0, this.config.rewardChoices ?? 3)
+    const step = this.steps[this.idx]
+    const rng = createRng(deriveSeed(this.config.runSeed ?? 1, hashString(step.id)))
+    const gold = (this.config.goldBase ?? 8) + (this.config.goldPerStep ?? 2) * this.idx
+    const offers: RewardOffer[] = [{ kind: 'gold', amount: gold }]
+    // Card 2: heal while hurt, otherwise a Rotate charge.
+    offers.push(this.encounterState.playerHp < this.config.playerMaxHp ? { kind: 'heal', hp: REWARD_HEAL } : { kind: 'rotate', charges: REWARD_ROTATE })
+    // Card 3: a rare item — forced by the step, else by chance — from the ones not yet owned.
+    const unowned = ITEM_IDS.filter((id) => !this.hasItem(id))
+    const roll = rng.next()
+    const wantItem = unowned.length > 0 && (step.def.rewardItem === true || roll < (this.config.itemChance ?? 0.3))
+    if (wantItem) offers.push({ kind: 'item', id: unowned[rng.int(unowned.length)] })
+    else offers.push({ kind: 'gold', amount: gold * 2 })
+    this.offers = offers
     return this.offers
+  }
+
+  /** ITEM-001: run gold. */
+  get gold(): number {
+    return this.goldValue
   }
 
   /** Applies offer `index`. For an item with a full inventory `replaceSlot` is required (else false). */
   chooseReward(index: number, replaceSlot?: number): boolean {
     const o = this.rewardOffers()[index]
     if (!o) return false
-    if (o.kind === 'item') {
+    if (o.kind === 'gold') {
+      this.goldValue += o.amount
+    } else if (o.kind === 'item') {
       if (!this.addItem(o.id, this.inventoryFull ? replaceSlot : undefined)) return false
     } else if (o.kind === 'heal') {
       this.pendingHeal += o.hp
@@ -236,6 +258,7 @@ export class RunState {
     this.pendingHeal = 0
     this.entryRotate = this.rotatePool.charges
     this.entryInventory = this.snapshotInventory()
+    this.entryGold = this.goldValue
     this.idx++
     this.encounterState = this.buildEncounterState()
     return true
@@ -246,6 +269,7 @@ export class RunState {
     this.rotatePool.charges = this.entryRotate
     this.inv.slots = this.entryInventory.map((it) => ({ ...it }))
     this.pendingHeal = 0
+    this.goldValue = this.entryGold
     this.encounterState = this.buildEncounterState()
   }
 
@@ -259,13 +283,15 @@ export class RunState {
     for (const id of this.config.startingItems ?? []) this.addItem(id)
     this.entryInventory = this.snapshotInventory()
     this.pendingHeal = 0
+    this.goldValue = 0
+    this.entryGold = 0
     this.encounterState = this.buildEncounterState()
   }
 
   // ---- ITEM-001: persistence (run-level only; the active encounter restarts on load) ----
 
   toJSON(): RunSave {
-    return { v: 1, stepIndex: this.idx, entryHp: this.entryHp, entryRotate: this.entryRotate, inventory: this.entryInventory.map((it) => ({ ...it })) }
+    return { v: 1, stepIndex: this.idx, entryHp: this.entryHp, entryRotate: this.entryRotate, inventory: this.entryInventory.map((it) => ({ ...it })), gold: this.entryGold }
   }
 
   /** Restores a save onto the same step list: the saved step restarts from its entry snapshot. */
@@ -278,6 +304,8 @@ export class RunState {
     run.rotatePool.charges = run.entryRotate
     run.inv.slots = (save.inventory ?? []).filter((it) => it && it.id in ITEMS).slice(0, INVENTORY_SLOTS).map((it) => ({ id: it.id, charges: Math.max(0, it.charges | 0) }))
     run.entryInventory = run.snapshotInventory()
+    run.goldValue = Math.max(0, save.gold ?? 0)
+    run.entryGold = run.goldValue
     run.encounterState = run.buildEncounterState()
     return run
   }

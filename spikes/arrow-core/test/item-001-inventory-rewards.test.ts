@@ -120,33 +120,62 @@ describe('RunState: inventory, reward draft, persistence', () => {
   const step = (id: string, def: EncounterDef) => ({ id, level: lvl, def })
   const d = () => base([{ id: 'a', side: E, hp: 1 }])
 
-  it('offers a deterministic 1-of-3 draft after a win, applies it, and recharges per-encounter items', () => {
-    const run = new RunState({ playerMaxHp: 10, runSeed: 7 }, [step('s1', d()), step('s2', d()), step('s3', d())])
+  it('draft = gold + (heal|rotate) + rare item/big gold; deterministic; forced item via rewardItem; recharge', () => {
+    const forced = () => base([{ id: 'a', side: E, hp: 1 }], { rewardItem: true })
+    const mk = () => new RunState({ playerMaxHp: 10, runSeed: 7 }, [step('s1', forced()), step('s2', d()), step('s3', d())])
+    const run = mk()
     expect(run.rewardPending).toBe(false)
     run.encounter.tap(0)
     expect(run.rewardPending).toBe(true)
     const offers = run.rewardOffers()
     expect(offers.length).toBe(3)
-    expect(run.rewardOffers()).toBe(offers) // stable
-    const again = new RunState({ playerMaxHp: 10, runSeed: 7 }, [step('s1', d()), step('s2', d()), step('s3', d())])
+    expect(offers[0]).toEqual({ kind: 'gold', amount: 8 }) // base 8 + 2*0
+    expect(offers[1]).toEqual({ kind: 'rotate', charges: 1 }) // full HP -> rotate, not heal
+    expect(offers[2].kind).toBe('item') // forced by rewardItem
+    expect(run.rewardOffers()).toBe(offers)
+    const again = mk()
     again.encounter.tap(0)
-    expect(again.rewardOffers()).toEqual(offers) // deterministic
-    const bowIdx = offers.findIndex((o) => o.kind === 'item' && o.id === 'bow')
-    const pick = bowIdx >= 0 ? bowIdx : offers.findIndex((o) => o.kind === 'item')
-    expect(run.chooseReward(pick)).toBe(true)
-    expect(run.rewardPending).toBe(false)
+    expect(again.rewardOffers()).toEqual(offers)
+    expect(run.chooseReward(2)).toBe(true)
     expect(run.inventory.length).toBe(1)
     run.advance()
-    const id = run.inventory[0].id
-    expect(run.encounter.canUseItem(id) || !ITEMS[id]).toBe(true)
-    if (id === 'bow') {
-      run.encounter.useItem('bow', E)
-      expect(run.encounter.won).toBe(true)
-      expect(run.inventory[0].charges).toBe(0)
-      run.skipReward()
-      run.advance()
-      expect(run.inventory[0].charges).toBe(1) // per-encounter recharge
+    // s2: not forced; card 3 is an item only by chance, card 1 is always gold, scaled by step.
+    run.encounter.tap(0)
+    const o2 = run.rewardOffers()
+    expect(o2[0]).toEqual({ kind: 'gold', amount: 10 })
+    expect(['item', 'gold']).toContain(o2[2].kind)
+    run.chooseReward(0)
+    expect(run.gold).toBe(10)
+    run.advance()
+    expect(run.inventory[0].charges).toBe(ITEMS[run.inventory[0].id].charges) // recharged on entry
+  })
+
+  it('items are rare: over many seeds the third card is an item roughly itemChance of the time', () => {
+    let items = 0
+    const N = 200
+    for (let seed = 1; seed <= N; seed++) {
+      const run = new RunState({ playerMaxHp: 10, runSeed: seed, itemChance: 0.3 }, [step('s1', d()), step('s2', d())])
+      run.encounter.tap(0)
+      if (run.rewardOffers()[2].kind === 'item') items++
     }
+    expect(items / N).toBeGreaterThan(0.18)
+    expect(items / N).toBeLessThan(0.42)
+  })
+
+  it('gold is kept across steps, reset by restartStep to the entry value, and saved', () => {
+    const run = new RunState({ playerMaxHp: 10, runSeed: 2 }, [step('s1', d()), step('s2', d()), step('s3', d())])
+    run.encounter.tap(0)
+    run.chooseReward(0)
+    expect(run.gold).toBe(8)
+    run.advance()
+    run.encounter.tap(0)
+    run.chooseReward(0)
+    expect(run.gold).toBe(18)
+    run.restartStep()
+    expect(run.gold).toBe(8)
+    const back = RunState.fromJSON({ playerMaxHp: 10 }, [step('s1', d()), step('s2', d()), step('s3', d())], JSON.parse(JSON.stringify(run.toJSON())))
+    expect(back.gold).toBe(8)
+    expect(back.stepIndex).toBe(1)
   })
 
   it('heal reward applies on advance, rotate reward goes to the pool, no reward on excluded steps', () => {

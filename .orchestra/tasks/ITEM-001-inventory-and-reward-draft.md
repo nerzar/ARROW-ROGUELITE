@@ -77,6 +77,10 @@ run-инвентаре и реально меняют следующий бой.
 - RunState: инвентарь (3 слота, recharge encounter/run), draft 1-из-3 (`rewardOffers/chooseReward/skipReward`,
   детерминирован `runSeed` + id этапа; heal предлагается только при неполном HP), `winHeal` + heal-награда,
   `toJSON/fromJSON` (run-level), `startingItems`, `noRewardAfter`.
+- Правило пользователя (2026-09-19): предмет — редкость, обычная награда — золото. Draft всегда 3 карты:
+  золото (base 8 + 2·этап) · +3 HP (если ранен) или +1 Rotate · предмет с шансом `itemChance` (0.3) либо
+  двойное золото; `def.rewardItem: true` принуждает предмет (босс/ключевые бои). Золото копится в
+  `RunState.gold`, сохраняется, показывается в панели; тратить пока негде (магазин — следующая задача).
 - Viewer: `items-ui.js` — панель предметов под карточкой игрока (пипсы зарядов, picker цели для Лука),
   экран награды внутри win-overlay перед «Следующий этап»; `?items=bow,shield,health_flask` — debug-старт.
 - `encounters/cp-run-config.json`: `runSeed: 1`, `noRewardAfter: [prologue-stage-1, prologue-stage-2]`.

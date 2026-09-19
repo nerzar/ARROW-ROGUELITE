@@ -7,7 +7,8 @@ const SIDE_RU = { 0: 'сверху', 1: 'справа', 2: 'снизу', 3: 'с�
 
 /** Player-facing name of a reward card. */
 export function describeOffer(o) {
-  if (o.kind === 'item') return { title: ITEMS[o.id].label, text: ITEMS[o.id].text }
+  if (o.kind === 'gold') return { title: `${o.amount} золота`, text: 'Обычная добыча. Пригодится у торговца.' }
+  if (o.kind === 'item') return { title: ITEMS[o.id].label, text: `Редкий предмет. ${ITEMS[o.id].text}` }
   if (o.kind === 'heal') return { title: `+${o.hp} HP`, text: 'Восстановить здоровье.' }
   return { title: `+${o.charges} Rotate`, text: 'Ещё один поворот доски в общий запас.' }
 }
@@ -86,6 +87,10 @@ export function createItemBar(host, { onUse, targetLabel }) {
       }
       bar.appendChild(el)
     }
+    const g = document.createElement('div')
+    g.className = 'item-gold'
+    g.textContent = `Золото: ${run.gold}`
+    bar.appendChild(g)
     if (enc.wardHp > 0) {
       const w = document.createElement('div')
       w.className = 'item-ward'
