@@ -1,5 +1,6 @@
 // MAP-001: Illustrated Route Map UI for Act I «Страна гоблинов».
-// Renders the panoramic illustrated map (approvedmap.png) with calibrated node hotspots,
+// Renders the fullscreen panoramic illustrated map (approvedempty.png) with calibrated node hotspots,
+// programmatic terrain and title labels, signpost easter-egg ("ТУТ НАЧИНАЮТСЯ ПРОБЛЕМЫ"),
 // interactive status beacons, glowing SVG road trails, narrative tooltips, and SHOP-001 placeholder beat.
 
 /** Calibrated pixel coordinates on the 1672x941 illustrated map canvas. */
@@ -51,26 +52,62 @@ export function createRouteMapModal(options = {}) {
   overlay.id = 'routeMapModal'
 
   overlay.innerHTML = `
-    <div class="route-map-panel illustrated-layout">
-      <header class="route-map-header">
-        <div class="route-map-title-group">
-          <div class="route-map-badge">АКТ I · СТРАНА ГОБЛИНОВ</div>
-          <h2 class="route-map-title" id="rmTitle">Карта маршрута</h2>
-          <div class="route-map-subtitle" id="rmSubtitle">Выберите следующий узел для продолжения похода</div>
+    <div class="route-map-panel fullscreen-map">
+      <!-- Floating HUD Top Bar -->
+      <header class="route-map-floating-top">
+        <div class="route-map-breadcrumbs">
+          <span class="breadcrumb-act">АКТ I</span>
+          <span class="breadcrumb-sep">·</span>
+          <span class="breadcrumb-map" id="rmTitle">Страна гоблинов</span>
+          <span class="breadcrumb-status" id="rmSubtitle">Выберите следующий узел</span>
         </div>
         <div class="route-map-header-stats" id="rmStats"></div>
         <button class="route-map-close-btn" id="rmCloseBtn" title="Вернуться в бой (Esc / M)">✕</button>
       </header>
 
+      <!-- Main Map Viewport & Board -->
       <div class="route-map-viewport" id="rmViewport">
         <div class="route-map-board" id="rmBoard">
+          <!-- Clean illustrated panoramic map art without baked-in labels -->
           <img class="route-map-artwork" src="assets/maps/approvedmap.png" alt="Карта Акта I: Страна гоблинов" />
+
+          <!-- Programmatic Terrain and Title Labels Layer -->
+          <div class="route-map-labels-layer" aria-hidden="true">
+            <!-- Top Left Title Card -->
+            <div class="map-title-card" style="left: 3.5%; top: 3.5%;">
+              <div class="map-title-badge">── АКТ I ──</div>
+              <h1 class="map-title-heading">Страна гоблинов</h1>
+              <div class="map-title-prompt">Выберите один из доступных путей для следующего этапа.</div>
+            </div>
+
+            <!-- Programmatic Terrain Landmarks -->
+            <div class="terrain-label label-crooked-forest" style="left: 22.9%; top: 28.5%;">Кривой лес</div>
+            <div class="terrain-label label-stone-gorge" style="left: 45.0%; top: 24.6%;">Каменное ущелье</div>
+            <div class="terrain-label label-abandoned-post" style="left: 33.5%; top: 53.4%;">Заброшенный пост</div>
+            <div class="terrain-label label-wolf-pack" style="left: 65.5%; top: 76.2%;">Волчья стая</div>
+            <div class="terrain-label label-shaman-swamp" style="left: 69.8%; top: 35.5%;">Шаманские топи</div>
+            <div class="terrain-label label-goblin-king" style="left: 95.8%; top: 28.5%;">Король гоблинов</div>
+
+            <!-- Wooden Signpost: "ТУТ НАЧИНАЮТСЯ ПРОБЛЕМЫ" -->
+            <div class="map-signpost" style="left: 19.7%; top: 80.5%;">
+              <div class="signpost-text">
+                <span class="sign-line-1">ТУТ</span>
+                <span class="sign-line-2">НАЧИНАЮТСЯ</span>
+                <span class="sign-line-3">ПРОБЛЕМЫ</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scalable SVG Roads Layer -->
           <svg class="route-map-svg-layer" id="rmSvgLines" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" preserveAspectRatio="none"></svg>
+
+          <!-- Interactive Hotspot Pins Layer -->
           <div class="route-map-pins-layer" id="rmPinsLayer"></div>
         </div>
       </div>
 
-      <footer class="route-map-footer">
+      <!-- Floating HUD Bottom Bar -->
+      <footer class="route-map-floating-bottom">
         <div class="route-map-legend">
           <span class="legend-item"><span class="legend-icon battle">⚔️</span> Схватка</span>
           <span class="legend-item"><span class="legend-icon shop">🛒</span> Лавка менялы</span>
@@ -215,13 +252,13 @@ export function createRouteMapModal(options = {}) {
     // Header title & close button visibility
     elTitle.textContent = graph.title ?? 'Страна гоблинов'
     if (isMandatoryPick) {
-      elSubtitle.textContent = 'Выберите следующий узел для продолжения похода'
+      elSubtitle.textContent = 'Выберите узел для продолжения'
       elClose.style.display = 'none' // mandatory step
       if (elHint) elHint.innerHTML = '👉 <strong>Выберите подсвеченный узел</strong>, чтобы отправиться в путь'
     } else {
       const curTitle = run.currentNode?.title ?? 'В походе'
       elSubtitle.textContent = `Текущий этап: ${curTitle}`
-      elClose.style.display = 'block'
+      elClose.style.display = 'flex'
       if (elHint) elHint.innerHTML = '💡 Нажмите <strong>[M]</strong> или <strong>✕</strong> для возврата к битве'
     }
 
