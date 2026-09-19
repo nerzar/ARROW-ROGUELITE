@@ -33,6 +33,9 @@ BOARD хранит не только одну текущую задачу, а **
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
 | ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
+| ART-010 — UI Style Base / Visual Bible v1 | READY | `art/ART-010-ui-style-base` | Зафиксировать единый visual language для HUD/rewards/popups/items: материалы, рамки, кнопки, цвет, glow, typography, motion. |
+| ART-011 — Reward Choice Screen Exploration | READY | `art/ART-011-reward-choice-screen` | 2–4 варианта reward screen в общем fantasy-языке; карточки, rarity, hover/select, confirm. Anchor-screen, финал только после user review. |
+| ART-012 — Player HUD Exploration | READY | `art/ART-012-player-hud` | 2–4 варианта HUD: HP, Rotate, active items/charges/statuses. Anchor-screen, не перекрывать board/arena. |
 
 Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
 
@@ -45,6 +48,12 @@ BOARD хранит не только одну текущую задачу, а **
 | ACT-I-002 — Act I Vertical Slice | PLAYTEST | В campaign добавлены 8 provisional Act I stages: патруль → cross-lock → caster → rock thrower → three-front → Shield Captain → mixed exam → Goblin King. Пользователь проходит и тюнит в Campaign Editor. |
 | LD-007 — 0-Rotate agency / puzzle density | PLANNED / FUNDAMENTAL | Пересмотреть Act I boards: обычный encounter не должен становиться пустым face-tank без Rotate. Отбирать seed'ы по meaningful 0-Rotate решениям, branch points и плотности puzzle; отдельно протестировать больше стрелок/board и возможное укорочение стрел. |
 | RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, небольшой понятный набор апгрейдов, желание сделать ещё один забег. |
+| ART-013 — Victory / Reward / Boss Popup Set | PLANNED | Единое семейство Victory / reward gained / boss intro-warning / unlock popups после выбора anchor-стиля. |
+| ART-014 — Item / Weapon Presentation | PLANNED | Карточка предмета/оружия, rarity, свойства, визуал лута — в стиле Reward Screen. |
+| ART-015 — Mini-Inventory / Loadout UI | PLANNED | Компактные equipped/available slots и замена предметов без RPG-склада. |
+| ART-016 — Reward Targets on Board | PLANNED LATER | Сундук/кристалл/тотем/временная бонус-цель, хорошо читаемая на арене. |
+| ART-017 — Item / Consumable / Status Icons | PLANNED LATER | Единая система мелких иконок после утверждения HUD/items. |
+| ART-018 — Act I Goblin Village Presentation Polish | PLANNED LATER | Тематические goblin-акценты, декоративные UI-детали и presentation polish поверх общей системы, не отдельный стиль. |
 | VFX integration (остальные пресеты после light-hit) | PLANNED | VFX-003 принят (light-hit целиком) — дальше heavy hit / magic hit / boss hit / kill / boss kill / blocked tap / reward, тем же паттерном (`fxFor(key).новое_поле`), по одному за раз. |
 | AUDIO-001 — Combat Audio | PLANNED LATER | После принятого визуального combat feel: hit/cast/death/reward SFX, без преждевременного большого sound-system. |
 | VK production pass | PLANNED LATER | SDK, saves, lifecycle/fullscreen, audio rules, rewarded ads, analytics, слабые устройства — после приятного vertical slice. |
