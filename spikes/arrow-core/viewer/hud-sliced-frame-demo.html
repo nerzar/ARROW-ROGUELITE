@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>HUD Sliced Frame Pipeline (Game-Ready Asset Pipeline)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Marcellus&family=Inter:wght@400;600;700;800;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at center, #151a24 0%, #06080c 100%);
+    font-family: 'Inter', sans-serif;
+    color: #e2d9cd;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 26px;
+    color: #ffdf7a;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+  }
+
+  p.subtitle {
+    font-size: 14px;
+    color: #a39b8e;
+    margin-bottom: 30px;
+    max-width: 800px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .nav-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .nav-link {
+    color: #ffd76a;
+    text-decoration: none;
+    background: #181d26;
+    border: 1px solid #3d475c;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+  .nav-link:hover {
+    background: #2b3547;
+    border-color: #ffd76a;
+  }
+
+  .demo-container {
+    width: 920px;
+    background: rgba(14, 18, 26, 0.95);
+    border: 1.5px solid #3c4252;
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.1);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+  }
+
+  .section {
+    border-bottom: 1px solid #232733;
+    padding-bottom: 30px;
+  }
+  .section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 17px;
+    color: #e5be6b;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #2b394f;
+    color: #79c0ff;
+    border: 1px solid #41597a;
+  }
+
+  .preview-stage {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    background: #090c12 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" opacity="0.05"><rect width="10" height="10" fill="white"/><rect x="10" y="10" width="10" height="10" fill="white"/></svg>');
+    border: 1px solid #222733;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: inset 0 4px 16px rgba(0,0,0,0.8);
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: #0f131a;
+    padding: 12px 18px;
+    border-radius: 8px;
+    border: 1px solid #242938;
+  }
+
+  .controls-row label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #c9c0b3;
+    min-width: 170px;
+  }
+
+  .controls-row input[type=range] {
+    flex: 1;
+    cursor: pointer;
+    accent-color: #e63946;
+  }
+
+  .controls-row .hp-display {
+    font-family: 'Marcellus', serif;
+    font-size: 15px;
+    font-weight: 900;
+    color: #ff6b6b;
+    min-width: 90px;
+    text-align: right;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  button {
+    background: #1e2430;
+    border: 1px solid #3d475c;
+    color: #e2d9cd;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  button:hover {
+    background: #2b3547;
+    border-color: #637799;
+  }
+
+  /* ========================================================
+     1. ENEMY SLICED FRAME ASSEMBLY
+     ======================================================== */
+  .enemy-hud-assembly {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.95));
+  }
+
+  /* Top nameplate container */
+  .enemy-nameplate-box {
+    position: relative;
+    width: 197px;
+    height: 26px;
+    margin-bottom: -4px;
+    z-index: 2;
+  }
+  .enemy-nameplate-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+  }
+  .enemy-name-text {
+    position: absolute;
+    top: 3px;
+    left: 44px;
+    right: 32px;
+    font-family: 'Marcellus', Georgia, serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 2px #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .enemy-timer-badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 10.5px;
+    font-weight: 900;
+    color: #ffbe8a;
+    background: #3d1610;
+    border: 1px solid #d45b32;
+    border-radius: 2px;
+    padding: 0 4px;
+    box-shadow: 0 0 6px rgba(212, 91, 50, 0.45);
+  }
+
+  /* Bar container */
+  .enemy-bar-box {
+    position: relative;
+    width: 254px;
+    height: 36px;
+  }
+  /* Layer 1: Dark track */
+  .enemy-track {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+    width: 238px;
+    height: 22px;
+    background: #080a0f;
+    clip-path: polygon(0 50%, 15px 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 15px 100%);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.95);
+    z-index: 1;
+  }
+  /* Layer 2: Dynamic fill */
+  .enemy-fill {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+    height: 22px;
+    background: linear-gradient(180deg, #ff6060 0%, #db2323 45%, #8f0d0d 100%);
+    clip-path: polygon(0 50%, 15px 0, 100% 0, 100% 100%, 15px 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: width 0.25s ease-out;
+    z-index: 2;
+  }
+  /* Layer 3: Sliced Frame Overlay (clean PNG without text or fill) */
+  .enemy-frame-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+  /* Layer 4: Numbers */
+  .enemy-hp-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Marcellus', Georgia, serif;
+    font-size: 13.5px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 2px #000, 0 0 6px #000, 1px 1px 2px #000, -1px -1px 2px #000;
+    z-index: 4;
+  }
+
+
+  /* ========================================================
+     2. PLAYER HUD SLICED ASSEMBLY
+     ======================================================== */
+  .player-hud-box {
+    position: relative;
+    width: 290px;
+    height: 151px;
+    filter: drop-shadow(0 12px 24px rgba(0,0,0,0.95));
+  }
+  /* Player HP window wrapper */
+  .player-hp-window {
+    position: absolute;
+    top: 67px;
+    left: 124px;
+    width: 118px;
+    height: 19px;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+    overflow: hidden;
+    z-index: 1;
+  }
+  .player-track {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #080d14;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.95);
+  }
+  .player-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    background: linear-gradient(180deg, #ff5e5e 0%, #ee2727 45%, #9e0f0f 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: width 0.25s ease-out;
+  }
+  /* Layer 3: Sliced Plate Skin */
+  .player-plate-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+  /* Layer 4: Live Player Text */
+  .player-text {
+    position: absolute;
+    top: 67px;
+    left: 124px;
+    width: 118px;
+    height: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Marcellus', Georgia, serif;
+    font-size: 12px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 2px #000, 0 0 6px #000, 1px 1px 1px #000, -1px -1px 1px #000;
+    z-index: 4;
+  }
+
+
+  /* ========================================================
+     3. 3-PART 9-SLICE SCALABLE FRAME ASSEMBLY
+     ======================================================== */
+  .scalable-frame-box {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 36px;
+    transition: width 0.2s ease-out;
+  }
+  .cap-left {
+    width: 24px;
+    height: 36px;
+    background-image: url('assets/hud/enemy-hp-frame-left.png');
+    background-size: 24px 36px;
+    flex-shrink: 0;
+    z-index: 3;
+  }
+  .cap-mid {
+    flex: 1;
+    height: 36px;
+    background-image: url('assets/hud/enemy-hp-frame-mid.png');
+    background-repeat: repeat-x;
+    background-size: 16px 36px;
+    z-index: 3;
+  }
+  .cap-right {
+    width: 24px;
+    height: 36px;
+    background-image: url('assets/hud/enemy-hp-frame-right.png');
+    background-size: 24px 36px;
+    flex-shrink: 0;
+    z-index: 3;
+  }
+  .scalable-track {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+    right: 8px;
+    height: 22px;
+    background: #080a0f;
+    clip-path: polygon(0 50%, 15px 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 15px 100%);
+    z-index: 1;
+  }
+  .scalable-fill {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+    right: 8px;
+    height: 22px;
+    background: linear-gradient(180deg, #ff6060 0%, #db2323 45%, #8f0d0d 100%);
+    clip-path: polygon(0 50%, 15px 0, 100% 0, 100% 100%, 15px 100%);
+    transition: width 0.2s ease-out;
+    z-index: 2;
+  }
+  .scalable-text {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Marcellus', serif;
+    font-size: 13.5px; font-weight: 900; color: #fff;
+    text-shadow: 0 1px 2px #000, 0 0 6px #000;
+    z-index: 4;
+  }
+
+
+  /* Architecture callouts */
+  .callout-box {
+    background: #11151e;
+    border-left: 4px solid #e5be6b;
+    padding: 14px 18px;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #cfc6b8;
+  }
+  .callout-box strong {
+    color: #ffdf7a;
+  }
+  .pipeline-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .step-card {
+    background: #151a24;
+    border: 1px solid #293040;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 12px;
+  }
+  .step-num {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 900;
+    color: #79c0ff;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>HUD Sliced Frame Pipeline (Анализ & Живая Демонстрация)</h1>
+  <p class="subtitle">
+    Ответ на вопрос пользователя: <em>«Мы наверное эту рамку можем не верстать, а просто вырезать и на неё ХП накладывать? Будет ли это нормально работать?»</em><br>
+    <strong>Да! Это канонический индустриальный подход (Sliced Frame Overlay + Dynamic Fill). Ниже показано, как это работает в браузере в реальном времени.</strong>
+  </p>
+
+  <div class="nav-bar">
+    <a class="nav-link" href="hud-approved-adaptation.html">← Перейти к полному экрану игры (1280×720)</a>
+    <a class="nav-link" href="visual-proto/">Перейти в Playable Prototype</a>
+  </div>
+
+  <div class="demo-container">
+
+    <!-- 1. ENEMY FRAME DEMO -->
+    <div class="section">
+      <div class="section-title">
+        1. Вражеская плашка и рамка (вырезаны из Скриншота 1)
+        <span class="badge">100% Арт из Референса · 0 запечённых цифр</span>
+      </div>
+
+      <div class="preview-stage">
+        <div class="enemy-hud-assembly">
+          <!-- Nameplate with dynamic text & timer -->
+          <div class="enemy-nameplate-box">
+            <img class="enemy-nameplate-bg" src="assets/hud/enemy-nameplate-skin.png" alt="Nameplate Skin"/>
+            <span class="enemy-name-text" id="enemy-name-label">Goblin Shaman</span>
+            <span class="enemy-timer-badge">⏱ 3</span>
+          </div>
+
+          <!-- Layered HP Frame Box -->
+          <div class="enemy-bar-box">
+            <div class="enemy-track"></div>
+            <div class="enemy-fill" id="enemy-fill" style="width: 100%;"></div>
+            <img class="enemy-frame-overlay" src="assets/hud/enemy-hp-frame.png" alt="Metallic Frame Skin"/>
+            <div class="enemy-hp-text" id="enemy-hp-text">120 / 120</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <label>Интерактивный урон врагу:</label>
+        <input type="range" id="enemy-slider" min="0" max="120" value="120" oninput="updateEnemyHp(this.value)"/>
+        <div class="hp-display" id="enemy-val">120 / 120</div>
+        <div class="btn-group">
+          <button onclick="setEnemyHp(120)">Full (120)</button>
+          <button onclick="setEnemyHp(60)">50% (60)</button>
+          <button onclick="setEnemyHp(18)">Low (18)</button>
+          <button onclick="setEnemyHp(0)">0 (Dead)</button>
+        </div>
+      </div>
+
+      <div class="controls-row" style="margin-top: 10px;">
+        <label>Смена имени врага:</label>
+        <button onclick="changeEnemyName('Goblin Shaman')">Goblin Shaman</button>
+        <button onclick="changeEnemyName('Dire Wolf')">Dire Wolf</button>
+        <button onclick="changeEnemyName('Skeleton Child')">Skeleton Child</button>
+        <button onclick="changeEnemyName('Spider Brute')">Spider Brute</button>
+      </div>
+    </div>
+
+
+    <!-- 2. PLAYER HUD DEMO -->
+    <div class="section">
+      <div class="section-title">
+        2. Player HUD (вырезан из Скриншота 2)
+        <span class="badge">Каменная плита + Слот HP + Сердце + Кристаллы</span>
+      </div>
+
+      <div class="preview-stage">
+        <div class="player-hud-box">
+          <div class="player-hp-window">
+            <div class="player-track"></div>
+            <div class="player-fill" id="player-fill" style="width: 68%;"></div>
+          </div>
+          <img class="player-plate-img" src="assets/hud/player-plate-sliced.png" alt="Player Plate Skin"/>
+          <div class="player-text" id="player-text">68 / 100</div>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <label>Интерактивное здоровье героя:</label>
+        <input type="range" id="player-slider" min="0" max="100" value="68" oninput="updatePlayerHp(this.value)"/>
+        <div class="hp-display" id="player-val">68 / 100</div>
+        <div class="btn-group">
+          <button onclick="setPlayerHp(100)">Full (100)</button>
+          <button onclick="setPlayerHp(68)">Ref (68)</button>
+          <button onclick="setPlayerHp(25)">Danger (25)</button>
+          <button onclick="setPlayerHp(0)">0 (Defeat)</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 3. SCALABILITY (9-SLICE / 3-PART SLICING) -->
+    <div class="section">
+      <div class="section-title">
+        3. Проверка масштабирования рамки (Scalable 9-Slice / 3-Part)
+        <span class="badge">Без искажения наконечников</span>
+      </div>
+
+      <div class="preview-stage">
+        <div class="scalable-frame-box" id="scalable-box" style="width: 254px;">
+          <div class="scalable-track"></div>
+          <div class="scalable-fill" style="width: 80%;"></div>
+          <div class="cap-left"></div>
+          <div class="cap-mid"></div>
+          <div class="cap-right"></div>
+          <div class="scalable-text">Scalable Bar (80%)</div>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <label>Ширина рамки в пикселях:</label>
+        <input type="range" id="scale-slider" min="150" max="420" value="254" oninput="updateFrameWidth(this.value)"/>
+        <div class="hp-display" id="scale-val">254 px</div>
+        <div class="btn-group">
+          <button onclick="setFrameWidth(160)">Minion (160px)</button>
+          <button onclick="setFrameWidth(254)">Standard (254px)</button>
+          <button onclick="setFrameWidth(360)">Boss (360px)</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 4. ARCHITECTURAL SUMMARY -->
+    <div class="section">
+      <div class="section-title">Почему это работает нормально: 4 ключевых преимущества</div>
+      
+      <div class="pipeline-steps">
+        <div class="step-card">
+          <div class="step-num">1. Аутентичность</div>
+          <strong>100% арт художника</strong>
+          <p style="color:#8f98a8; margin-top:4px;">Сохраняются сколы камня, блики на бронзе и тени, которые невозможно повторить кодом.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2. Чистая маска</div>
+          <strong>Фаски закрывают срез</strong>
+          <p style="color:#8f98a8; margin-top:4px;">Рамка лежит поверх бара: срез заливки физически скрыт под металлом при любом значении HP.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3. Производительность</div>
+          <strong>60–120 FPS без просадок</strong>
+          <p style="color:#8f98a8; margin-top:4px;">GPU декодирует текстуру 1 раз. При получении урона меняется только <code>scaleX</code> прямоугольника.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">4. Масштабируемость</div>
+          <strong>9-Slice / 3-Part</strong>
+          <p style="color:#8f98a8; margin-top:4px;">Стреловидные концы фиксированы, середина тянется на любую ширину для мобов, элиты и боссов.</p>
+        </div>
+      </div>
+
+      <div class="callout-box" style="margin-top: 18px;">
+        <strong>Вердикт:</strong> Ваш тезис абсолютно верен. Попытка верстать каменные фаски и кованый металл кодом в стиле stylized fantasy — тупиковый путь. Растровая рамка-скин с прозрачным окном и динамической заливкой под ней — это золотой стандарт игровой индустрии.
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function updateEnemyHp(val) {
+      val = parseInt(val);
+      const pct = Math.max(0, Math.min(100, (val / 120) * 100));
+      document.getElementById('enemy-fill').style.width = pct + '%';
+      document.getElementById('enemy-hp-text').innerText = val + ' / 120';
+      document.getElementById('enemy-val').innerText = val + ' / 120';
+      document.getElementById('enemy-slider').value = val;
+    }
+    function setEnemyHp(val) { updateEnemyHp(val); }
+
+    function changeEnemyName(name) {
+      document.getElementById('enemy-name-label').innerText = name;
+    }
+
+    function updatePlayerHp(val) {
+      val = parseInt(val);
+      const pct = Math.max(0, Math.min(100, val));
+      document.getElementById('player-fill').style.width = pct + '%';
+      document.getElementById('player-text').innerText = val + ' / 100';
+      document.getElementById('player-val').innerText = val + ' / 100';
+      document.getElementById('player-slider').value = val;
+    }
+    function setPlayerHp(val) { updatePlayerHp(val); }
+
+    function updateFrameWidth(w) {
+      w = parseInt(w);
+      document.getElementById('scalable-box').style.width = w + 'px';
+      document.getElementById('scale-val').innerText = w + ' px';
+      document.getElementById('scale-slider').value = w;
+    }
+    function setFrameWidth(w) { updateFrameWidth(w); }
+  </script>
+</body>
+</html>

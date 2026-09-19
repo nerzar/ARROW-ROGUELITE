@@ -225,9 +225,10 @@ createServer(async (req, res) => {
     res.writeHead(404).end('not found')
   }
 }).listen(port, '127.0.0.1', () => {
-  console.log(`▶ Playable Prologue:  http://localhost:${port}/viewer/visual-proto/
-  Campaign Editor:    http://localhost:${port}/viewer/visual-proto/calibration-editor.html
-  core debug viewer:  http://localhost:${port}/viewer/index.html#preset=medium&seed=1
-  combat prologue:    http://localhost:${port}/viewer/cp-prologue.html
-  gray prologue:      http://localhost:${port}/viewer/prologue.html`)
+  console.log(`▶ Playable Prologue:      http://localhost:${port}/viewer/visual-proto/
+  HUD Approved Adaptation:http://localhost:${port}/viewer/hud-approved-adaptation.html
+  Campaign Editor:        http://localhost:${port}/viewer/visual-proto/calibration-editor.html
+  core debug viewer:      http://localhost:${port}/viewer/index.html#preset=medium&seed=1
+  combat prologue:        http://localhost:${port}/viewer/cp-prologue.html
+  gray prologue:          http://localhost:${port}/viewer/prologue.html`)
 })

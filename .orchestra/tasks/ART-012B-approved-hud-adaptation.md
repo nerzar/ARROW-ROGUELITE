@@ -25,7 +25,15 @@ BRANCH: art/ART-012B-approved-hud-adaptation
 
 ## RESULT / VERIFY / FOUND / STATUS
 
-- RESULT: Сгенерирован финальный production-ready скриншот `docs/visual-refs/hud/04-hud-approved-adaptation.png` (1280×720). Утверждённый стиль перенесён с нулевым искажением геометрии арены: центр внизу (булыжниковый пол и алтарный ромб) полностью открыт, Player HP компактно расположен в левом нижнем углу, блок Rotate + 2 Item Slots органично занял правый нижний угол, оба Dire Wolf получили аутентичные плашки таймеров и HP.
-- VERIFY: Проверено визуально через `view_file`. Изображение 100% аутентично live-скриншоту Moonlit Fortress, отсутствуют лишние служебные надписи, баннеры и RPG-мусор. Вся типографика и микро-детали (рубиновые блики, золотые фаски, светящиеся кристаллы) идеально читаемы.
-- FOUND: Перенос Rotate и слотов предметов в правый нижний угол разгружает центральную проекцию пазл-доски значительно лучше, чем центральное размещение кнопок, не конфликтуя со стрелками в нижней строке доски.
+- RESULT: Реализован канонический индустриальный пайплайн вырезанных рамок (Sliced Frame Overlay + Dynamic Health Fill):
+  1. Вырезаны и очищены прозрачные PNG-скины без запечённых цифр/заливок: `enemy-hp-frame.png`, 3-part модули (`enemy-hp-frame-left.png`, `enemy-hp-frame-mid.png`, `enemy-hp-frame-right.png`), `enemy-nameplate-skin.png`, `player-hp-bar-frame.png` (и его 3-part нарезка), `player-plate-sliced.png`, `crystal-active.png`, `crystal-empty.png`, `rotate-button.png`, `item-slot-bow.png`, `item-slot-frostdarts.png`.
+  2. Все динамические параметры (рубиновая заливка здоровья `0..100%`, числовые значения HP, имена мобов, бейджи таймеров `⏱ 3` / `⏱ 4`, кристаллы маны) рендерятся программно в 4-слойном сэндвиче (Track → Fill → Sliced Frame Overlay → Text).
+  3. Финальный production-ready скриншот `docs/visual-refs/hud/04-hud-approved-adaptation.png` (1280×720) обновлён с использованием аутентичных скинов.
+  4. Создан интерактивный стенд `spikes/arrow-core/viewer/hud-sliced-frame-demo.html` с живыми ползунками урона, сменой имён и динамическим тестом 9-slice масштабирования (от 160px до 360px) без искажения наконечников.
+- VERIFY:
+  1. Проверено визуально через `view_file` для `docs/visual-refs/hud/04-hud-approved-adaptation.png` и `docs/visual-refs/hud/05-hud-sliced-frame-demo.png`.
+  2. Проверено в живом браузере на локальном сервере `http://localhost:5177/viewer/hud-sliced-frame-demo.html` и `http://localhost:5177/viewer/hud-approved-adaptation.html`.
+  3. Рамки масштабируются без артефактов, наложение рамки поверх бара идеально маскирует край заливки под любым процентом HP.
+- FOUND: Вырезка растровых рамок в PNG с прозрачным внутренним окном и наложением поверх динамического бара полностью превосходит векторную верстку на CSS/Canvas — сохраняются 100% художественных сколов камня и металлических фасок, а 3-part нарезка (левый/правый кэп + растягиваемая середина) позволяет применять один и тот же ассет для миньонов, стандартных мобов и боссов.
 - STATUS: DONE
+

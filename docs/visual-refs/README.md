@@ -49,7 +49,10 @@
 | Файл | Описание |
 |---|---|
 | `approved-ui/approved-hud-reference.png` | Канонический утверждённый референс HUD-языка (из `magicarrowassets/gameplay-reference/hud-approved.png`) |
-| `hud/04-hud-approved-adaptation.png` | **Финальная адаптация (1280×720)**: утверждённый HUD на каноническом live screenshot (Moonlit Fortress) |
-| `docs/ART-012B-APPROVED-HUD-ADAPTATION.md` | Полный отчёт по архитектуре адаптации, компоновке и соблюдению ограничений |
+| `hud/04-hud-approved-adaptation.png` | **Финальная адаптация (1280×720)**: утверждённый HUD со sliced-скинами на каноническом live screenshot (Moonlit Fortress) |
+| `hud/05-hud-sliced-frame-demo.png` | Скриншот живого интерактивного пайплайна (Sliced Frame Overlay + Dynamic Health Fill + Scalable 9-Slice) |
+| `hud/skins/` | Набор чистых вырезанных рамок и элементов без запечённых цифр и полос (`enemy-hp-frame.png`, `player-hp-bar-frame.png`, и др.) |
+| `docs/ART-012B-APPROVED-HUD-ADAPTATION.md` | Полный отчёт по архитектуре адаптации, компоновке, пайплайну рамок и соблюдению ограничений |
+
 
 
