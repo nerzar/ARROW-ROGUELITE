@@ -136,3 +136,29 @@ body.clean .debug-panel { display: none !important; }
   border: 1px solid var(--panel-border); backdrop-filter: blur(6px); opacity: 0.75;
 }
 .admin-toggle:hover { opacity: 1; color: var(--ink); }
+
+/* ITEM-001: item bar + reward draft (placeholder look; ART-012/011 replace it). */
+.item-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; position: relative; }
+.item-slot { width: 66px; min-height: 44px; padding: 4px 4px; border-radius: 8px; border: 1px solid var(--panel-border); background: var(--panel); color: var(--ink); font: inherit; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.item-slot:hover:not(:disabled) { border-color: var(--accent); }
+.item-slot:disabled { cursor: default; opacity: 0.55; }
+.item-slot.empty { opacity: 0.35; }
+.item-slot.spent .item-pips { opacity: 0.5; }
+.item-slot .item-name { font-weight: 700; }
+.item-slot .item-pips { font-size: 10px; letter-spacing: 2px; color: var(--accent); }
+.item-ward { width: 100%; font-size: 11px; color: var(--accent); font-weight: 700; }
+.item-picker { position: absolute; left: 0; bottom: 52px; z-index: 5; background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 200px; backdrop-filter: blur(10px); }
+.item-picker-title { font-size: 12px; font-weight: 700; color: var(--ink-dim); }
+.item-picker button { font: inherit; font-size: 12px; padding: 6px 10px; border-radius: 8px; border: none; background: var(--accent); color: inherit; cursor: pointer; font-weight: 700; }
+.item-picker button.secondary-btn { background: transparent; border: 1px solid var(--panel-border); }
+.reward-draft h2 { margin: 0 0 10px; font-size: 20px; }
+.reward-row { display: flex; gap: 12px; justify-content: center; }
+.overlay .card .reward-card { width: 150px; margin: 0; min-height: 110px; border-radius: 12px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.04); color: var(--ink); font: inherit; padding: 12px 10px; cursor: pointer; text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; transition: transform 120ms, border-color 120ms; }
+.overlay .card .reward-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+.reward-card .reward-title { font-weight: 800; font-size: 16px; }
+.reward-card .reward-text { font-size: 12px; color: var(--ink-dim); }
+.reward-card.reward-heal .reward-title { color: #9fe870; }
+.reward-card.reward-rotate .reward-title { color: #ffd166; }
+.reward-note { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12px; align-items: center; }
+.reward-draft > .secondary-btn { margin-top: 12px; }
+.overlay .card .reward-note button { margin: 0; padding: 4px 8px; font-size: 12px; }
