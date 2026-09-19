@@ -135,6 +135,35 @@ STATUS: **AGREED FOR NOW**.
 
 Это важный принцип: моб создаёт давление и цену за неидеальное решение, но не обязан всегда быть обязательной целью для завершения уровня.
 
+### 7.1. Формально проходимо != хороший encounter
+
+STATUS: **AGREED FOR NOW**.
+
+Для обычного encounter недостаточно доказать только:
+
+> board можно очистить и игрок математически не умер.
+
+Нужна **осмысленная combat agency без расходуемого Rotate**.
+
+Плохой обычный encounter:
+- естественные направления дают, например, только 1–2 попадания;
+- эти попадания почти ничего не меняют;
+- ни одну приоритетную угрозу нельзя реально снять/сдержать;
+- после этого игрок просто дочищает puzzle и терпит enemy attacks.
+
+Такой уровень может быть технически WIN по правилу board-clear, но для content shortlist его нужно отклонять или переделывать.
+
+Rotate в обычном бою должен:
+- улучшать маршрут;
+- экономить HP/ходы;
+- открывать более выгодную цель;
+- создавать burst/combo;
+- исправлять неидеальную ситуацию.
+
+Он не должен обычно быть обязательной платой за право нормально взаимодействовать с encounter.
+
+Будущие оружие и active abilities считаются дополнительными решениями, а не костылём, которым заранее закрывают слабую базовую puzzle-композицию.
+
 ---
 
 ## 8. Два стандартных пути победы в encounter
@@ -240,7 +269,13 @@ STATUS: **AGREED FOR EXPLORATION**.
 ```text
 earliest hit to side: turn N
 hit availability by turn
+zero-Rotate meaningful hits by side/target
+zero-Rotate kill / disable / pressure-reduction reachability
 maximum forced gap between useful hits
+forced no-impact / face-tank turns after last meaningful hit
+wasted-projectile ratio
+branch-point / meaningful-choice count
+arrow count / effective topology density
 board-clear turn count
 expected / minimum damage from enemy timers along a path
 ```
@@ -249,9 +284,15 @@ expected / minimum damage from enemy timers along a path
 
 - путь, где моба можно убить до конца board;
 - путь, где моб остаётся жив и наносит урон, но board всё равно можно закончить;
-- путь, где игрок умирает раньше завершения encounter.
+- путь, где игрок умирает раньше завершения encounter;
+- путь, который формально выигрывается без Rotate, но практически не даёт содержательных боевых решений и превращается в face-tank;
+- насколько 1 Rotate реально улучшает результат относительно 0 Rotate.
+
+Для shortlist обычных encounter'ов **technical solvability и encounter quality — разные фильтры**.
 
 Первые уровни остаются hand-authored на выбранных seed'ах; бесконечный encounter-generator сейчас не нужен.
+
+По мере роста Act I отдельно тестируем puzzle density: больше стрелок, больше branch points, более витиеватая topology и более крупные board. Возможное сокращение средней длины стрел — рабочая гипотеза, а не принятое точное число.
 
 ---
 
