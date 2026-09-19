@@ -45,7 +45,7 @@ BOARD хранит не только одну текущую задачу, а **
 | ASSET-010 — Спрайты лут-цели | READY (арт пользователя) | `art/ASSET-010-loot-target-sprites` | species `loot-chest`, 5 поз под текущий пайплайн; заменяет гоблина-носильщика в «Обозе». |
 | ASSET-011 — Портрет героя | READY (арт пользователя) | `art/ASSET-011-hero-portrait` | portrait / portrait-hurt / full для HUD и reward-экранов. |
 | ASSET-012 — HUD-элементы: плашка волны, Rotate, пипсы, слот | READY после ART-012 | `art/ASSET-012-hud-elements` | Маленькие production-элементы под WAVE-001/ITEM-001. |
-| FIX-034 — Stone Pin / Matron | READY | `fix/FIX-034-matron-stone-pin-block` | На уровне с Матроной камень не блокирует стрелу как должен; воспроизвести и исправить без изменения правил Stone Pin. |
+| FIX-034 — Stone Pin / Matron | BLOCKED — AFTER GEMINI MERGE | `fix/FIX-034-matron-stone-pin-block` | Не запускать: нужный Matron/Stone Pin skill ещё не в main. После интеграции Gemini-ветки сначала воспроизвести баг на новом main, потом фиксить. Devin/Fable запускался на неверной базе. |
 | ART-011B — Approved Reward Reference Pass | READY | `art/ART-011B-approved-reward-reference` | Взять пользовательский `reward-approved.png`, положить его в канонические refs и сделать один cleaned-up reward mockup вместо свободного exploration. |
 
 Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
