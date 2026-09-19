@@ -42,6 +42,7 @@ BOARD хранит не только одну текущую задачу, а **
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
 | ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
+| FIX-036 — HUD-кард выезжает за рамки | READY | `fix/FIX-036-hud-card-overflow` | Одобренный HUD (BUILD-036) — карточка player/enemy выходит за пределы экрана в каком-то сценарии (пользователь сообщил, точный repro не зафиксирован). |
 | ART-011 — Reward Choice Screen Exploration | DONE / USER REVIEW | `art/ART-011-reward-choice-screen` | 4 варианта reward screen готовы; выбрать направление перед production-интеграцией. |
 | ASSET-009 — Иконки предметов v1 | READY (арт пользователя) | `art/ASSET-009-item-icons-v1` | 6 активных + 3 реликвии, 512 px, фиксированные пути под ITEM-001/002. |
 | ASSET-010 — Спрайты лут-цели | READY (арт пользователя) | `art/ASSET-010-loot-target-sprites` | species `loot-chest`, 5 поз под текущий пайплайн; заменяет гоблина-носильщика в «Обозе». |
