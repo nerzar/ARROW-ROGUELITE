@@ -6,9 +6,10 @@
 // designer cares about that the bare validator does not:
 //   - ammo per side vs enemy HP per side (structural killability at 0 Rotate);
 //   - min-damage line at 0 / 1 / 2 shared Rotate charges, and which enemies that line kills;
-//   - decision density: turns with a real choice, forced tail after the last hit, wasted taps.
+//   - decision density: turns with a real choice, forced tail after the last hit, wasted taps;
+//   - ITEM-002: `--kit <item,relic>` support so LD-008 can tune encounters against specific loadouts.
 //
-// usage: node tools/ld007-audit.mjs [campaigns/campaign.json] [--only act1] [--hp 10] [--budget N]
+// usage: node tools/ld007-audit.mjs [campaigns/campaign.json] [--only act1] [--hp 10] [--budget N] [--kit bow,shield]
 
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
@@ -16,7 +17,7 @@ import { resolve } from 'node:path'
 
 const here = resolve(new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
 const core = await import(pathToFileURL(resolve(here, '../dist/src/index.js')).href)
-const { generateLevel, BoardTopology, EncounterState, minDamageToWin, DIR_NAMES, analyzeSeed } = core
+const { generateLevel, BoardTopology, EncounterState, minDamageToWin, DIR_NAMES, analyzeSeed, ITEMS, RELICS } = core
 const { boardParamsFor } = await import(pathToFileURL(resolve(here, '../viewer/visual-proto/board-profiles.js')).href)
 const { ascii } = await import(pathToFileURL(resolve(here, './ld007-lib.mjs')).href)
 
@@ -33,6 +34,11 @@ const playerHp = Number(opt.hp ?? 10)
 const budget = Number(opt.budget ?? 3_000_000)
 const campaign = JSON.parse(readFileSync(file, 'utf8'))
 
+const kitArg = opt.kit ?? ''
+const kitTokens = kitArg.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+const kitItems = kitTokens.filter((id) => id in ITEMS).map((id) => ({ id, charges: ITEMS[id].charges }))
+const kitRelics = kitTokens.filter((id) => id in RELICS)
+
 const SIDE = { N: 0, E: 1, S: 2, W: 3, top: 0, right: 1, left: 3 }
 
 function normalizeDef(enc) {
@@ -45,9 +51,21 @@ function normalizeDef(enc) {
   return def
 }
 
+function makeInv() {
+  return kitItems.length > 0 ? { slots: kitItems.map((it) => ({ ...it })) } : null
+}
+
 /** Replay a line and collect designer metrics. */
 function lineMetrics(level, def, actions, hp, pool) {
-  const s = new EncounterState(BoardTopology.fromLevel(level), def, hp, pool ? { charges: pool } : null)
+  const s = new EncounterState(
+    BoardTopology.fromLevel(level),
+    def,
+    hp,
+    pool ? { charges: pool } : null,
+    hp,
+    makeInv(),
+    kitRelics,
+  )
   let taps = 0, hits = 0, misses = 0, forced = 0, choice = 0, lastHitTurn = 0, turn = 0
   const kills = []
   const enemyHp = () => (def.enemies ? s.enemies.map((e) => e.hp) : [s.hp])
@@ -66,8 +84,10 @@ function lineMetrics(level, def, actions, hp, pool) {
       const cur = enemyHp()
       cur.forEach((v, i) => { if (v <= 0 && prev[i] > 0) kills.push({ turn, who: def.enemies ? def.enemies[i].id : 'boss' }) })
       prev = cur
-    } else {
+    } else if (a.kind === 'rotate') {
       s.rotate(a.turn)
+    } else if (a.kind === 'item') {
+      s.useItem(a.id, a.target)
     }
   }
   return { taps, hits, misses, forced, choice, lastHitTurn, tail: taps - lastHitTurn, kills, dmgEvents, won: s.won, playerHp: s.playerHp }
@@ -98,17 +118,31 @@ function audit(stage) {
   }
   const wasted = an.dirCounts.reduce((s, c, d) => s + (targets.some((t) => t.side === d) ? 0 : c), 0)
   console.log(`  arrows pointing at NO target: ${wasted}/${an.arrows}`)
+  if (kitTokens.length > 0) {
+    console.log(`  kit: items=[${kitItems.map((it) => it.id).join(', ') || 'none'}] relics=[${kitRelics.join(', ') || 'none'}]`)
+  }
 
   for (const pool of [0, 1, 2]) {
     const usePool = !!def.rotate.useRunPool
     if (pool > 0 && !usePool) { console.log(`  Rotate ${pool}: (encounter has no run pool)`); break }
-    const start = new EncounterState(BoardTopology.fromLevel(level), def, playerHp, usePool ? { charges: pool } : null)
+    const start = new EncounterState(
+      BoardTopology.fromLevel(level),
+      def,
+      playerHp,
+      usePool ? { charges: pool } : null,
+      playerHp,
+      makeInv(),
+      kitRelics,
+    )
     const r = minDamageToWin(start, { nodeBudget: budget, maxRotates: pool })
     if (!r.win) { console.log(`  Rotate<=${pool}: NO WIN (proven ${r.proven})`); continue }
     const m = lineMetrics(level, def, r.sequence, playerHp, usePool ? pool : 0)
     const rot = r.sequence.filter((a) => a.kind === 'rotate').length
-    console.log(`  Rotate<=${pool}: minDmg ${r.minDamage}${r.proven ? '' : ' (unproven)'}  used ${rot}R  taps ${m.taps} hits ${m.hits} miss ${m.misses}  choiceTurns ${m.choice} forcedTurns ${m.forced}  lastHit t${m.lastHitTurn} tail ${m.tail}  kills [${m.kills.map((k) => `${k.who}@t${k.turn}`).join(', ')}]  enemyAttacks [${m.dmgEvents.map((d) => `t${d.turn}:-${d.dmg}`).join(' ')}]`)
-    if (pool === 0) console.log(`     line: ${r.sequence.map((a) => (a.kind === 'tap' ? `#${a.id}${DIR_NAMES[level.arrows[a.id].dir]}` : `R${a.turn > 0 ? 'cw' : 'ccw'}`)).join(' ')}`)
+    const itUses = r.sequence.filter((a) => a.kind === 'item').length
+    console.log(`  Rotate<=${pool}: minDmg ${r.minDamage}${r.proven ? '' : ' (unproven)'}  used ${rot}R${itUses ? ` ${itUses}items` : ''}  taps ${m.taps} hits ${m.hits} miss ${m.misses}  choiceTurns ${m.choice} forcedTurns ${m.forced}  lastHit t${m.lastHitTurn} tail ${m.tail}  kills [${m.kills.map((k) => `${k.who}@t${k.turn}`).join(', ')}]  enemyAttacks [${m.dmgEvents.map((d) => `t${d.turn}:-${d.dmg}`).join(' ')}]`)
+    if (pool === 0) {
+      console.log(`     line: ${r.sequence.map((a) => (a.kind === 'tap' ? `#${a.id}${DIR_NAMES[level.arrows[a.id].dir]}` : a.kind === 'rotate' ? `R${a.turn > 0 ? 'cw' : 'ccw'}` : `Item(${a.id}${a.target !== undefined ? `->${DIR_NAMES[a.target]}` : ''})`)).join(' ')}`)
+    }
   }
   console.log()
 }

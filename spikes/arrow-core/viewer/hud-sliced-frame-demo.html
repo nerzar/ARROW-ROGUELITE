@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>HUD Sliced Frame Pipeline (Game-Ready Asset Pipeline)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Marcellus&family=Inter:wght@400;600;700;800;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at center, #151a24 0%, #06080c 100%);
+    font-family: 'Inter', sans-serif;
+    color: #e2d9cd;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 26px;
+    color: #ffdf7a;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+  }
+
+  p.subtitle {
+    font-size: 14px;
+    color: #a39b8e;
+    margin-bottom: 30px;
+    max-width: 840px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .nav-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .nav-link {
+    color: #ffd76a;
+    text-decoration: none;
+    background: #181d26;
+    border: 1px solid #3d475c;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+  .nav-link:hover {
+    background: #2b3547;
+    border-color: #ffd76a;
+  }
+
+  .demo-container {
+    width: 940px;
+    background: rgba(14, 18, 26, 0.95);
+    border: 1.5px solid #3c4252;
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.1);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+  }
+
+  .section {
+    border-bottom: 1px solid #232733;
+    padding-bottom: 30px;
+  }
+  .section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 17px;
+    color: #e5be6b;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #2b394f;
+    color: #79c0ff;
+    border: 1px solid #41597a;
+  }
+
+  .preview-stage {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: #090c12 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" opacity="0.05"><rect width="10" height="10" fill="white"/><rect x="10" y="10" width="10" height="10" fill="white"/></svg>');
+    border: 1px solid #222733;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: inset 0 4px 16px rgba(0,0,0,0.8);
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: #0f131a;
+    padding: 12px 18px;
+    border-radius: 8px;
+    border: 1px solid #242938;
+  }
+
+  .controls-row label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #c9c0b3;
+    min-width: 170px;
+  }
+
+  .controls-row input[type=range] {
+    flex: 1;
+    cursor: pointer;
+    accent-color: #e63946;
+  }
+
+  .controls-row .hp-display {
+    font-family: Georgia, serif;
+    font-size: 15px;
+    font-weight: 900;
+    color: #ff6b6b;
+    min-width: 90px;
+    text-align: right;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 8px;
+  }
+  button {
+    background: #1c2331;
+    border: 1px solid #3e4a63;
+    color: #e2d9cd;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button:hover {
+    background: #2b3952;
+    border-color: #ffd76a;
+    color: #ffd76a;
+  }
+  button.active {
+    background: #8f2d1e;
+    border-color: #ff6060;
+    color: #ffffff;
+  }
+
+  /* ========================================================
+     1. ENEMY FRAME ASSEMBLY
+     ======================================================== */
+  .enemy-hud-box {
+    position: relative;
+    width: 320px;
+    height: 92px;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.9));
+  }
+  .enemy-name-text {
+    position: absolute;
+    top: 19%;
+    left: 28%;
+    width: 44%;
+    text-align: center;
+    font-family: Georgia, serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 2px #000, 0 0 5px #000, 1px 1px 1px #000;
+    z-index: 4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .enemy-timer-badge {
+    position: absolute;
+    top: 14%;
+    right: 18%;
+    height: 32%;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(50, 16, 12, 0.9);
+    border: 1px solid #d75a32;
+    border-radius: 3px;
+    padding: 0 5px;
+    box-shadow: 0 0 6px rgba(215, 90, 50, 0.4);
+    z-index: 4;
+  }
+  .enemy-clock-icon {
+    width: 9px;
+    height: 9px;
+    border: 1.5px solid #ffbe8c;
+    border-radius: 50%;
+    position: relative;
+  }
+  .enemy-clock-icon::after {
+    content: '';
+    position: absolute;
+    top: 1px; left: 3px;
+    width: 2px; height: 3px;
+    border-left: 1.5px solid #ffbe8c;
+    border-bottom: 1.5px solid #ffbe8c;
+  }
+  .enemy-timer-num {
+    font-family: Georgia, serif;
+    font-size: 11px;
+    font-weight: 900;
+    color: #ffbe8c;
+  }
+
+  .enemy-track-bg {
+    position: absolute;
+    left: 6%;
+    top: 66%;
+    width: 88%;
+    height: 22%;
+    background: #080a0f;
+    clip-path: polygon(0 50%, 18px 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 18px 100%);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.95);
+    z-index: 1;
+  }
+  .enemy-fill-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(180deg, #ff6060 0%, #db2323 45%, #8f0d0d 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: width 0.25s ease-out;
+  }
+  .enemy-skin-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .enemy-hp-value {
+    position: absolute;
+    left: 6%;
+    top: 65%;
+    width: 88%;
+    height: 24%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    font-size: 13.5px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 2px #000, 0 0 6px #000, 1px 1px 2px #000, -1px -1px 2px #000;
+    z-index: 4;
+  }
+
+  /* ========================================================
+     2. PLAYER HUD ASSEMBLY
+     ======================================================== */
+  .player-demo-box {
+    position: relative;
+    width: 380px;
+    height: 135px;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.95));
+  }
+  .player-demo-track {
+    position: absolute;
+    left: 44.5%;
+    top: 41%;
+    width: 39.5%;
+    height: 17.5%;
+    background: #080d14;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.95);
+    z-index: 1;
+  }
+  .player-demo-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    background: linear-gradient(180deg, #ff5e5e 0%, #ee2727 45%, #9e0f0f 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: width 0.25s ease-out;
+  }
+  .player-demo-skin {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .player-demo-text {
+    position: absolute;
+    left: 44.5%;
+    top: 40%;
+    width: 39.5%;
+    height: 18%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    font-size: 13.5px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 2px #000, 0 0 6px #000, 1px 1px 1px #000, -1px -1px 1px #000;
+    z-index: 4;
+  }
+  .demo-gem {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    filter: drop-shadow(0 0 8px #00b4d8);
+    transition: opacity 0.25s, transform 0.25s;
+  }
+  .demo-gem img { width: 100%; height: 100%; }
+  .demo-gem-1 { left: 50.2%; top: 72.7%; }
+  .demo-gem-2 { left: 59.5%; top: 73.6%; }
+  .demo-gem-3 { left: 68.8%; top: 74.5%; opacity: 0; }
+
+  /* ========================================================
+     3. 3-PART 9-SLICE SCALABLE FRAME
+     ======================================================== */
+  .scalable-frame-box {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 36px;
+    transition: width 0.2s ease-out;
+  }
+  .cap-left {
+    width: 24px;
+    height: 36px;
+    background-image: url('assets/hud/enemy-hp-frame-left.png');
+    background-size: 24px 36px;
+    flex-shrink: 0;
+    z-index: 3;
+  }
+  .cap-mid {
+    flex: 1;
+    height: 36px;
+    background-image: url('assets/hud/enemy-hp-frame-mid.png');
+    background-repeat: repeat-x;
+    background-size: 16px 36px;
+    z-index: 3;
+  }
+  .cap-right {
+    width: 24px;
+    height: 36px;
+    background-image: url('assets/hud/enemy-hp-frame-right.png');
+    background-size: 24px 36px;
+    flex-shrink: 0;
+    z-index: 3;
+  }
+  .scalable-track {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+    right: 8px;
+    height: 22px;
+    background: #080a0f;
+    clip-path: polygon(0 50%, 14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%);
+    z-index: 1;
+  }
+  .scalable-fill {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+    height: 22px;
+    background: linear-gradient(180deg, #ff6060 0%, #db2323 45%, #8f0d0d 100%);
+    clip-path: polygon(0 50%, 14px 0, 100% 0, 100% 100%, 14px 100%);
+    transition: width 0.25s ease-out;
+    z-index: 2;
+  }
+  .scalable-text {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif;
+    font-size: 13px; font-weight: 900; color: #ffffff;
+    text-shadow: 0 1px 2px #000, 0 0 6px #000;
+    z-index: 4;
+  }
+
+  /* ========================================================
+     4. ARCHITECTURE CALLOUT
+     ======================================================== */
+  .callout-box {
+    background: #111622;
+    border-left: 4px solid #ffd76a;
+    border-radius: 4px;
+    padding: 16px 20px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #c9c0b3;
+  }
+  .callout-box strong { color: #ffdf7a; }
+  .pipeline-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .step-card {
+    background: #171d2b;
+    border: 1px solid #29344a;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 12px;
+  }
+  .step-num {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 900;
+    color: #79c0ff;
+    margin-bottom: 4px;
+  }
+
+</style>
+</head>
+<body>
+
+  <h1>HUD Sliced Frame Pipeline (Анализ & Живая Демонстрация)</h1>
+  <p class="subtitle">
+    Ответ на вопрос: <em>«Мы наверное эту рамку можем не верстать, а просто вырезать и на неё ХП накладывать? Будет ли это нормально работать?»</em><br>
+    <strong>Да! Это канонический индустриальный пайплайн (Sliced Frame Overlay + Dynamic Health Fill). Ниже показано, как это работает в браузере с живыми ползунками урона и сменой состояний.</strong>
+  </p>
+
+  <div class="nav-bar">
+    <a class="nav-link" href="hud-approved-adaptation.html">← Перейти к полному каноническому экрану (1280×720)</a>
+    <a class="nav-link" href="visual-proto/">🎮 Перейти в Playable Prototype</a>
+  </div>
+
+  <div class="demo-container">
+
+    <!-- 1. ENEMY FRAME DEMO -->
+    <div class="section">
+      <div class="section-title">
+        1. Вражеская плашка и рамка (вырезаны из Master Cutouts)
+        <span class="badge">100% Арт из Референса · 0 запечённых цифр</span>
+      </div>
+
+      <div class="preview-stage">
+        <div class="enemy-hud-box">
+          <span class="enemy-name-text" id="enemy-name">Dire Wolf</span>
+          <div class="enemy-timer-badge">
+            <div class="enemy-clock-icon"></div>
+            <span class="enemy-timer-num" id="enemy-timer">3</span>
+          </div>
+
+          <div class="enemy-track-bg">
+            <div class="enemy-fill-bar" id="enemy-fill" style="width: 100%;"></div>
+          </div>
+          <div class="enemy-hp-value" id="enemy-hp-text">3 / 3</div>
+          <img class="enemy-skin-img" id="enemy-skin" src="assets/hud/enemy-plate-standard-hollow.png" alt="Enemy Plate Skin"/>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <label>Интерактивный урон врагу:</label>
+        <input type="range" id="enemy-slider" min="0" max="3" value="3" step="1" oninput="updateEnemyHp(this.value)"/>
+        <div class="hp-display" id="enemy-val">3 / 3</div>
+        <div class="btn-group">
+          <button onclick="setEnemyHp(3)">Full (3/3)</button>
+          <button onclick="setEnemyHp(2)">Hit 1 (2/3)</button>
+          <button onclick="setEnemyHp(1)">Low (1/3)</button>
+          <button onclick="setEnemyHp(0)">0 (Dead)</button>
+        </div>
+      </div>
+
+      <div class="controls-row" style="margin-top: 10px;">
+        <label>Тип плашки и моб:</label>
+        <button id="btn-std" class="active" onclick="setEnemySkin('std')">Стандартный моб (Dire Wolf)</button>
+        <button id="btn-boss" onclick="setEnemySkin('boss')">Босс / Элита (Gilded Frame)</button>
+        <span style="color:#5f6d85;">|</span>
+        <button onclick="changeTimer(3)">⏱ 3</button>
+        <button onclick="changeTimer(4)">⏱ 4</button>
+        <button onclick="changeTimer(1)">⏱ 1 (Danger)</button>
+      </div>
+    </div>
+
+
+    <!-- 2. PLAYER HUD DEMO -->
+    <div class="section">
+      <div class="section-title">
+        2. Player HUD (вырезан из Master Cutout)
+        <span class="badge">Каменная плита + Слот HP + Сердце + Кристаллы маны</span>
+      </div>
+
+      <div class="preview-stage">
+        <div class="player-demo-box">
+          <div class="player-demo-track">
+            <div class="player-demo-fill" id="player-fill" style="width: 100%;"></div>
+          </div>
+          <div class="player-demo-text" id="player-text">10 / 10</div>
+          <div class="demo-gem demo-gem-1" id="gem-1"><img src="assets/hud/crystal-active.png"/></div>
+          <div class="demo-gem demo-gem-2" id="gem-2"><img src="assets/hud/crystal-active.png"/></div>
+          <div class="demo-gem demo-gem-3" id="gem-3"><img src="assets/hud/crystal-active.png"/></div>
+          <img class="player-demo-skin" src="assets/hud/player-plate-hollow.png" alt="Player Plate Skin"/>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <label>Интерактивное здоровье героя:</label>
+        <input type="range" id="player-slider" min="0" max="10" value="10" step="1" oninput="updatePlayerHp(this.value)"/>
+        <div class="hp-display" id="player-val">10 / 10</div>
+        <div class="btn-group">
+          <button onclick="setPlayerHp(10)">Full (10/10)</button>
+          <button onclick="setPlayerHp(7)">7/10</button>
+          <button onclick="setPlayerHp(3)">Danger (3/10)</button>
+          <button onclick="setPlayerHp(0)">0 (Defeat)</button>
+        </div>
+      </div>
+
+      <div class="controls-row" style="margin-top: 10px;">
+        <label>Заряды кристаллов маны:</label>
+        <button onclick="setCrystals(3)">3 кристалла (Max)</button>
+        <button class="active" id="btn-c2" onclick="setCrystals(2)">2 кристалла (Канон)</button>
+        <button onclick="setCrystals(1)">1 кристалл</button>
+        <button onclick="setCrystals(0)">0 кристаллов (Пусто)</button>
+      </div>
+    </div>
+
+
+    <!-- 3. SCALABILITY (9-SLICE / 3-PART SLICING) -->
+    <div class="section">
+      <div class="section-title">
+        3. Проверка масштабирования рамки (Scalable 9-Slice / 3-Part)
+        <span class="badge">Без искажения наконечников</span>
+      </div>
+
+      <div class="preview-stage">
+        <div class="scalable-frame-box" id="scalable-box" style="width: 254px;">
+          <div class="scalable-track"></div>
+          <div class="scalable-fill" style="width: 80%;"></div>
+          <div class="cap-left"></div>
+          <div class="cap-mid"></div>
+          <div class="cap-right"></div>
+          <div class="scalable-text">Scalable Bar (80%)</div>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <label>Ширина рамки в пикселях:</label>
+        <input type="range" id="scale-slider" min="150" max="420" value="254" oninput="updateFrameWidth(this.value)"/>
+        <div class="hp-display" id="scale-val">254 px</div>
+        <div class="btn-group">
+          <button onclick="setFrameWidth(160)">Minion (160px)</button>
+          <button onclick="setFrameWidth(254)">Standard (254px)</button>
+          <button onclick="setFrameWidth(360)">Boss (360px)</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 4. ARCHITECTURAL SUMMARY -->
+    <div class="section">
+      <div class="section-title">
+        4. Архитектура сэндвича (Layer Sandwich Pipeline)
+      </div>
+
+      <div class="callout-box">
+        <strong>Почему вырезанные растровые рамки (PNG-скины с прозрачным окном) превосходят Canvas/CSS верстку:</strong><br>
+        1. <strong>100% сохранение художественного стиля:</strong> Все сколы сланца, металлические фаски, текстуры бронзы и рубиновые блики сохраняются в неизменном виде без геометрических упрощений.<br>
+        2. <strong>Нулевая нагрузка на CPU/GPU:</strong> Браузер не вычисляет сложные SVG/Canvas фильтры каждый кадр — статичный растровый оверлей кэшируется на GPU как один спрайт.<br>
+        3. <strong>Идеальное маскирование края HP:</strong> Поскольку рамка лежит <em>поверх</em> бара, граница убывающей заливки всегда заходит под скос металлической фаски, исключая любые визуальные зазоры и щели.
+      </div>
+
+      <div class="pipeline-steps">
+        <div class="step-card">
+          <div class="step-num">Слой 1: Track</div>
+          Тёмная выемка в сланце/металле со скошенными углами (clip-path). Создаёт эффект глубокого паза.
+        </div>
+        <div class="step-card">
+          <div class="step-num">Слой 2: Dynamic Fill</div>
+          Рубиновый градиент с верхним бликом. Регулируется CSS-свойством <code>width: 0..100%</code>.
+        </div>
+        <div class="step-card">
+          <div class="step-num">Слой 3: Sliced Frame</div>
+          Прозрачный PNG-скин с вырезанным внутренним окном. Накладывается поверх бара.
+        </div>
+        <div class="step-card">
+          <div class="step-num">Слой 4: Live Data</div>
+          Векторный текст HP, имя моба и бейдж таймера с четкой тенью для 100% читаемости на любой арене.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let maxEnemyHp = 3;
+
+    function updateEnemyHp(val) {
+      val = parseInt(val);
+      const pct = (val / maxEnemyHp) * 100;
+      document.getElementById('enemy-fill').style.width = pct + '%';
+      document.getElementById('enemy-hp-text').textContent = `${val} / ${maxEnemyHp}`;
+      document.getElementById('enemy-val').textContent = `${val} / ${maxEnemyHp}`;
+      document.getElementById('enemy-slider').value = val;
+    }
+
+    function setEnemyHp(val) {
+      updateEnemyHp(val);
+    }
+
+    function setEnemySkin(type) {
+      const skinImg = document.getElementById('enemy-skin');
+      const nameEl = document.getElementById('enemy-name');
+      const btnStd = document.getElementById('btn-std');
+      const btnBoss = document.getElementById('btn-boss');
+
+      if (type === 'boss') {
+        skinImg.src = 'assets/hud/enemy-plate-boss-hollow.png';
+        nameEl.textContent = 'Alpha Wolf';
+        maxEnemyHp = 8;
+        btnBoss.classList.add('active');
+        btnStd.classList.remove('active');
+      } else {
+        skinImg.src = 'assets/hud/enemy-plate-standard-hollow.png';
+        nameEl.textContent = 'Dire Wolf';
+        maxEnemyHp = 3;
+        btnStd.classList.add('active');
+        btnBoss.classList.remove('active');
+      }
+      document.getElementById('enemy-slider').max = maxEnemyHp;
+      setEnemyHp(maxEnemyHp);
+    }
+
+    function changeTimer(num) {
+      document.querySelector('.enemy-timer-num').textContent = num;
+    }
+
+    function updatePlayerHp(val) {
+      val = parseInt(val);
+      const pct = (val / 10) * 100;
+      document.getElementById('player-fill').style.width = pct + '%';
+      document.getElementById('player-text').textContent = `${val} / 10`;
+      document.getElementById('player-val').textContent = `${val} / 10`;
+      document.getElementById('player-slider').value = val;
+    }
+
+    function setPlayerHp(val) {
+      updatePlayerHp(val);
+    }
+
+    function setCrystals(count) {
+      document.getElementById('gem-1').style.opacity = count >= 1 ? '1' : '0';
+      document.getElementById('gem-2').style.opacity = count >= 2 ? '1' : '0';
+      document.getElementById('gem-3').style.opacity = count >= 3 ? '1' : '0';
+    }
+
+    function updateFrameWidth(w) {
+      document.getElementById('scalable-box').style.width = w + 'px';
+      document.getElementById('scale-val').textContent = w + ' px';
+      document.getElementById('scale-slider').value = w;
+    }
+
+    function setFrameWidth(w) {
+      updateFrameWidth(w);
+    }
+  </script>
+</body>
+</html>

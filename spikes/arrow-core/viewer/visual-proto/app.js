@@ -4,11 +4,12 @@
 // 16:9 desktop shell: board-renderer.js draws the board/targets, this file owns scene loading,
 // input, HUD DOM, and the win/loss overlay. No combat rule is duplicated here.
 import {
-  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, ITEMS, PRESETS, RunState, validateEncounter,
+  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, ITEMS, PRESETS, RELICS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
+import { abilityIntroHint } from './ability-hud.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
 import { resolveActiveSceneKey } from './scene-sync.js'
 import { loadCampaign, convertLevelToStep } from './campaign-model.js'
@@ -28,7 +29,8 @@ const ui = {
   stage: $('stage'), bgLayer: $('bgLayer'), scenePick: $('scenePick'), sceneTitle: $('sceneTitle'),
   restartBtn: $('restartBtn'), hintBtn: $('hintBtn'), debugToggle: $('debugToggle'), debugPanel: $('debugPanel'),
   msgLine: $('msgLine'), canvas: $('arena'), status: $('status'), log: $('log'), report: $('report'),
-  playerCard: $('playerCard'), playerHpFill: $('playerHpFill'), playerHpText: $('playerHpText'),
+  playerCard: $('playerCard'), playerHudSkin: $('playerHudSkin'), playerHpFill: $('playerHpFill'), playerHpText: $('playerHpText'), playerCharges: $('playerCharges'),
+  rotateSkin: $('rotateSkin'),
   rotCw: $('rotCw'), rotCcw: $('rotCcw'), rotateCharges: $('rotateCharges'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
@@ -83,10 +85,12 @@ const wolfPosesLoaded = ENEMY_POSES.filter((p) => wolfPack[p]).length
 applyDomAssets(assets)
 
 const runConfig = await fetchJson('../../encounters/cp-run-config.json').catch(() => ({ playerMaxHp: 10 }))
-// ITEM-001 debug: `?items=bow,shield` starts every run with those items (playtest shortcut, no effect otherwise).
+// ITEM-001/002 debug: `?items=bow,shield&relics=safety_fuse` starts every run with those items/relics (playtest shortcut).
 {
   const q = new URLSearchParams(location.search).get('items')
   if (q) runConfig.startingItems = q.split(',').map((x) => x.trim()).filter((x) => x in ITEMS)
+  const qr = new URLSearchParams(location.search).get('relics')
+  if (qr) runConfig.startingRelics = qr.split(',').map((x) => x.trim()).filter((x) => x in RELICS)
 }
 // ITEM-001: item bar (placeholder look) under the player card; the reward draft lives in the overlay.
 const itemBar = createItemBar(document.querySelector('.hud-left'), {
@@ -348,7 +352,7 @@ function loadActiveStep() {
   buildBossPoseButtons()
   buildWolfPoseButtons()
   targetsBefore = renderer.collectTargets(run.encounter, def)
-  const hasAbility = def.enemies?.some((e) => e.ability)
+  const abilityHint = abilityIntroHint((def.enemies ?? []).filter((e) => e.ability).map((e) => e.ability.kind))
   // STORY-001: scripted-flee intro — the encounter opens with an unkillable guest. Generic:
   // any enemy carrying `flee` announces itself, so the next such event needs no new code.
   const fleeGuests = (def.enemies ?? []).filter((e) => e.flee)
@@ -358,7 +362,7 @@ function loadActiveStep() {
   ui.msgLine.textContent = def.enemies
     ? `На арене: ${run.encounter.enemies.filter((e) => !e.pending).map((e) => e.label ?? e.id).join(', ') || 'ожидание волны'}.` +
       (def.enemies.some((e) => e.arrival) ? ' Следующие враги указаны над свободными подиумами.' : '') +
-      (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '') + fleeIntro
+      abilityHint + fleeIntro
     : `Цель: ${def.boss?.id ?? 'boss'}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
   ui.report.textContent = formatEncounterReport(rep)
@@ -377,12 +381,10 @@ function applyDomAssets(store) {
     $('boardFrame').style.backgroundPosition = 'center'
     $('boardFrame').style.backgroundRepeat = 'no-repeat'
   }
-  if (store.playerPortrait) {
-    ui.playerCard.style.backgroundImage = `url(${store.playerPortrait.src})`
-    ui.playerCard.style.backgroundSize = 'cover'
-    ui.playerCard.style.backgroundPosition = 'center top'
-    ui.playerCard.classList.add('has-portrait') // CSS applies the blend mode
-  }
+  // BUILD-036: the approved player/Rotate PNGs are shown whole and unmodified. Portrait and
+  // decorative diamonds belong to the player skin; live HP/charge state remains separate DOM.
+  if (store.playerHudFrame && ui.playerHudSkin) ui.playerHudSkin.src = store.playerHudFrame.src
+  if (store.rotateButton && ui.rotateSkin) ui.rotateSkin.src = store.rotateButton.src
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -439,6 +441,10 @@ function tap(id) {
   const defAtTap = def
   const wolfMap = wolfVisuals
   const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
+  // PRESENT-001: a healer visibly casts (attack pose for the standard hold) when its heal
+  // resolves -- the spark + green popup are stamped in the renderer, the pose lives here
+  // with the other per-actor gameplay -> presentation events.
+  const healedBy = new Set((r.healed ?? []).map((h) => h.id))
   const fireImpact = () => {
     if (!run || run.encounter !== enc || def !== defAtTap) return
     renderer.markDeaths(before, after)
@@ -454,6 +460,7 @@ function tap(id) {
         if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
         else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
         else if (r.hit && before.find((b) => b.id === e.id && !b.pending && !b.dead && !b.fled)?.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+        else if (healedBy.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
       }
       tickAndSyncWolves(now)
     }
@@ -474,6 +481,16 @@ function tap(id) {
   }
   if (r.hit) setTimeout(fireImpact, FLIGHT_MS)
   else fireImpact()
+  // PRESENT-001: loot reward toast on the player card, arrival-synced like the death
+  // visuals (a kill always comes with a hit, but stay correct if that ever changes).
+  if (r.rewards && r.rewards.length) {
+    const lootHeal = r.rewards.reduce((a, w) => a + (w.heal ?? 0), 0)
+    const lootRotate = r.rewards.reduce((a, w) => a + (w.rotate ?? 0), 0)
+    if (lootHeal > 0 || lootRotate > 0) {
+      if (r.hit) setTimeout(() => { if (run && run.encounter === enc && def === defAtTap) flashPlayerHeal(lootHeal, lootRotate) }, FLIGHT_MS)
+      else flashPlayerHeal(lootHeal, lootRotate)
+    }
+  }
 
   let text = `#${id} ${r.hit ? 'попадание' : 'мимо'} · HP целей ${s.hp}/${s.totalHp}`
   if (r.enemyAttacked) {
@@ -608,6 +625,8 @@ function useItem(id, target) {
   if (r.hit) text += ` · попадание (${r.hitDamage}) · HP целей ${s.hp}/${s.totalHp}`
   if (id === 'shield') text += ` · щит ${s.wardHp}`
   if (id === 'health_flask') text += ` · HP игрока ${s.playerHp}`
+  if (id === 'war_horn') text += ` · War Horn активен (+1 к следующей стреле)`
+  if (id === 'frost_dart') text += ` · таймер цели +2`
   if (r.enemyAttacked) {
     text += ` · ВРАГ АТАКУЕТ (HP игрока ${r.playerHp})`
     flashPlayerHit()
@@ -641,6 +660,27 @@ function flashPlayerHit() {
   ui.stage.classList.add('hit-flash')
   setTimeout(() => ui.stage.classList.remove('hit-flash'), 260) // animation has no fill-mode: forwards, so it must be removed explicitly or it freezes at opacity 1
   ui.playerCard.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }], { duration: 220 })
+}
+
+// PRESENT-001: loot kill reward lands on the player -- a green pulse on the player card
+// plus a floating "+N HP / +M R" toast. DOM-only (WAAPI + inline styles, no CSS file
+// change); the matching burst + popup at the victim's slot lives in the renderer.
+function flashPlayerHeal(heal, rotate) {
+  const parts = []
+  if (heal > 0) parts.push(`+${heal} HP`)
+  if (rotate > 0) parts.push(`+${rotate} R`)
+  if (!parts.length || !ui.playerCard?.animate) return
+  ui.playerCard.animate(
+    [{ transform: 'scale(1)', boxShadow: '0 0 0 rgba(16,185,129,0)' }, { transform: 'scale(1.04)', boxShadow: '0 0 18px rgba(16,185,129,0.9)' }, { transform: 'scale(1)', boxShadow: '0 0 0 rgba(16,185,129,0)' }],
+    { duration: 600 },
+  )
+  const toast = document.createElement('div')
+  toast.textContent = parts.join('  ')
+  toast.style.cssText = 'position:absolute;left:8px;top:-6px;z-index:5;pointer-events:none;font:800 15px system-ui;color:#bbf7d0;text-shadow:0 1px 2px #14532d, 0 0 8px rgba(16,185,129,.8);'
+  if (getComputedStyle(ui.playerCard).position === 'static') ui.playerCard.style.position = 'relative'
+  ui.playerCard.append(toast)
+  toast.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-26px)', opacity: 0 }], { duration: 1200, easing: 'ease-out' }).onfinish = () => toast.remove()
+  setTimeout(() => toast.remove(), 1400)
 }
 
 function setMsg(text, bad) {
@@ -792,6 +832,9 @@ function renderPanel() {
   ui.playerHpFill.style.width = `${Math.max(0, (hp / max) * 100)}%`
   ui.playerHpFill.classList.toggle('low', hp / max <= 0.3)
   ui.playerHpText.textContent = `${hp}/${max}`
+  const chargeSlots = [...(ui.playerCharges?.querySelectorAll('.charge-diamond') ?? [])]
+  chargeSlots.forEach((slot, index) => slot.classList.toggle('filled', index < s.rotateCharges))
+  if (ui.playerCharges) ui.playerCharges.setAttribute('aria-label', `${s.rotateCharges} Rotate charges`)
   ui.rotCw.disabled = !s.canRotate(1) || def.rotate.allow.length === 0
   ui.rotCcw.disabled = !s.canRotate(-1) || def.rotate.allow.length === 0
   ui.rotCw.style.visibility = def.rotate.allow.includes(1) ? 'visible' : 'hidden'
@@ -799,7 +842,8 @@ function renderPanel() {
   // RUN-001: the count is pool-backed for post-prologue encounters (EncounterState reports the
   // live shared pool via the same getter), encounter-local otherwise. At 0 the buttons stay
   // visible but disabled (disabled comes from canRotate below); the label always shows the count.
-  ui.rotateCharges.textContent = def.rotate.allow.length === 0 ? '' : `Rotate ×${s.rotateCharges}`
+  ui.rotateCharges.textContent = `×${s.rotateCharges}`
+  document.querySelector('.rotate-controls')?.classList.toggle('is-hidden', def.rotate.allow.length === 0)
   itemBar.render(run)
   const statusLines = [
     `${def.title ?? def.id}`,
@@ -1111,6 +1155,7 @@ window.visualDebug = {
     return wolfVisuals?.get(id) ?? null
   },
   layout: () => renderer.debugLayout(), // VIS-007: per-frame arena layout (canvas coords)
+  fx: (key) => renderer.debugFx(key), // PRESENT-001: per-target ability fx stamps (debug/QA)
   // BUILD-035: live projectile shots + hit-anchors (debug/QA only -- no gameplay effect).
   shots: () => renderer.debugShots(),
   anchors: () => renderer.debugAnchors(),

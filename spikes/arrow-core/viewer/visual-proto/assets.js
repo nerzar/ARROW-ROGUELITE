@@ -28,6 +28,12 @@ export const ASSET_MANIFEST = {
   magicProjectile: 'assets/magic-projectile.png',
   castGlow: 'assets/cast-glow.png',
   hitFx: 'assets/hit-fx.png',
+  // BUILD-036: approved HUD PNGs are the production skins. The renderer draws the full source
+  // images unchanged, then layers live names, timers, HP fills/numbers and charges over them.
+  enemyHudFrame: 'assets/hud/enemy-hud-frame-approved.png',
+  bossHudFrame: 'assets/hud/boss-hud-frame-approved.png',
+  playerHudFrame: 'assets/hud/player-hud-frame-approved.png',
+  rotateButton: 'assets/hud/rotate-button-approved.png',
 }
 
 // VIS-005: Goblin Taunter/King runtime pack -- one PNG per presentation pose (canonical source:

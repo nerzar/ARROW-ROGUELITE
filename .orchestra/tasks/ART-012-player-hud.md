@@ -55,7 +55,7 @@ Mockups/references в ветке + короткое объяснение вар�
 
 ## RESULT / VERIFY / FOUND / STATUS
 
-- RESULT: —
-- VERIFY: —
-- FOUND: —
-- STATUS: READY
+- RESULT: Подготовлены 3 сильных HUD-направления поверх неизменяемой композиции live screenshot (Moonlit Fortress 1280×720), переносящие утверждённый язык ART-010/010B (Player HP, 1 Active Item Slot, Rotate chip/buttons с пипсами, компактные Enemy Plates). Создан сравнительный борд `docs/visual-refs/hud/00-hud-comparison-board.png` и отчёт `docs/ART-012-PLAYER-HUD-EXPLORATION.md` с анализом и явной рекомендацией (Вариант 1: Moonlit Bronze).
+- VERIFY: Проверены глазами все 3 полноразмерных мокапа (1280×720) и сравнительный борд (1920×1080). Арена, борд, стрелки и расположение врагов сохранены на 100%. Читаемость ресурсов, контраст на ночной сцене и компактность подтверждены.
+- FOUND: Объединённый Rotate Dock из Варианта 2 показал высокую эргономику для PC; при финальной имплементации можно перенять эту компоновку в бронзовом материале Варианта 1.
+- STATUS: DONE
