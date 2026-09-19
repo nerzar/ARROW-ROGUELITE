@@ -474,6 +474,10 @@ function tap(id) {
   if (r.shieldConsumed && r.shieldConsumed.length) text += ` · SHIELD BLOCKED: ${r.shieldConsumed.map((x) => x.id).join(', ')}`
   // LD-007 provisional: Side Shift ability.
   if (r.shifted && r.shifted.length) text += ` · MOVED: ${r.shifted.map((x) => `${x.id} ${DIR_NAMES[x.from]}→${DIR_NAMES[x.to]}`).join(', ')}`
+  // ACT-I-003: support heals, kill rewards, expired temporary targets.
+  if (r.healed && r.healed.length) text += ` · HEALED: ${r.healed.map((x) => `${x.target} +${x.amount} (${x.id})`).join(', ')}`
+  if (r.rewards && r.rewards.length) text += ` · LOOT: ${r.rewards.map((x) => [x.heal ? `+${x.heal} HP` : '', x.rotate ? `+${x.rotate} Rotate` : ''].filter(Boolean).join(' ') || '—').join(', ')}`
+  if (r.expired && r.expired.length) text += ` · GONE: ${r.expired.map((x) => x.label ?? x.id).join(', ')}`
   if (r.won) text = `Цель выполнена. ${text}`
   else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
   // STORY-001: scripted flee in three beats. This tap's flee only taunts (one turn);

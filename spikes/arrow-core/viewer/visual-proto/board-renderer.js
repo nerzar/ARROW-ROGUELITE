@@ -424,10 +424,13 @@ export function createBoardRenderer(canvas, stageEl) {
       // species resolves to undefined here and falls back to Dire Wolf's pack at the call site.
       return s.enemies.map((e) => ({
         id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead,
-        fled: e.fled,
+        fled: e.fled || e.expired, // ACT-I-003: an expired temporary target leaves like a fled one
+        turnsLeft: e.turnsLeft,
         countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
         shielded: e.shielded,
         abilityKind: def.enemies.find((raw) => raw.id === e.id)?.ability?.kind ?? (def.enemies.find((raw) => raw.id === e.id)?.ability ? 'stone_throw' : undefined),
+        abilityTrigger: def.enemies.find((raw) => raw.id === e.id)?.ability?.trigger,
+        reward: def.enemies.find((raw) => raw.id === e.id)?.reward,
         species: def.enemies.find((raw) => raw.id === e.id)?.species,
         isBoss: false,
       }))
@@ -892,10 +895,24 @@ export function createBoardRenderer(canvas, stageEl) {
           lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD IN ${t.abilityCountdown}`, bold: true, color: col.cast })
         } else if (t.abilityKind === 'shift') {
           // LD-007 provisional: the enemy walks to another arena side when this hits 0.
-          lines.push({ text: `MOVE IN ${t.abilityCountdown}`, bold: true, color: col.cast })
+          if (t.abilityTrigger === 'hit') lines.push({ text: 'STAGGERS WHEN HIT', bold: true, color: col.cast })
+          else lines.push({ text: `MOVE IN ${t.abilityCountdown}`, bold: true, color: col.cast })
+        } else if (t.abilityKind === 'heal') {
+          // ACT-I-003: support enemy — heals the most wounded ally when this hits 0.
+          lines.push({ text: `HEAL IN ${t.abilityCountdown}`, bold: true, color: col.cast })
         } else {
           lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
         }
+      }
+      // ACT-I-003: temporary target countdown and kill reward.
+      if (!t.dead && !t.fled && t.turnsLeft !== undefined) {
+        lines.push({ text: `LEAVES IN ${t.turnsLeft}`, bold: true, color: t.turnsLeft <= 1 ? col.danger : col.text })
+      }
+      if (!t.dead && !t.fled && t.reward && ((t.reward.heal ?? 0) > 0 || (t.reward.rotate ?? 0) > 0)) {
+        const parts = []
+        if (t.reward.heal) parts.push(`+${t.reward.heal} HP`)
+        if (t.reward.rotate) parts.push(`+${t.reward.rotate} Rotate`)
+        lines.push({ text: `LOOT: ${parts.join(' ')}`, bold: true, color: col.cast })
       }
       const lineH = fontPx * 1.15
       let maxW = 0

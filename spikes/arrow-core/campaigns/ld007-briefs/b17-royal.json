@@ -1,0 +1,72 @@
+{
+ "id": "ld7_b17_royal",
+ "title": "Акт I · 17 · Королевская стража",
+ "enemies": [
+  {
+   "id": "captain_e",
+   "species": "goblin-grunt",
+   "label": "Royal Guard",
+   "side": 1,
+   "hp": 3,
+   "attackTimer": {
+    "interval": 7,
+    "damage": 3
+   },
+   "ability": {
+    "id": "guard_shield",
+    "kind": "shield",
+    "interval": 3,
+    "label": "shield"
+   }
+  },
+  {
+   "id": "drunk_w",
+   "species": "goblin-drunkard",
+   "label": "Goblin Drunkard",
+   "side": 3,
+   "hp": 3,
+   "attackTimer": {
+    "interval": 6,
+    "damage": 2
+   },
+   "ability": {
+    "id": "stagger",
+    "kind": "shift",
+    "interval": 99,
+    "sides": [
+     3,
+     0
+    ],
+    "trigger": "hit",
+    "label": "stagger"
+   }
+  },
+  {
+   "id": "matron_n",
+   "species": "goblin-matron",
+   "label": "Goblin Matron",
+   "side": 0,
+   "hp": 3,
+   "attackTimer": {
+    "interval": 10,
+    "damage": 1
+   },
+   "ability": {
+    "id": "matron_heal",
+    "kind": "heal",
+    "interval": 3,
+    "amount": 1,
+    "label": "heal"
+   }
+  }
+ ],
+ "rotate": {
+  "allow": [
+   1,
+   -1
+  ],
+  "advancesTurn": false,
+  "useRunPool": true
+ },
+ "blockedTapDamage": 1
+}

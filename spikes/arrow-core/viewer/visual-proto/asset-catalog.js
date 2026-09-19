@@ -112,6 +112,19 @@ export const CREATURE_CATALOG = [
     defaultTimer: { interval: 4, damage: 1 },
     sourceFolder: 'small-goblin',
   },
+  // ACT-I-003: three new goblin species from magicarrowassets/creatures (poses in creature-poses.json).
+  {
+    id: 'goblin-grunt', label: 'Goblin Grunt · shield bearer (Enemy)', kind: 'enemy', species: 'goblin-grunt',
+    defaultHp: 3, defaultSide: 0, defaultTimer: { interval: 5, damage: 2 }, sourceFolder: 'goblin-grunt',
+  },
+  {
+    id: 'goblin-matron', label: 'Goblin Matron · support/heal (Enemy)', kind: 'enemy', species: 'goblin-matron',
+    defaultHp: 3, defaultSide: 0, defaultTimer: { interval: 6, damage: 1 }, sourceFolder: 'goblin-matron',
+  },
+  {
+    id: 'goblin-drunkard', label: 'Goblin Drunkard · staggers when hit (Enemy)', kind: 'enemy', species: 'goblin-drunkard',
+    defaultHp: 3, defaultSide: 0, defaultTimer: { interval: 4, damage: 2 }, sourceFolder: 'goblin-drunkard',
+  },
   {
     id: 'spider-brute',
     label: 'Spider Brute (Enemy)',

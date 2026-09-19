@@ -373,6 +373,9 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
     if (r.shifted && r.shifted.length) {
       text += `  MOVED: ${r.shifted.map((sh) => `${sh.id} ${DIR_NAMES[sh.from]}->${DIR_NAMES[sh.to]}`).join(', ')}`
     }
+    if (r.healed && r.healed.length) text += `  HEALED: ${r.healed.map((h) => `${h.target} +${h.amount}`).join(', ')}`
+    if (r.rewards && r.rewards.length) text += `  LOOT: ${r.rewards.map((w) => `${w.id} +${w.heal}hp +${w.rotate}R`).join(', ')}`
+    if (r.expired && r.expired.length) text += `  GONE: ${r.expired.map((x) => x.id).join(', ')}`
     if (r.phaseAfter !== r.phaseBefore) {
       text += r.won ? '  => WIN' : `  => phase ${r.phaseAfter + 1}, boss on ${DIR_NAMES[s.bossSide as number]}`
       if (r.granted) text += `, Rotate +${r.granted}`
