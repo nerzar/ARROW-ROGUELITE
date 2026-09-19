@@ -9,6 +9,7 @@ import {
 import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
+import { abilityIntroHint } from './ability-hud.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
 import { resolveActiveSceneKey } from './scene-sync.js'
 import { loadCampaign, convertLevelToStep } from './campaign-model.js'
@@ -351,7 +352,7 @@ function loadActiveStep() {
   buildBossPoseButtons()
   buildWolfPoseButtons()
   targetsBefore = renderer.collectTargets(run.encounter, def)
-  const hasAbility = def.enemies?.some((e) => e.ability)
+  const abilityHint = abilityIntroHint((def.enemies ?? []).filter((e) => e.ability).map((e) => e.ability.kind))
   // STORY-001: scripted-flee intro — the encounter opens with an unkillable guest. Generic:
   // any enemy carrying `flee` announces itself, so the next such event needs no new code.
   const fleeGuests = (def.enemies ?? []).filter((e) => e.flee)
@@ -361,7 +362,7 @@ function loadActiveStep() {
   ui.msgLine.textContent = def.enemies
     ? `На арене: ${run.encounter.enemies.filter((e) => !e.pending).map((e) => e.label ?? e.id).join(', ') || 'ожидание волны'}.` +
       (def.enemies.some((e) => e.arrival) ? ' Следующие враги указаны над свободными подиумами.' : '') +
-      (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '') + fleeIntro
+      abilityHint + fleeIntro
     : `Цель: ${def.boss?.id ?? 'boss'}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
   ui.report.textContent = formatEncounterReport(rep)
