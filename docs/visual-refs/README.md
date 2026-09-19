@@ -33,3 +33,14 @@
 
 Все visual/art-задачи (ART-010…) стартуют с этих скринов. Мокапы должны выглядеть как часть этих сцен.
 Полный язык — в `docs/VISUAL-DIRECTION.md` (§1, §8).
+
+## Исследования HUD (`hud/`, задача ART-012)
+
+| Файл | Описание |
+|---|---|
+| `hud/00-hud-comparison-board.png` | Сводный сравнительный борд 3 вариантов с зумом деталей (1920×1080) |
+| `hud/01-hud-moonlit-bronze.png` | Вариант 1 · Moonlit Bronze (канонический фасочный стиль, рекомендован) |
+| `hud/02-hud-gilded-slate.png` | Вариант 2 · Slate & Gilded Trim (PC-first low profile, единый Rotate Dock) |
+| `hud/03-hud-runeforge.png` | Вариант 3 · Arcane Runeforge (боевой тактический стиль, сегментированный HP) |
+| `docs/ART-012-PLAYER-HUD-EXPLORATION.md` | Полный аналитический отчёт с разбором плюсов/минусов и рекомендацией |
+
