@@ -38,7 +38,7 @@ BOARD хранит не только одну текущую задачу, а **
 |---|---|---|
 | ACT-I-002 — Act I Vertical Slice | PLANNED | Развить уже существующие первые Act I encounters в короткий кусок настоящего акта, который интересно проходить, а не просто технически тестировать. |
 | RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, небольшой понятный набор апгрейдов, желание сделать ещё один забег. |
-| VFX integration (эффекты 5-10) | WAITING FOR VFX-002 | Пользователь посмотрел лабу VFX-001 и решил забрать все 10 эффектов по одному, начиная с damage number (VFX-002). Следующие карточки — по одному эффекту за раз, тем же паттерном, после того как VFX-002 принят на плейтесте. |
+| VFX integration (остальные 9 эффектов) | WAITING FOR VFX-002 | Пользователь посмотрел лабу VFX-001 и решил забрать все 10 эффектов по одному, начиная с damage number (VFX-002, эффект 4). **Готово отдельно от VFX-002:** базовый hit-flash + shake (~110-200мс) уже есть с BUILD-035 (`fx.hitT`), не путать с полноценным impact flash / hit sparks (эффекты 2 и 3) из лабы — они НЕ интегрированы, ждут своей карточки первыми, не 5-10. Следующие карточки — по одному эффекту за раз, тем же паттерном (`fxFor(key).новое_поле`), после того как VFX-002 принят на плейтесте. |
 | AUDIO-001 — Combat Audio | PLANNED LATER | После принятого визуального combat feel: hit/cast/death/reward SFX, без преждевременного большого sound-system. |
 | VK production pass | PLANNED LATER | SDK, saves, lifecycle/fullscreen, audio rules, rewarded ads, analytics, слабые устройства — после приятного vertical slice. |
 
