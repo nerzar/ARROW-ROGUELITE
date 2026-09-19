@@ -78,6 +78,11 @@ describe('Authored Prologue + Act I campaign', () => {
     expect(exam.def.enemies.some((e: any) => e.attackTimer?.kind === 'cast')).toBe(true)
     expect(exam.def.enemies.some((e: any) => e.ability?.id === 'stone_throw')).toBe(true)
 
+    const captain = steps.find((s: any) => s.id === 'act1-stage-6')!
+    const captainDef = captain.def.enemies.find((e: any) => e.id === 'captain_e')!
+    expect(captainDef.ability?.kind).toBe('shield')
+    expect(captainDef.ability?.interval).toBe(3)
+
     const king = steps.find((s: any) => s.id === 'act1-stage-8')!
     expect(king.def.boss!.id).toBe('goblin-king')
     expect(king.def.boss!.phases.length).toBe(2)

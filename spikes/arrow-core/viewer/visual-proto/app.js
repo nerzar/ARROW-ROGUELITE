@@ -470,6 +470,8 @@ function tap(id) {
   // EXP-013: Stone Throw pin/unpin this turn, enemies mode only.
   if (r.pinnedThisTurn && r.pinnedThisTurn.length) text += ` · ROCK THROWN: #${r.pinnedThisTurn.map((p) => p.id).join(', #')} pinned ${r.pinnedThisTurn[0].turnsLeft}t`
   if (r.pinExpired && r.pinExpired.length) text += ` · UNPINNED: #${r.pinExpired.join(', #')}`
+  if (r.shieldRaised && r.shieldRaised.length) text += ` · SHIELD UP: ${r.shieldRaised.map((x) => x.id).join(', ')}`
+  if (r.shieldConsumed && r.shieldConsumed.length) text += ` · SHIELD BLOCKED: ${r.shieldConsumed.map((x) => x.id).join(', ')}`
   if (r.won) text = `Цель выполнена. ${text}`
   else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
   // STORY-001: scripted flee in three beats. This tap's flee only taunts (one turn);
