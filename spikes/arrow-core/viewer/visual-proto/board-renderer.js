@@ -746,15 +746,24 @@ export function createBoardRenderer(canvas, stageEl) {
       const shiftT = !t.isBoss && !t.dead && !t.fled ? fx.shiftT : null
       if (shiftT && shiftT.from !== shiftT.to) {
         const since = now - shiftT.at
-        if (since >= 0 && since < SHIFT_TOTAL_MS) {
+        if (since < SHIFT_TOTAL_MS) {
           const fromSlot = podiumSlot(shiftT.from, false, g.stageW, g.stageH, charCell, g.groundOverride)
           const dx = slot.x - fromSlot.x
           const dy = slot.y - fromSlot.y
-          if (since < SHIFT_STAGGER_MS) {
+          if (since < 0) {
+            // Hit-triggered shift: the arrow is still in flight toward the OLD podium (the hit
+            // hasn't landed yet, per FLIGHT_MS in onTapResult) -- hold fully there. `t.side` is
+            // already the post-shift engine value, so the un-held `slot` would otherwise show
+            // the sprite already gone before its own impact flash plays.
+            shiftOx = fromSlot.x - slot.x
+            shiftOy = fromSlot.y - slot.y
+          } else if (since < SHIFT_STAGGER_MS) {
             shiftStagger = true
             const k = Math.sin((since / SHIFT_STAGGER_MS) * Math.PI)
-            shiftOx = DX[t.side] * 10 * k
-            shiftOy = DY[t.side] * 10 * k
+            // Stagger plays AT the old podium (the hit just landed there) -- step back using the
+            // OLD side's outward direction; the sprite hasn't reached the new side yet.
+            shiftOx = (fromSlot.x - slot.x) + DX[shiftT.from] * 10 * k
+            shiftOy = (fromSlot.y - slot.y) + DY[shiftT.from] * 10 * k
           } else {
             const p = (since - SHIFT_STAGGER_MS) / SHIFT_RUN_MS
             const e = p * p * (3 - 2 * p)
