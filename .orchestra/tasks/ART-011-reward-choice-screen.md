@@ -1,6 +1,6 @@
 # TASK: ART-011 — Reward Choice Screen Exploration
 
-STATUS: READY
+STATUS: DONE
 TYPE: ART
 SIZE: S
 BASE_BRANCH: main
@@ -56,7 +56,8 @@ Mockups/references в ветке + короткое описание плюсо�
 
 ## RESULT / VERIFY / FOUND / STATUS
 
-- RESULT: —
-- VERIFY: —
-- FOUND: —
-- STATUS: READY
+- RESULT: 4 desktop-first reward-choice mockups + comparison notes in `docs/art/ART-011/`.
+- VERIFY: all 4 variants show 3 rewards, rarity treatment, a clearly selected card, confirm/continue CTA, and the current arena composition retained as a dimmed background layer.
+- FOUND: exploration only; no reward economy, gameplay logic, or production UI implementation added. Final style intentionally not selected.
+- OUTPUT_COMMIT: `04597b159d75d95ec9879d8d3c57934ce7306fd7`
+- STATUS: DONE
