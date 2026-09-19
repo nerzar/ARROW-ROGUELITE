@@ -1,9 +1,9 @@
 # TASK: ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + первые реликвии
 
-STATUS: PLANNED (после ITEM-001)
+STATUS: READY
 TYPE: BUILD
 SIZE: M
-AGENT:
+AGENT: Gemini / Antigravity
 BASE_BRANCH: main
 BRANCH: build/ITEM-002-items-v1-set
 
@@ -36,5 +36,7 @@ Draft-пул: веса/редкость условные (`common/rare`), но �
 - реликвии показываются в HUD как пассивный ряд (плейсхолдер);
 - `tools/ld007-audit.mjs` умеет запускать аудит «с набором» (`--kit bow,shield`), чтобы `LD-008`
   мог балансировать уровни под предметы.
+
+Перед сдачей запусти tests/typecheck/build и реальный viewer. Оставь локальный viewer-сервер запущенным и укажи URL для быстрой пользовательской проверки.
 
 После сдачи STOP.
