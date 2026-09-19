@@ -21,6 +21,8 @@ import {
 // kept intact as a debug/fallback style -- see ARROW_STYLES / setArrowStyle.
 import { ARROW_INSET_PX, ARROW_SCALE, buildArrowPath, createHoverFade, materialIsAnimated, paintFilledArrow, shapeForCell } from './filled-arrow-render.js'
 import { MATERIALS } from './filled-arrow-materials.js'
+// VFX-003: light-hit feel (flash/sparks/squash/camera) -- pure scheduling math; painting below.
+import { LIGHT_HIT, camOffset, hashStr, punch, sparkParts } from './hit-fx.js'
 // BUILD-035: projectile flight trajectory (exit dir, then steer to the hit-anchor).
 import { FLIGHT_MS, flightPoint, straightLen } from './projectile-flight.js'
 
@@ -148,7 +150,7 @@ export function createBoardRenderer(canvas, stageEl) {
   function fxFor(key) {
     let fx = targetFx.get(key)
     if (!fx) {
-      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9, fleeT: -1e9, fleeBackT: -1e9, fleeExitT: -1e9, dmgText: null }
+      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9, fleeT: -1e9, fleeBackT: -1e9, fleeExitT: -1e9, dmgText: null, hitCount: 0 }
       targetFx.set(key, fx)
     }
     return fx
@@ -190,6 +192,9 @@ export function createBoardRenderer(canvas, stageEl) {
   // flight. Rebuilt every frame alongside layoutInfo, so a shot always steers to where its
   // target visibly is -- never to a stale position. Presentation only.
   let targetAnchors = new Map()
+  // VFX-003: current camera impulse offset (canvas px), recomputed every frame from the live
+  // per-target shakes. drawTarget subtracts it back for HUD/readouts (they must not shake).
+  let frameCam = { x: 0, y: 0 }
   // BUILD-035: pending impact visuals per target: { hp, dead, until }.
   // The engine applies damage synchronously at tap, but the HP bar / 'убит' line must not
   // drop until the projectile actually arrives -- frame() shows the pre-tap values until then.
@@ -304,6 +309,16 @@ export function createBoardRenderer(canvas, stageEl) {
         // target this tap, never a presentation-layer guess. A later lab effect (recoil, sparks,
         // ...) adds its own field here the same way, on the same fx object.
         if (r.hitDamage > 0) fx.dmgText = { value: r.hitDamage, at: now + FLIGHT_MS }
+        // VFX-003: light-hit feel (flash/sparks/squash/camera) -- same arrival-synced pattern:
+        // one more field each on the same fx object, all stamped `now + FLIGHT_MS`. The next
+        // lab effect attaches identically. Spark parts are precomputed once (deterministic per
+        // hit) so every frame replays them byte-identical; debris sprays back along incoming.
+        fx.hitCount = (fx.hitCount ?? 0) + 1
+        const seed = (hashStr(targetKey(hitTarget)) + fx.hitCount * 7919) >>> 0
+        const backAng = Math.atan2(-DY[hitTarget.side], -DX[hitTarget.side])
+        fx.sparks = { at: now + FLIGHT_MS, seed, parts: sparkParts(seed, LIGHT_HIT.sparkCount, backAng) }
+        fx.squashT = { at: now + FLIGHT_MS }
+        fx.shakeC = { at: now + FLIGHT_MS }
         // EXP-011/VS-001: only a genuine cast-interrupt gets the "CAST INTERRUPTED" burst -- the
         // legacy EXP-010 interruptOnHit reset (r.interrupted without r.castInterrupted) is unused
         // by any current content and isn't a cast, so it gets no burst text.
@@ -466,6 +481,15 @@ export function createBoardRenderer(canvas, stageEl) {
     hoverFade.set(hoverId)
     if (hoverFade.tick(now)) animating = true
 
+    // VFX-003: camera impulse -- one world offset summed over every live per-target
+    // shake (lab math: decaying oscillation, pure function of absolute time). Keeps the loop
+    // alive for its own window, like every other time-based fx above.
+    const liveShakes = []
+    for (const fx of targetFx.values()) {
+      if (fx.shakeC) liveShakes.push({ at: fx.shakeC.at, dur: LIGHT_HIT.camDur, amp: LIGHT_HIT.camAmp, freq: LIGHT_HIT.camFreq })
+    }
+    frameCam = camOffset(now, liveShakes)
+    if (liveShakes.some((s) => now - s.at >= 0 && now - s.at < s.dur)) animating = true
     const dark = typeof matchMedia !== 'undefined' ? matchMedia('(prefers-color-scheme: dark)').matches : true
     const col = palette(dark)
     ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -506,6 +530,12 @@ export function createBoardRenderer(canvas, stageEl) {
     drawSideReadouts(col, s, def)
     layoutInfo = []
     targetAnchors = new Map()
+    // VFX-003: everything inside this transform is the "world" -- the arena (board, targets,
+    // projectiles) moves with the camera impulse. HUD plates/readouts subtract it back inside
+    // drawTarget; layoutInfo records unshaken data truth. hitTest mismatch (<=2px, 200ms) is
+    // negligible and never persists (offset decays to exactly 0).
+    ctx.save()
+    ctx.translate(frameCam.x, frameCam.y)
     for (const t of targets) {
       // BUILD-035: pre-impact HP presentation -- show pre-tap hp/dead until the projectile
       // arrives (pendingHp), then fall through to live state. Expired entries are dropped.
@@ -522,6 +552,7 @@ export function createBoardRenderer(canvas, stageEl) {
     }
     for (const a of level.arrows) drawArrow(col, s, def, a, hint)
     for (const sh of shots) drawShot(col, sh, now)
+    ctx.restore()
 
     return animating
 
@@ -699,13 +730,20 @@ export function createBoardRenderer(canvas, stageEl) {
       const bossSince = t.isBoss && view.boss?.visual ? now - view.boss.visual.startedAt : -1e9
       const wolfSince = fleePose ? fleeSince : wolfVisual ? now - wolfVisual.startedAt : -1e9
       const wolfPoseShown = fleePose ?? wolfPose
-      const flashWhite = (now - fx.hitT >= 0 && now - fx.hitT < 110) ||
-        (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130) ||
-        (wolfPose === 'hit' && wolfSince >= 0 && wolfSince < 130)
       const pivot = g.spritePivotOverride?.[t.side] ?? ZERO_PIVOT
       // TOOL-002/CAL-005: scene pivot + species default (speciesId/speciesPivot/artScale are
       // resolved once above, next to the HUD/shadow species offsets from the same entry).
       const scenePivot = { dx: pivot.dx + speciesPivot.dx, dy: pivot.dy + speciesPivot.dy }
+      // VFX-003: squash/recoil -- feet planted (scale about the ground point), shove along the
+      // incoming direction. punch() envelope: fast out, settle back. Wraps the art AND the hit
+      // flash so they deform as one body.
+      const sqK = fx.squashT ? punch((now - fx.squashT.at) / LIGHT_HIT.sqDur) : 0
+      const sqDx = DX[t.side] * LIGHT_HIT.sqRecoil * sqK
+      const sqDy = DY[t.side] * LIGHT_HIT.sqRecoil * sqK * 0.35
+      ctx.save()
+      ctx.translate(sqDx, charH / 2 + sqDy)
+      ctx.scale(1 + LIGHT_HIT.sqSquash * sqK * 0.85, 1 - LIGHT_HIT.sqSquash * sqK)
+      ctx.translate(0, -charH / 2)
       if (img) {
         if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH, scenePivot, artScale)
         else if (wolfImg || fleeImg) drawWolfArt(img, wolfPoseShown, wolfSince, t, charW, charH, scenePivot, artScale)
@@ -737,16 +775,80 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.ellipse(0, 0, charW / 2, charH / 2, 0, 0, Math.PI * 2)
         ctx.fill()
       }
-      // Hit-flash: tint the sprite's own opaque pixels white, not a hard-edged box over
-      // transparent art -- 'source-atop' masks the fill to whatever alpha the just-drawn
-      // character art (or its fallback glow) already left in this rect, so on real art with
-      // a non-rectangular silhouette the flash never reads as a floating translucent square.
-      if (flashWhite) {
+      // Hit-flash, VFX-003 lab style: expanding additive burst + hot core + lens streak
+      // at the body center (flashScale-driven, not a flat fill). The pose-tied tint below is a
+      // different sync point (visual state, not arrival) and stays subtle on its own.
+      const hitP = (now - fx.hitT) / LIGHT_HIT.flashDur
+      if (hitP >= 0 && hitP < 1) {
+        const grow = easeOutCubic(hitP)
+        const fade = (1 - hitP) ** 1.6
+        const R = LIGHT_HIT.flashScale * Math.max(charW, charH) * 0.5 * (0.45 + 2.6 * grow)
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        const glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, R)
+        glowGrad.addColorStop(0, 'rgba(255,170,60,0.9)')
+        glowGrad.addColorStop(1, 'rgba(255,170,60,0)')
+        ctx.globalAlpha = 0.75 * fade
+        ctx.fillStyle = glowGrad
+        ctx.beginPath()
+        ctx.arc(0, 0, R, 0, Math.PI * 2)
+        ctx.fill()
+        const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.45)
+        coreGrad.addColorStop(0, '#fff6d8')
+        coreGrad.addColorStop(1, 'rgba(255,246,216,0)')
+        ctx.globalAlpha = 0.9 * (1 - hitP) ** 2.2
+        ctx.fillStyle = coreGrad
+        ctx.beginPath()
+        ctx.arc(0, 0, R * 0.45, 0, Math.PI * 2)
+        ctx.fill()
+        const sw = R * 3.4
+        const sg = ctx.createLinearGradient(-sw, 0, sw, 0)
+        sg.addColorStop(0, 'rgba(255,255,255,0)')
+        sg.addColorStop(0.5, '#fff6d8')
+        sg.addColorStop(1, 'rgba(255,255,255,0)')
+        ctx.globalAlpha = 0.5 * fade * (1 - hitP)
+        ctx.fillStyle = sg
+        ctx.fillRect(-sw, -Math.max(1, R * 0.09), sw * 2, Math.max(2, R * 0.18))
+        ctx.restore()
+      }
+      const poseFlash = (bossPose === 'stunned' && bossSince >= 0 && bossSince < 130) ||
+        (wolfPose === 'hit' && wolfSince >= 0 && wolfSince < 130)
+      if (poseFlash) {
         ctx.save()
         ctx.globalCompositeOperation = 'source-atop'
-        ctx.fillStyle = 'rgba(255,255,255,0.55)'
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'
         ctx.fillRect(-charW / 2, -charH / 2, charW, charH)
         ctx.restore()
+      }
+      ctx.restore() // VFX-003 squash wrap
+      // VFX-003: hit sparks -- precomputed particles with gravity, additive short streaks
+      // from the body center (lab logic, charCell-scaled). Unscaled space: they trail the
+      // world, not the squashed body.
+      if (fx.sparks) {
+        const sp = fx.sparks
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.lineCap = 'round'
+        for (const q of sp.parts) {
+          const te = clamp01((now - sp.at - q.delay * LIGHT_HIT.sparkDur) / LIGHT_HIT.sparkDur)
+          if (te <= 0 || te >= 1) continue
+          const e = 1 - (1 - te) ** 5
+          const spread = LIGHT_HIT.sparkSpread
+          const spd = q.spd * charCell * 3.4
+          const x = Math.cos(q.ang) * spd * e * spread
+          const y = Math.sin(q.ang) * spd * e * spread * 0.72 + q.g * charCell * 2.1 * e * e * spread * 0.9
+          const a = (1 - te) ** 1.4
+          const len = q.size * (1 - te * 0.6)
+          ctx.globalAlpha = a * 0.9
+          ctx.strokeStyle = q.hot ? '#fff6d8' : '#ffd27a'
+          ctx.lineWidth = Math.max(1, len * 0.55)
+          ctx.beginPath()
+          ctx.moveTo(x, y)
+          ctx.lineTo(x - Math.cos(q.ang) * len, y - Math.sin(q.ang) * len)
+          ctx.stroke()
+        }
+        ctx.restore()
+        ctx.globalAlpha = 1
       }
 
       // VIS-007: HUD is a separate plate near the character -- HP / ATTACK-CAST / THROW
@@ -787,6 +889,11 @@ export function createBoardRenderer(canvas, stageEl) {
         // FIX-033: keep the stack inside the visible stage (last resort after all offsets).
         viewport: { w: g.stageW, h: g.stageH, x: slot.x, y: slot.y },
       })
+      // VFX-003: HUD/readouts subtract the camera impulse back -- a camera hit must not
+      // move HP plates, badges, bursts or the damage number (lab: "HUD-ish overlays are NOT
+      // shaken"). Everything above (telegraph, shadow, art, flash, sparks) is world and shakes.
+      ctx.save()
+      ctx.translate(-frameCam.x, -frameCam.y)
       if (!t.dead || t.isBoss) {
         const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
         ctx.fillStyle = col.hpTrack
@@ -885,6 +992,7 @@ export function createBoardRenderer(canvas, stageEl) {
           ctx.restore()
         }
       }
+      ctx.restore() // VFX-003 HUD compensation (camera impulse)
 
       // VIS-007: debug layout record in canvas coords, for automated checks (HUD clear of
       // board/sprite-face, characters unclipped, pose swaps anchored).
