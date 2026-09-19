@@ -2,7 +2,7 @@
   "format": "arrow-campaign",
   "v": 1,
   "id": "square-prologue",
-  "title": "Квадратный Пролог (5 этапов)",
+  "title": "Пролог + Акт I (playtest v1)",
   "levels": [
     {
       "id": "prologue-stage-1",
@@ -532,7 +532,7 @@
             },
             {
               "side": 1,
-              "hpUnits": 2,
+              "hpUnits": 3,
               "grantRotate": 1,
               "attackTimer": {
                 "interval": 3,
@@ -545,7 +545,7 @@
                   "kind": "normal"
                 }
               },
-              "label": "Phase 2: Moves East, CAST interrupt & Rotate grant"
+              "label": "Phase 2: Teleports East, begins CAST, Rotate grant"
             }
           ]
         },
@@ -558,7 +558,1021 @@
         },
         "blockedTapDamage": 1,
         "winRotateReward": 2,
-        "notes": "Stage 5: Goblin Shaman boss. Board 6x6 seed 15. Starts center/TOP (side 0, 3 HP, IN 5 dmg 2). Phase 2 moves East (side 1, 2 HP, CAST IN 3 dmg 2, grants +1 Rotate). Rotate CCW turns South-facing arrows to East, interrupting CAST and defeating boss with true 0-damage kill. Win awards +2 Rotate."
+        "notes": "Stage 5: Goblin Shaman boss. Phase 1 remains 3 HP on TOP. After teleport to EAST he now has 3 HP (one more than the previous tune), immediately enters interruptible CAST IN 3 with the existing cast pose + pulsing cast telegraph, and grants +1 Rotate. Interrupting the cast switches him to the normal attack cycle. Win still awards +2 shared Rotate. USER PLAYTEST TUNING: HP/timers remain provisional."
+      }
+    },
+    {
+      "id": "act1-stage-1",
+      "title": "Акт I · 1 · Пограничный патруль",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 22
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "act1_1_border_patrol",
+        "title": "Акт I · Пограничный патруль",
+        "enemies": [
+          {
+            "id": "raider_w",
+            "species": "small-goblin",
+            "label": "Goblin Raider",
+            "side": 3,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          },
+          {
+            "id": "guard_e",
+            "species": "small-goblin",
+            "label": "Goblin Guard",
+            "side": 1,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "Story: после победы над Shaman игрок продолжает погоню за Goblin King и упирается в первый нормальный патруль. Gameplay: самостоятельная проверка two-front priority после пролога; Rotate доступен как страховка, но не должен быть обязателен."
+      }
+    },
+    {
+      "id": "act1-stage-2",
+      "title": "Акт I · 2 · Взаимный заслон",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 112
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "act1_2_cross_lock",
+        "title": "Акт I · Взаимный заслон",
+        "enemies": [
+          {
+            "id": "guard_e",
+            "species": "small-goblin",
+            "label": "Goblin Guard",
+            "side": 1,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          },
+          {
+            "id": "lookout_n",
+            "species": "small-goblin",
+            "label": "Goblin Lookout",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "Story: два гоблина держат узкий проход и прикрывают друг друга. Gameplay target: направления/очередность открытия стрел должны заставлять переключаться между TOP и EAST, а не просто фокусить один HP bar."
+      }
+    },
+    {
+      "id": "act1-stage-3",
+      "title": "Акт I · 3 · Ученик шамана",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 25
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "act1_3_shaman_apprentice",
+        "title": "Акт I · Ученик шамана",
+        "enemies": [
+          {
+            "id": "apprentice_n",
+            "species": "goblin-shaman",
+            "label": "Shaman Apprentice",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 4,
+              "kind": "cast",
+              "interruptible": true,
+              "interruptedAttack": {
+                "interval": 3,
+                "damage": 2,
+                "kind": "normal"
+              }
+            }
+          },
+          {
+            "id": "escort_e",
+            "species": "small-goblin",
+            "label": "Goblin Escort",
+            "side": 1,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "Story: обычные патрули не справились, поэтому в бой входит ученик шамана с охранником. Gameplay: уже знакомый по boss-прологу interrupt теперь становится обычным боевым правилом без tutorial-подсказки."
+      }
+    },
+    {
+      "id": "act1-stage-4",
+      "title": "Акт I · 4 · Камнемёт",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 723
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "act1_4_rock_thrower",
+        "title": "Акт I · Камнемёт",
+        "enemies": [
+          {
+            "id": "rock_n",
+            "species": "small-goblin",
+            "label": "Goblin Rock Thrower",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 1
+            },
+            "ability": {
+              "id": "stone_throw",
+              "interval": 3,
+              "targetPolicy": "free-arrow",
+              "pinDuration": 2,
+              "label": "stone throw"
+            }
+          },
+          {
+            "id": "escort_e",
+            "species": "small-goblin",
+            "label": "Goblin Escort",
+            "side": 1,
+            "hp": 1,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "Story: гоблины начинают вмешиваться прямо в puzzle — Rock Thrower кидает камни и временно прибивает доступные стрелы. Gameplay: первая enemy ability в обычной кампании. Использует уже существующий EXP-013 stone_throw."
+      }
+    },
+    {
+      "id": "act1-stage-5",
+      "title": "Акт I · 5 · Засада с трёх сторон",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 428
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "act1_5_three_front_ambush",
+        "title": "Акт I · Засада с трёх сторон",
+        "enemies": [
+          {
+            "id": "grunt_n",
+            "species": "small-goblin",
+            "label": "Goblin Ambusher",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            }
+          },
+          {
+            "id": "grunt_e",
+            "species": "small-goblin",
+            "label": "Goblin Raider",
+            "side": 1,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          },
+          {
+            "id": "brute_w",
+            "species": "spider-brute",
+            "label": "Camp Brute",
+            "side": 3,
+            "hp": 1,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "Story: игрок добирается до лагеря и попадает в настоящую засаду. Gameplay: первый three-front triage; выбрать срочную цель важнее равномерного распределения урона."
+      }
+    },
+    {
+      "id": "act1-stage-6",
+      "title": "Акт I · 6 · Капитан стражи",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 97
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "act1_6_guard_captain",
+        "title": "Акт I · Капитан стражи",
+        "enemies": [
+          {
+            "id": "captain_e",
+            "species": "small-goblin",
+            "label": "Goblin Guard Captain",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 3
+            }
+          },
+          {
+            "id": "pest_w",
+            "species": "small-goblin",
+            "label": "Goblin Pest",
+            "side": 3,
+            "hp": 1,
+            "attackTimer": null
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "Story: капитан охраны пытается задержать игрока перед внутренней частью лагеря. PLAYTEST PLACEHOLDER: после принятия COMBAT-001 сюда первым кандидатом подключаем Shield ability; сейчас это честный elite по HP/таймеру без несуществующей механики."
+      }
+    },
+    {
+      "id": "act1-stage-7",
+      "title": "Акт I · 7 · Ритуальные ворота",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 239
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "act1_7_ritual_gate",
+        "title": "Акт I · Ритуальные ворота",
+        "enemies": [
+          {
+            "id": "caster_n",
+            "species": "goblin-shaman",
+            "label": "Goblin Caster",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 4,
+              "kind": "cast",
+              "interruptible": true,
+              "interruptedAttack": {
+                "interval": 3,
+                "damage": 2,
+                "kind": "normal"
+              }
+            }
+          },
+          {
+            "id": "rock_w",
+            "species": "small-goblin",
+            "label": "Goblin Rock Thrower",
+            "side": 3,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 1
+            },
+            "ability": {
+              "id": "stone_throw",
+              "interval": 3,
+              "targetPolicy": "free-arrow",
+              "pinDuration": 2,
+              "label": "stone throw"
+            }
+          },
+          {
+            "id": "grunt_e",
+            "species": "small-goblin",
+            "label": "Goblin Guard",
+            "side": 1,
+            "hp": 1,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "Story: последний заслон перед Goblin King — caster, камнемёт и охрана одновременно. Gameplay: экзамен на interrupt + pin + multi-side priority перед boss. Баланс намеренно provisional для ручного playtest."
+      }
+    },
+    {
+      "id": "act1-stage-8",
+      "title": "Акт I · 8 · Goblin King",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 186
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "act1_8_goblin_king",
+        "title": "Акт I · Goblin King",
+        "boss": {
+          "id": "goblin-king",
+          "phases": [
+            {
+              "side": 0,
+              "hpUnits": 3,
+              "attackTimer": {
+                "interval": 5,
+                "damage": 2
+              },
+              "label": "Phase 1: King holds the center"
+            },
+            {
+              "side": 1,
+              "hpUnits": 3,
+              "attackTimer": {
+                "interval": 4,
+                "damage": 2
+              },
+              "label": "Phase 2: cornered King moves East"
+            }
+          ]
+        },
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "Story payoff: тот же Goblin King, который насмехался и сбежал в первой сцене, наконец загнан в угол. Boss reward Ricochet пока НЕ включён: механика ещё не реализована; после EXP/BUILD Ricochet награда подключается сюда."
       }
     }
   ],

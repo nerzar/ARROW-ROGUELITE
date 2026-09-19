@@ -56,6 +56,8 @@ export const SHAMAN_MANIFEST = Object.fromEntries(BOSS_POSES.map((p) => [p, `${S
  * Unknown ids default to Shaman, today's only boss scene. */
 const BOSS_ID_TO_SPECIES = {
   miniboss_placeholder: 'goblin-shaman', // cp-e5: prologue boss (VIS-008 reassignment)
+  'goblin-shaman': 'goblin-shaman',
+  'goblin-king': 'goblin-taunter', // Act I boss: the taunter/king pack reserved by VIS-008
 }
 export const BOSS_MANIFESTS = { 'goblin-shaman': SHAMAN_MANIFEST, 'goblin-taunter': BOSS_MANIFEST }
 export function bossSpeciesFor(bossId) {
