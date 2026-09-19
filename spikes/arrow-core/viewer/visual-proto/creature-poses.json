@@ -19,10 +19,19 @@
       "back": "back.png"
     },
     "pivot": {
-      "x": 0.4992568492749892,
-      "y": 0.7886699656941619
+      "x": 0.4653062885310374,
+      "y": 0.8642856831453285
     },
-    "scale": 0.6
+    "scale": 0.7,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
   },
   "skeleton-child": {
     "poses": {
@@ -40,10 +49,19 @@
       "defeat": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (8).png"
     },
     "pivot": {
-      "x": 0.5,
-      "y": 0.92
+      "x": 0.5203704833984375,
+      "y": 0.8129629912199797
     },
-    "scale": 1
+    "scale": 0.66,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
   },
   "dire-wolf": {
     "poses": {
@@ -65,5 +83,219 @@
       "y": 0.92
     },
     "scale": 1
+  },
+  "goblin-taunter": {
+    "poses": {
+      "idle": "assets/enemies/goblin-taunter/idle.png",
+      "taunt": "assets/enemies/goblin-taunter/taunt.png",
+      "cast": "assets/enemies/goblin-taunter/cast.png",
+      "stunned": "assets/enemies/goblin-taunter/stunned.png",
+      "angry": "assets/enemies/goblin-taunter/angry.png",
+      "defeat": "assets/enemies/goblin-taunter/defeat.png",
+      "back": "assets/enemies/goblin-taunter/back.png"
+    },
+    "sourceFiles": {
+      "idle": "indle.png",
+      "taunt": "taunt.png",
+      "cast": "cast.png",
+      "stunned": "stuned.png",
+      "angry": "angry-with-bg-or-cast.png",
+      "defeat": "defeat.png",
+      "back": "back.png"
+    },
+    "pivot": {
+      "x": 0.5,
+      "y": 0.92
+    },
+    "scale": 1,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "green-slime": {
+    "poses": {
+      "idle": "assets/enemies/green-slime/idle.png",
+      "attackReady": "assets/enemies/green-slime/attackReady.png",
+      "attack": "assets/enemies/green-slime/attack.png",
+      "hit": "assets/enemies/green-slime/hit.png",
+      "defeat": "assets/enemies/green-slime/defeat.png"
+    },
+    "sourceFiles": {
+      "idle": "idle.png",
+      "attackReady": "angry.png",
+      "attack": "cast  shot.png",
+      "hit": "stun-hit.png",
+      "defeat": "death.png"
+    },
+    "pivot": {
+      "x": 0.5,
+      "y": 0.92
+    },
+    "scale": 1,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "small-goblin": {
+    "poses": {
+      "idle": "assets/enemies/small-goblin/idle.png",
+      "attackReady": "assets/enemies/small-goblin/attackReady.png",
+      "attack": "assets/enemies/small-goblin/attack.png",
+      "hit": "assets/enemies/small-goblin/hit.png",
+      "defeat": "assets/enemies/small-goblin/defeat.png"
+    },
+    "sourceFiles": {
+      "idle": "idle.png",
+      "attackReady": "angry.png",
+      "attack": "cast-end-attack.png",
+      "hit": "stun.png",
+      "defeat": "death.png"
+    },
+    "pivot": {
+      "x": 0.5,
+      "y": 0.92
+    },
+    "scale": 1,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "spider-brute": {
+    "poses": {
+      "idle": "assets/enemies/spider-brute/idle.png",
+      "attackReady": "assets/enemies/spider-brute/attackReady.png",
+      "attack": "assets/enemies/spider-brute/attack.png",
+      "hit": "assets/enemies/spider-brute/hit.png",
+      "defeat": "assets/enemies/spider-brute/defeat.png"
+    },
+    "sourceFiles": {
+      "idle": "ChatGPT Image Sep 17, 2026, 01_37_38 PM (2).png",
+      "attackReady": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (4).png",
+      "attack": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (5).png",
+      "hit": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (6).png",
+      "defeat": "ChatGPT Image Sep 17, 2026, 01_37_40 PM (8).png"
+    },
+    "pivot": {
+      "x": 0.5,
+      "y": 0.92
+    },
+    "scale": 1,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "small-spider": {
+    "poses": {
+      "idle": "assets/enemies/small-spider/idle.png",
+      "attackReady": "assets/enemies/small-spider/attackReady.png",
+      "attack": "assets/enemies/small-spider/attack.png",
+      "hit": "assets/enemies/small-spider/hit.png",
+      "defeat": "assets/enemies/small-spider/defeat.png"
+    },
+    "sourceFiles": {
+      "idle": "ChatGPT Image Sep 17, 2026, 01_53_23 PM (4).png",
+      "attackReady": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (7).png",
+      "attack": "ChatGPT Image Sep 17, 2026, 01_53_23 PM (5).png",
+      "hit": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (8).png",
+      "defeat": "ChatGPT Image Sep 17, 2026, 01_53_21 PM (2).png"
+    },
+    "pivot": {
+      "x": 0.5,
+      "y": 0.92
+    },
+    "scale": 1,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "toxic-demonic-spider": {
+    "poses": {
+      "idle": "assets/enemies/toxic-demonic-spider/idle.png",
+      "attackReady": "assets/enemies/toxic-demonic-spider/attackReady.png",
+      "attack": "assets/enemies/toxic-demonic-spider/attack.png",
+      "hit": "assets/enemies/toxic-demonic-spider/hit.png",
+      "defeat": "assets/enemies/toxic-demonic-spider/defeat.png"
+    },
+    "sourceFiles": {
+      "idle": "idle.png",
+      "attackReady": "angry.png",
+      "attack": "cast.png",
+      "hit": "stun.png",
+      "defeat": "death.png"
+    },
+    "pivot": {
+      "x": 0.5,
+      "y": 0.92
+    },
+    "scale": 1,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "small-green-slime": {
+    "poses": {
+      "idle": "assets/enemies/small-green-slime/idle.png",
+      "attackReady": "assets/enemies/small-green-slime/attackReady.png",
+      "attack": "assets/enemies/small-green-slime/attack.png",
+      "hit": "assets/enemies/small-green-slime/hit.png",
+      "defeat": "assets/enemies/small-green-slime/defeat.png"
+    },
+    "sourceFiles": {
+      "idle": "idle.png",
+      "attackReady": "down - jump.png",
+      "attack": "taunt. - jump -up.png",
+      "hit": "hit stun.png",
+      "defeat": "death.png"
+    },
+    "pivot": {
+      "x": 0.5,
+      "y": 0.92
+    },
+    "scale": 1,
+    "hudOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
   }
 }
