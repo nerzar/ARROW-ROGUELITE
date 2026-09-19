@@ -1,9 +1,9 @@
 # TASK: WAVE-001 — Волны врагов («одного убил — пришёл второй») с телеграфом
 
-STATUS: READY
+STATUS: RUNNING
 TYPE: BUILD
 SIZE: M
-AGENT:
+AGENT: Codex
 BASE_BRANCH: main
 BRANCH: build/WAVE-001-enemy-waves
 
@@ -49,3 +49,20 @@ BRANCH: build/WAVE-001-enemy-waves
 - тесты: приход по kill, по ходу, ожидание занятой стороны, undo через приход.
 
 После сдачи STOP.
+
+## RESULT
+
+- Добавлены `arrival.afterKill` / `arrival.onTurn`, pending-state, ожидание занятой стороны в порядке `enemies`, свежие attack/ability timers при приходе. При двух условиях требуются оба; `onTurn` — целый ход от 1.
+- Pending учитывается в targeting, abilities, snapshot/undo/clone/key; mandatory pending блокирует раннюю победу, board-clear сохранён. Валидация запрещает неизвестные id, циклы и повторные enemy id.
+- Viewer показывает следующего врага силуэтом и плашкой над свободным подиумом, при приходе — импульс; viewer/audit логируют `ARRIVED`. Fixture `encounters/wave-001.json` доступен как `Debug · WAVE-001 · Две волны`; production campaign не менялась.
+
+## VERIFY
+
+- `npm run build` — PASS; полный `npm test` — 402/402 PASS, затем расширенный `enemy-waves.test.ts` — 13/13 PASS (включая ещё 3 проверки blocked/pinned taps и min damage будущих врагов).
+- Audit fixture: proven min damage 0 без Rotate, все 3 врага убиты за 6 ходов: `0 → 6 → 5 → 10 → 9 → 1`. Отдельный тест проверяет последовательную цепь N → E → W и undo через приход.
+- Браузер: обе плашки/силуэты, countdown до прихода, свежие ATK 3/2, оба `ARRIVED`, победа с HP 10/10; console errors отсутствуют. `git diff --check` — PASS.
+- Ручной просмотр: открыть viewer, выбрать `Debug · WAVE-001 · Две волны`, оценить читаемость будущих врагов и их появление.
+
+## FOUND
+
+- Блокеров нет. Если задан `expiresAfter`, он остаётся абсолютным world-turn deadline, как в исходном runtime. Визуальное принятие остаётся за пользователем.

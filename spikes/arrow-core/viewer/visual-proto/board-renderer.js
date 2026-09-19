@@ -304,7 +304,7 @@ export function createBoardRenderer(canvas, stageEl) {
     // frame). A miss (or no anchor yet) flies straight and fades, exactly like before.
     let target = null
     if (r.hit) {
-      const hitTarget = targetsBefore.find((t) => t.side === r.arenaDir)
+      const hitTarget = targetsBefore.find((t) => t.side === r.arenaDir && !t.pending && !t.dead && !t.fled)
       if (hitTarget) {
         target = targetAnchors.get(targetKey(hitTarget)) ?? null
         // BUILD-035: HP/dead visuals wait for the arrival (see frame()'s pendingHp patch).
@@ -379,6 +379,13 @@ export function createBoardRenderer(canvas, stageEl) {
     }
   }
 
+  function markArrivals(before, after, delay = 0) {
+    const now = performance.now()
+    for (const t of after) {
+      if (!t.pending && before.find((b) => b.id === t.id)?.pending) fxFor(targetKey(t)).arrivalT = now + delay
+    }
+  }
+
   // STORY-001: scripted-flee counterpart of markDeaths. The engine flips `fled` synchronously
   // on the tap; this stamps the presentation beat's t0 so drawTarget can play taunt-then-exit.
   // Generic per enemy id — any future `flee` content reuses it with no new code.
@@ -431,6 +438,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // species resolves to undefined here and falls back to Dire Wolf's pack at the call site.
       return s.enemies.map((e) => ({
         id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead,
+        pending: e.pending, arrivesIn: e.arrivesIn, arrivesAfter: e.arrivesAfter,
         fled: e.fled || e.expired, // ACT-I-003: an expired temporary target leaves like a fled one
         turnsLeft: e.turnsLeft,
         countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
@@ -550,6 +558,10 @@ export function createBoardRenderer(canvas, stageEl) {
     ctx.save()
     ctx.translate(frameCam.x, frameCam.y)
     for (const t of targets) {
+      const liveOnSide = targets.find((other) => other.side === t.side && !other.pending && !other.dead && !other.fled)
+      if (t.pending && (t.fled || liveOnSide || targets.find((other) => other.side === t.side && other.pending && !other.fled)?.id !== t.id)) continue
+      // A replacement takes the podium after the killing projectile lands.
+      if ((t.dead || t.fled) && liveOnSide && now >= (fxFor(targetKey(liveOnSide)).arrivalT ?? -Infinity)) continue
       // BUILD-035: pre-impact HP presentation -- show pre-tap hp/dead until the projectile
       // arrives (pendingHp), then fall through to live state. Expired entries are dropped.
       const pend = pendingHp.get(targetKey(t))
@@ -603,6 +615,50 @@ export function createBoardRenderer(canvas, stageEl) {
       // CAL-005: species HUD size scales the plate's own font/bar metrics (measured and drawn
       // at the scaled size); the offset above stays a pure position shift. Default 1 = no-op.
       const hudScale = speciesHudScale(speciesId)
+      if (t.pending) {
+        const pack = view.wolf?.packsBySpecies?.[t.species] ?? view.wolf?.pack
+        const img = pack ? resolveWolfImage(pack, 'idle') : null
+        const pivot = g.spritePivotOverride?.[t.side] ?? ZERO_PIVOT
+        ctx.save()
+        ctx.translate(slot.x, slot.y)
+        ctx.globalAlpha = 0.8
+        ctx.filter = 'brightness(0.35) saturate(0) drop-shadow(0px 0px 2px #b9dcff)'
+        if (img) drawWolfArt(img, 'idle', 0, t, charW, charH, { dx: pivot.dx + speciesPivot.dx, dy: pivot.dy + speciesPivot.dy }, artScale)
+        ctx.restore()
+        const conditions = []
+        if (t.arrivesIn !== undefined) conditions.push(t.arrivesIn > 0 ? `через ${t.arrivesIn}` : 'ждёт свободный слот')
+        if (t.arrivesAfter) conditions.push(`после ${def.enemies.find((e) => e.id === t.arrivesAfter)?.label ?? t.arrivesAfter}`)
+        const lines = [`СЛЕДУЮЩИЙ: ${t.label ?? t.id}`, conditions.join(' · ')]
+        const fontPx = Math.max(11, Math.min(16, charCell * 0.24))
+        ctx.save()
+        ctx.font = `600 ${fontPx}px system-ui, sans-serif`
+        const width = Math.min(g.stageW - 12, Math.max(...lines.map((line) => ctx.measureText(line).width)) + 18)
+        const height = fontPx * 2.7
+        const x = Math.max(6, Math.min(g.stageW - width - 6, slot.x + hudOffPx.x - width / 2))
+        const y = Math.max(6, Math.min(g.stageH - height - 6, slot.y - charH / 2 + hudOffPx.y - height - 8))
+        ctx.fillStyle = col.labelBacking
+        roundRect(x, y, width, height, 7)
+        ctx.fill()
+        ctx.fillStyle = '#d1d9e7'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        lines.forEach((line, i) => ctx.fillText(line, x + width / 2, y + fontPx * (0.75 + i * 1.2), width - 12))
+        ctx.restore()
+        return
+      }
+      const arrivalAge = now - (fx.arrivalT ?? -Infinity)
+      if (arrivalAge < 0) return
+      if (arrivalAge < 450) {
+        const p = arrivalAge / 450
+        ctx.save()
+        ctx.strokeStyle = '#b9dcff'
+        ctx.globalAlpha = 1 - p
+        ctx.lineWidth = 3 * (1 - p)
+        ctx.beginPath()
+        ctx.ellipse(slot.x, slot.y + charH / 2, charW * (0.35 + p * 0.4), charCell * (0.12 + p * 0.12), 0, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.restore()
+      }
       const idle = (t.isBoss || t.dead) ? 0 : Math.sin(now / 900 + t.side * 1.7) * 1.6
       const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
       const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * charCell : 0
@@ -1593,7 +1649,7 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.textBaseline = 'middle'
       for (let d = 0; d < 4; d++) {
         // STORY-001: a fled enemy already left the arena — its side stops reading as a target.
-        const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead && !e.fled) : d === s.bossSide
+        const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead && !e.fled && !e.expired && !e.pending) : d === s.bossSide
         if (isLive) continue // the target panel itself already shows this side clearly
         // FIX-021/CAL-002: same arena-relative podium anchor an actor on this side would use (not a
         // board-relative radius) -- an empty side still reads its readout from a stable, real
@@ -1678,7 +1734,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // draws from, kept visually consistent here (rock-brown, dashed) so the two viewers agree.
       const pinned = s.isPinned(a.id)
       // STORY-001: fled enemies are gone — remaining arrows no longer aim at their side.
-      const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead && !e.fled) : arena === s.bossSide
+      const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead && !e.fled && !e.expired && !e.pending) : arena === s.bossSide
       const pts = a.cells.map((c) => cellCenter(c, shownAngle))
       // FIX-023: perspective-sensitive scale, sampled at the arrowhead's own cell (the most
       // visually prominent point of the arrow) rather than geo.cell's whole-board average --
@@ -2041,7 +2097,7 @@ export function createBoardRenderer(canvas, stageEl) {
   }
 
   return {
-    resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markFled, markFledAdvance, resetFx, frame,
+    resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markArrivals, markFled, markFledAdvance, resetFx, frame,
     get geo() { return geo },
     /** BUILD-035: live shots + last-frame hit-anchors (debug/QA only -- no gameplay effect). */
     debugShots() { return shots.map((sh) => ({ ...sh })) },
