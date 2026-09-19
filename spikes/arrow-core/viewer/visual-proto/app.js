@@ -10,6 +10,7 @@ import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENE
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
+import { resolveActiveSceneKey } from './scene-sync.js'
 import { loadCampaign, convertLevelToStep } from './campaign-model.js'
 import {
   appearBossVisual, baselinePose, BOSS_POSES, manualBossPose,
@@ -31,6 +32,7 @@ const ui = {
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
   arrowStylePick: $('arrowStylePick'), arrowMatPick: $('arrowMatPick'), flightStylePick: $('flightStylePick'),
+  adminToggle: $('adminToggle'),
 }
 
 // BUILD-025/CAL-004: canon Prologue sequence -- now shared with calibration-editor.js via
@@ -99,6 +101,37 @@ let wolfVisuals = null
 // null on every normal/flexible-arena/rectangular-regression scene -- see loadBakedArenaDebug.
 let activeCalibration = null
 let authoredSteps = []
+// UI-001: what the scene dropdown must show. loadScene sets kind/entryKey; loadActiveStep
+// resolves the position (advance may have moved past the entry) via scene-sync.js.
+let sceneKind = 'sequence'
+let sceneEntryKey = null
+
+/** UI-001: point the scene dropdown at the ACTUAL runtime scene (single source of truth).
+ * Debug boards (no static option) get one reusable transient option labelled live. */
+function syncScenePick() {
+  const { key, transient } = resolveActiveSceneKey({
+    kind: sceneKind,
+    entryKey: sceneEntryKey,
+    idx: run?.idx ?? 0,
+    stepCount: run?.steps?.length ?? 1,
+    sequenceKeys: SEQUENCE_STEPS.map((s) => s.key),
+  })
+  const has = [...ui.scenePick.options].some((o) => o.value === key)
+  if (!transient && has) {
+    ui.scenePick.value = key
+    ui.scenePick.querySelector('option[data-transient]')?.remove()
+    return
+  }
+  let opt = ui.scenePick.querySelector('option[data-transient]')
+  if (!opt) {
+    opt = new Option('', '__debug__')
+    opt.dataset.transient = '1'
+    ui.scenePick.append(opt)
+  }
+  opt.value = '__debug__'
+  opt.textContent = `debug: ${run?.currentStep?.title ?? run?.currentStep?.id ?? key}`
+  ui.scenePick.value = '__debug__'
+}
 
 /** Expire timed holds and re-sync baselines (e.g. a newly armed attackReady telegraph).
  * Presentation only; never touches engine state. */
@@ -127,6 +160,13 @@ async function loadScene(key) {
   ui.stage.classList.remove('hit-flash')
   activeCalibration = null // flexible-arena regression path -- see loadBakedArenaDebug
   restoreDefaultBackground()
+  // UI-001: remember how this run was entered so the dropdown can stay truthful on advance.
+  sceneKind = key.startsWith('authored-')
+    ? 'authored'
+    : SEQUENCE_STEPS.some((s) => s.key === key)
+      ? 'sequence'
+      : 'single'
+  sceneEntryKey = key
 
   if (key.startsWith('authored-') && authoredSteps.length > 0) {
     const authIdx = Number(key.replace('authored-', ''))
@@ -181,6 +221,8 @@ async function loadSquareDebug(n, seed = 1) {
   }
   run = new RunState(runConfig, [step])
   restoreDefaultBackground()
+  sceneKind = 'debug' // UI-001: synthesised board, no static dropdown option
+  sceneEntryKey = null
   loadActiveStep()
   return { ok: true, width: gen.level.width, height: gen.level.height, arrows: gen.level.arrows.length }
 }
@@ -221,6 +263,8 @@ async function loadBakedArenaDebug(calibId, seed = 1, defSceneKey = 'rock-spike'
     ui.bgLayer.classList.add('has-image')
   }
   run = new RunState(runConfig, [step])
+  sceneKind = 'debug' // UI-001: synthesised baked board, no static dropdown option
+  sceneEntryKey = null
   loadActiveStep()
   return { ok: true, width: gen.level.width, height: gen.level.height, arrows: gen.level.arrows.length, calibration: calibId }
 }
@@ -248,7 +292,7 @@ function loadActiveStep() {
   level = step.level
   def = step.def
   board = step.board ?? { preset: 'unknown', seed: 0 }
-  ui.scenePick.value = step.id
+  syncScenePick() // UI-001: dropdown follows the actual runtime scene (advance included)
   ui.sceneTitle.textContent = step.title ?? step.id
 
   // BUILD-024: resolve calibrated arena through ordinary scene/runtime presentation metadata.
@@ -763,6 +807,23 @@ ui.restartBtn.onclick = () => {
 }
 ui.hintBtn.onclick = showHint
 ui.debugToggle.onclick = () => ui.debugPanel.classList.toggle('hidden')
+// UI-001: clean game view -- one explicit switch hides the admin chrome (baked-arena debug,
+// external links, debug toggle + panel) without losing dev access. Sticks in localStorage,
+// ?clean=1 / ?clean=0 overrides on load. Campaign/Pose editors are separate pages, untouched.
+const CLEAN_KEY = 'ar_playable_clean'
+function applyCleanMode(clean) {
+  document.body.classList.toggle('clean', clean)
+  try { localStorage.setItem(CLEAN_KEY, clean ? '1' : '0') } catch {}
+  if (ui.adminToggle) ui.adminToggle.textContent = clean ? '🛠' : '⚙'
+  if (ui.adminToggle) ui.adminToggle.title = clean ? 'Show admin UI' : 'Hide admin UI (clean game view)'
+}
+function initCleanMode(queryParams, hashParams) {
+  const param = queryParams.get('clean') ?? hashParams.get('clean')
+  let stored = null
+  try { stored = localStorage.getItem(CLEAN_KEY) } catch {}
+  applyCleanMode(param !== null ? param !== '0' : stored === '1')
+}
+if (ui.adminToggle) ui.adminToggle.onclick = () => applyCleanMode(!document.body.classList.contains('clean'))
 ui.scenePick.onchange = () => loadScene(ui.scenePick.value)
 window.addEventListener('resize', () => { if (level) { renderer.resize(level, activeCalibration); kick() } })
 window.addEventListener('keydown', (ev) => {
@@ -814,6 +875,7 @@ const queryParams = new URLSearchParams(location.search)
 const hashParams = new URLSearchParams(location.hash.slice(1))
 const mode = queryParams.get('mode') ?? hashParams.get('mode')
 const stageParam = queryParams.get('stage') ?? hashParams.get('stage')
+initCleanMode(queryParams, hashParams) // UI-001: ?clean=1 starts in clean game view
 
 // BUILD-035: projectile flight style switcher. Painting only -- same trajectory sync
 // (FLIGHT_MS arrival timing) for every style. ?flight=lob starts with the lob arc.
@@ -950,6 +1012,8 @@ window.visualDebug = {
   anchors: () => renderer.debugAnchors(),
   // BUILD-035: flight style switcher (painting only, same trajectory sync every style).
   setFlightStyle: (st) => { renderer.setFlightStyle(st); if (ui.flightStylePick) ui.flightStylePick.value = renderer.getFlightStyle(); kick(); return renderer.getFlightStyle() },
+  // UI-001: clean game view switch (hides admin chrome; dev access kept via the ⚙ button).
+  setCleanMode: (clean) => { applyCleanMode(!!clean); kick(); return document.body.classList.contains('clean') },
   // FIX-021: board-plane projection debug API -- corners/logical fit + point projection, so
   // browser checks can verify click mapping and plane geometry without eyeballing pixels.
   boardPlane: () => renderer.boardPlane(),
