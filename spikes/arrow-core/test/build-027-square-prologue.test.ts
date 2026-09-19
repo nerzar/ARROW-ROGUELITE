@@ -17,7 +17,8 @@ describe('Authored Prologue + Act I campaign', () => {
     expect(act1Raw.length).toBe(8)
     for (const lvl of campaignRaw.levels) {
       expect(lvl.board.size).toBeGreaterThanOrEqual(5)
-      expect(lvl.board.size).toBeLessThanOrEqual(6)
+      // LD-007 provisional: Act I grows the board 6 -> 7 -> 8 (puzzle-density playtest).
+      expect(lvl.board.size).toBeLessThanOrEqual(8)
       const gen = generateBoardForLevel(lvl)
       expect(gen.ok).toBe(true)
       expect(gen.level!.width).toBe(lvl.board.size)
@@ -71,8 +72,12 @@ describe('Authored Prologue + Act I campaign', () => {
     const steps = act1Raw.map(convertLevelToStep)
     expect(steps.length).toBe(8)
 
-    const rock = steps.find((s: any) => s.id === 'act1-stage-4')!
+    // LD-007 provisional chain: 3 rock -> 4 scout (shift) -> 5 three fronts -> 6 captain -> 7 exam -> 8 king.
+    const rock = steps.find((s: any) => s.id === 'act1-stage-3')!
     expect(rock.def.enemies.some((e: any) => e.ability?.id === 'stone_throw')).toBe(true)
+
+    const scout = steps.find((s: any) => s.id === 'act1-stage-4')!
+    expect(scout.def.enemies.some((e: any) => e.ability?.kind === 'shift')).toBe(true)
 
     const exam = steps.find((s: any) => s.id === 'act1-stage-7')!
     expect(exam.def.enemies.some((e: any) => e.attackTimer?.kind === 'cast')).toBe(true)
@@ -81,11 +86,21 @@ describe('Authored Prologue + Act I campaign', () => {
     const captain = steps.find((s: any) => s.id === 'act1-stage-6')!
     const captainDef = captain.def.enemies.find((e: any) => e.id === 'captain_e')!
     expect(captainDef.ability?.kind).toBe('shield')
-    expect(captainDef.ability?.interval).toBe(3)
+    expect(captainDef.ability?.interval).toBe(2)
 
     const king = steps.find((s: any) => s.id === 'act1-stage-8')!
     expect(king.def.boss!.id).toBe('goblin-king')
     expect(king.def.boss!.phases.length).toBe(2)
+  })
+
+  it('LD-007: every Act I stage has a 0-damage line WITHOUT Rotate (0-Rotate agency, not a Rotate lock)', () => {
+    for (const lvl of act1Raw) {
+      const step = convertLevelToStep(lvl)
+      const enc = EncounterState.fromLevel(step.level, step.def, 10, { charges: 0 })
+      const r = minDamageToWin(enc, { nodeBudget: 1_500_000, maxRotates: 0 })
+      expect(r.win, lvl.id).toBe(true)
+      expect(r.minDamage, `${lvl.id} min damage at 0 Rotate`).toBe(0)
+    }
   })
 
   it('plays the 5-stage Prologue end-to-end without requiring Act I to be balance-final', () => {

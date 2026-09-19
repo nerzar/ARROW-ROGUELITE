@@ -4,7 +4,7 @@
 // 16:9 desktop shell: board-renderer.js draws the board/targets, this file owns scene loading,
 // input, HUD DOM, and the win/loss overlay. No combat rule is duplicated here.
 import {
-  findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
+  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
@@ -472,6 +472,8 @@ function tap(id) {
   if (r.pinExpired && r.pinExpired.length) text += ` · UNPINNED: #${r.pinExpired.join(', #')}`
   if (r.shieldRaised && r.shieldRaised.length) text += ` · SHIELD UP: ${r.shieldRaised.map((x) => x.id).join(', ')}`
   if (r.shieldConsumed && r.shieldConsumed.length) text += ` · SHIELD BLOCKED: ${r.shieldConsumed.map((x) => x.id).join(', ')}`
+  // LD-007 provisional: Side Shift ability.
+  if (r.shifted && r.shifted.length) text += ` · MOVED: ${r.shifted.map((x) => `${x.id} ${DIR_NAMES[x.from]}→${DIR_NAMES[x.to]}`).join(', ')}`
   if (r.won) text = `Цель выполнена. ${text}`
   else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
   // STORY-001: scripted flee in three beats. This tap's flee only taunts (one turn);

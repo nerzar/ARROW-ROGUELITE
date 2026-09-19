@@ -1,0 +1,62 @@
+{
+ "id": "ld7_a6_gate",
+ "title": "Акт I · 7 · Ритуальные ворота",
+ "enemies": [
+  {
+   "id": "caster_n",
+   "species": "goblin-shaman",
+   "label": "Goblin Caster",
+   "side": 0,
+   "hp": 3,
+   "attackTimer": {
+    "interval": 4,
+    "damage": 4,
+    "kind": "cast",
+    "interruptible": true,
+    "interruptedAttack": {
+     "interval": 3,
+     "damage": 2,
+     "kind": "normal"
+    }
+   }
+  },
+  {
+   "id": "rock_w",
+   "species": "small-goblin",
+   "label": "Goblin Rock Thrower",
+   "side": 3,
+   "hp": 3,
+   "attackTimer": {
+    "interval": 8,
+    "damage": 1
+   },
+   "ability": {
+    "id": "stone_throw",
+    "interval": 3,
+    "targetPolicy": "free-arrow",
+    "pinDuration": 2,
+    "label": "stone throw"
+   }
+  },
+  {
+   "id": "grunt_e",
+   "species": "small-goblin",
+   "label": "Goblin Guard",
+   "side": 1,
+   "hp": 2,
+   "attackTimer": {
+    "interval": 4,
+    "damage": 2
+   }
+  }
+ ],
+ "rotate": {
+  "allow": [
+   1,
+   -1
+  ],
+  "advancesTurn": false,
+  "useRunPool": true
+ },
+ "blockedTapDamage": 1
+}

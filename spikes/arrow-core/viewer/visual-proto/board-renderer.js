@@ -890,6 +890,9 @@ export function createBoardRenderer(canvas, stageEl) {
       if (!t.dead && !t.fled && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
         if (t.abilityKind === 'shield') {
           lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD IN ${t.abilityCountdown}`, bold: true, color: col.cast })
+        } else if (t.abilityKind === 'shift') {
+          // LD-007 provisional: the enemy walks to another arena side when this hits 0.
+          lines.push({ text: `MOVE IN ${t.abilityCountdown}`, bold: true, color: col.cast })
         } else {
           lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
         }

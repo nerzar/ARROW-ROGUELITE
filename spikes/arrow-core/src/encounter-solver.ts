@@ -370,6 +370,9 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
     if (r.shieldConsumed && r.shieldConsumed.length) {
       text += `  SHIELD BLOCKED: ${r.shieldConsumed.map((sh) => sh.id).join(', ')} (no damage)`
     }
+    if (r.shifted && r.shifted.length) {
+      text += `  MOVED: ${r.shifted.map((sh) => `${sh.id} ${DIR_NAMES[sh.from]}->${DIR_NAMES[sh.to]}`).join(', ')}`
+    }
     if (r.phaseAfter !== r.phaseBefore) {
       text += r.won ? '  => WIN' : `  => phase ${r.phaseAfter + 1}, boss on ${DIR_NAMES[s.bossSide as number]}`
       if (r.granted) text += `, Rotate +${r.granted}`
