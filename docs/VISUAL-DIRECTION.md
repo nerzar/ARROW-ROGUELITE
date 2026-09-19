@@ -121,7 +121,52 @@ STATUS: AGREED FOR NOW как персонаж/визуальный gag. Точ�
 
 Research должен вернуть не каталог на сотни ссылок, а короткий shortlist по категориям: что реально стоит взять, что можно сделать процедурно, а что выгоднее сгенерировать/нарисовать самим.
 
-## 8. Открытые вопросы
+## 8. UI / Reward visual direction
+
+STATUS: **AGREED FOR NOW**.
+
+Текущая playable-база уже задаёт общий язык: насыщенное stylized fantasy, объёмные персонажи и арены, камень/бронза/дерево, тёплый свет и магические акценты. Новый UI не должен выглядеть как отдельный flat/mobile-kit поверх игры.
+
+Базовые правила:
+
+- общий тон: **premium fantasy + локальные грубоватые goblin-акценты в Act I**;
+- материалы: тёмный камень, бронза/тёплый металл, дерево/кожа, магический свет;
+- UI объёмный и игровой, но читаемость важнее декора;
+- базовые панели и рамки должны жить в одном семействе;
+- важные цифры/таймеры читаются мгновенно;
+- glow и particles используются как акцент, а не постоянный шум;
+- UI motion короткий и сочный: мягкий hover, reward pop, тяжёлый boss accent, без истеричного постоянного bounce;
+- визуальные решения сначала проверяются мокапами/референсами, затем переносятся в production UI.
+
+Два anchor-экрана, от которых строим остальную систему:
+
+1. **Reward Choice Screen** — задаёт карточки, редкость, selection/hover, reward presentation.
+2. **Player HUD** — задаёт постоянный боевой UI, HP/Rotate/active items/statuses и масштаб декоративности.
+
+После их пользовательского выбора под них подстраиваются victory/boss popups, item cards, loadout и иконки.
+
+### ART roadmap
+
+Первая очередь:
+
+- `ART-010` — UI Style Base / Visual Bible v1;
+- `ART-011` — Reward Choice Screen Exploration;
+- `ART-012` — Player HUD Exploration;
+- `ART-013` — Victory / Reward / Boss Popup Set;
+- `ART-014` — Item / Weapon Presentation;
+- `ART-015` — Mini-Inventory / Loadout UI.
+
+Вторая очередь:
+
+- `ART-016` — Reward Targets on Board;
+- `ART-017` — Item / Consumable / Status Icons;
+- `ART-018` — Act I Goblin Village Presentation Polish.
+
+Первые три задачи можно исследовать параллельно, но `ART-011/012` считаются exploration: окончательный стиль не фиксируется до пользовательского просмотра `ART-010` и самих мокапов.
+
+---
+
+## 9. Открытые вопросы
 
 - финальная fantasy-тональность после Muse/VK research;
 - точный renderer и VFX pipeline;
