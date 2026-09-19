@@ -163,6 +163,20 @@ Vertical slice считается собранным не тогда, когда
 
 До полного run-flow цены, частота наград, heal/Rotate economy и power-gating считаются provisional.
 
+## Дополнительные принятые направления
+
+AGREED FOR NOW:
+
+- friendly-fire/self-damage от столкновения стрел должно иметь отдельный понятный VFX/feedback;
+- Stone Pin на уровне Матроны обязан реально блокировать стрелу — это bugfix, не новое правило;
+- route map позже расширяется events / points of interest, а не остаётся только battle/shop/boss;
+- reward visual должен опираться на пользовательский approved reference `C:\Users\nerza\Projects\magicarrowassets\gameplay-reference\reward-approved.png`; свободный ART-011 exploration не считать финальным стилем;
+- popups (victory/reward/boss/unlock) входят в ближайший presentation layer;
+- XP/Level Up — отдельный run-progression слой: возможны бонусы к Rotate/charges/HP/utility; до финального balance нужно явно решить, входит ли он в первый vertical slice;
+- позже нужны расходники/умения, усиливающие сами puzzle-стрелы;
+- portal/spawner — новый encounter target: создаёт монстров, пока игрок не уничтожит портал;
+- classes/skill tree/удары/spawn-control — осознанно MUCH LATER, не блокируют первый vertical slice.
+
 ## Более дальний маршрут — обсуждали, но пока не активные задачи
 
 Это направление, а не автоматически принятый backlog:
