@@ -1,6 +1,7 @@
 import { DIR_NAMES } from './dir.js'
 import {
   type AttackTimer,
+  describeAbility,
   type EncounterAction,
   type EncounterDef,
   EncounterState,
@@ -311,7 +312,7 @@ export function validateEncounter(
         (e, i) =>
           `${i + 1}: ${e.id}, side ${DIR_NAMES[e.side]}, ${e.hp} hp${e.mandatory === false ? ' (optional)' : ''}` +
           (e.attackTimer ? `, ${describeAttackTimer(e.attackTimer)}` : '') +
-          (e.ability ? `, THROW IN ${e.ability.interval} (${e.ability.targetPolicy}, pin ${e.ability.pinDuration} turns)` : ''),
+          (e.ability ? `, ${describeAbility(e.ability)}` : ''),
       )
   return {
     totalHp: start.totalHp,
@@ -362,6 +363,12 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
     }
     if (r.pinExpired && r.pinExpired.length) {
       text += `  UNPINNED: #${r.pinExpired.join(', #')}`
+    }
+    if (r.shieldRaised && r.shieldRaised.length) {
+      text += `  SHIELD UP: ${r.shieldRaised.map((sh) => sh.id).join(', ')}`
+    }
+    if (r.shieldConsumed && r.shieldConsumed.length) {
+      text += `  SHIELD BLOCKED: ${r.shieldConsumed.map((sh) => sh.id).join(', ')} (no damage)`
     }
     if (r.phaseAfter !== r.phaseBefore) {
       text += r.won ? '  => WIN' : `  => phase ${r.phaseAfter + 1}, boss on ${DIR_NAMES[s.bossSide as number]}`
