@@ -1,6 +1,6 @@
 # TASK: WAVE-001 — Волны врагов («одного убил — пришёл второй») с телеграфом
 
-STATUS: BLOCKED (push approval; implementation and verification complete)
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Codex
@@ -65,5 +65,5 @@ BRANCH: build/WAVE-001-enemy-waves
 
 ## FOUND
 
-- Реализация закоммичена: `2170026`. Push в `https://github.com/nerzar/ARROW-ROGUELITE.git` дважды отклонён автоматической проверкой как экспорт исходников без подтверждения пользователя для этого адреса; требуется явное разрешение пользователя. По GIT.md статус DONE до push не ставится.
+- Реализация: `2170026`, ветка отправлена в `origin/build/WAVE-001-enemy-waves` с явного разрешения пользователя; наличие коммитов на remote проверено. Блокеров нет.
 - Если задан `expiresAfter`, он остаётся абсолютным world-turn deadline, как в исходном runtime. Визуальное принятие остаётся за пользователем.
