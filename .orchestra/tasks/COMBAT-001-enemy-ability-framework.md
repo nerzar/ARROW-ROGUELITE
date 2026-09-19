@@ -1,13 +1,13 @@
 # TASK: COMBAT-001 — Generic enemy ability framework
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT:
 BASE_BRANCH: main
 BRANCH: build/COMBAT-001-enemy-ability-framework
 START_SHA: 9da57313344b63d32c1ce5f1fb9e94f2c356783e
-RESULT_SHA:
+RESULT_SHA: 3a2e9a0
 
 ## Цель
 
