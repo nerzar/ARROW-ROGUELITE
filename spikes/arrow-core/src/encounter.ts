@@ -2,7 +2,7 @@ import { type Dir, DIR_NAMES, rotateDir } from './dir.js'
 import { generateLevel } from './generator.js'
 import { type Level, levelHash } from './level.js'
 import { PRESETS, type PresetName } from './presets.js'
-import { type Inventory, type ItemAction, type ItemId, ITEMS, itemNeedsTarget } from './items.js'
+import { type Inventory, type ItemAction, type ItemId, ITEMS, itemNeedsTarget, itemIsPassive, type RelicId } from './items.js'
 import { BoardState } from './state.js'
 import { BoardTopology } from './topology.js'
 
@@ -334,7 +334,7 @@ export interface RotatePool {
 
 export type TapResult =
   | { ok: false; reason: 'over' | 'gone'; blocker: -1 }
-  | { ok: false; reason: 'blocked'; blocker: number; damage: number; playerHp: number; playerDead: boolean }
+  | { ok: false; reason: 'blocked'; blocker: number; damage: number; playerHp: number; playerDead: boolean; safetyFuse?: boolean }
   /** EXP-013: `id` is geometrically free but currently pinned by an enemy ability (Stone Throw).
    * Deliberately NOT the same as `'blocked'`: no HP cost, and (like `'blocked'`) not logged/undoable
    * and not a world turn — see `tap()`. */
@@ -387,6 +387,14 @@ export type TapResult =
       /** STORY-001, `enemies` mode only: enemies that fled the arena this turn (scripted
        * `flee` event fired — taunt beat for the presentation layer). Empty when none fled. */
       fled?: { id: string; label?: string }[]
+      /** ITEM-002: Keystone Release relic triggered this tap (nearest enemy timer +1). */
+      keystoneTriggered?: boolean
+      /** ITEM-002: Safety Fuse relic prevented blocked tap damage this tap. */
+      safetyFuse?: boolean
+      /** ITEM-002: Waste Conversion relic buff applied +1 DU to this landed hit. */
+      wasteConversionTriggered?: boolean
+      /** ITEM-002: War Horn item buff applied +1 DU to this landed hit. */
+      warHornTriggered?: boolean
       playerHp: number
       won: boolean
       lost: boolean
@@ -432,11 +440,21 @@ interface TimerSnapshot {
   bonusRotate: number
   /** ITEM-001: player ward HP (Shield item) still up. */
   ward: number
+  /** ITEM-002: Pocket Gyro local Rotate charges. */
+  localBonusRotate: number
+  /** ITEM-002: War Horn buff primed. */
+  warHornActive: boolean
+  /** ITEM-002: Waste Conversion relic buff primed. */
+  wasteConversionReady: boolean
+  /** ITEM-002: Keystone Release relic already triggered this encounter. */
+  keystoneTriggered: boolean
+  /** ITEM-002: Safety Fuse relic already triggered this encounter. */
+  safetyFuseUsed: boolean
 }
 
 type Entry = (
-  | { kind: 'tap'; id: number; hit: boolean; poolReward?: number }
-  | { kind: 'rotate'; turn: Turn }
+  | { kind: 'tap'; id: number; hit: boolean; poolReward?: number; units?: number }
+  | { kind: 'rotate'; turn: Turn; timerBefore: TimerSnapshot; spentGyro?: boolean }
   | { kind: 'item'; item: ItemId; target?: Dir; hit: boolean; poolReward?: number; slot: number; units?: number }
 ) & { timerBefore: TimerSnapshot }
 
@@ -485,6 +503,18 @@ export class EncounterState {
   private ward = 0
   /** ITEM-001: the run inventory, by handle (charges are spent here directly, undo refunds). Null = no items. */
   private readonly inventory: Inventory | null
+  /** ITEM-002: owned passive relics. */
+  private readonly relics: readonly RelicId[]
+  /** ITEM-002: War Horn buff primed for the next landed puzzle arrow. */
+  private warHornActive = false
+  /** ITEM-002: Waste Conversion relic primed for the next landed hit. */
+  private wasteConversionReady = false
+  /** ITEM-002: Keystone Release relic triggered once per encounter. */
+  private keystoneTriggered = false
+  /** ITEM-002: Safety Fuse relic used once per encounter. */
+  private safetyFuseUsed = false
+  /** ITEM-002: Pocket Gyro encounter-local Rotate charges (does NOT touch shared pool). */
+  private localBonusRotate = 0
   /** The HP this encounter started with (constructor param), needed to replay it exactly in clone(). */
   readonly playerHpStart: number
   /**
@@ -495,11 +525,20 @@ export class EncounterState {
   private readonly rotatePool: RotatePool | null
   private readonly log: Entry[] = []
 
-  constructor(topo: BoardTopology, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null, playerMaxHp = playerHp, inventory: Inventory | null = null) {
+  constructor(
+    topo: BoardTopology,
+    def: EncounterDef,
+    playerHp = DEFAULT_PLAYER_HP,
+    rotatePool: RotatePool | null = null,
+    playerMaxHp = playerHp,
+    inventory: Inventory | null = null,
+    relics: readonly RelicId[] = [],
+  ) {
     checkEncounter(def)
     this.def = def
     this.board = new BoardState(topo)
     this.inventory = inventory
+    this.relics = relics
     this.playerHpValue = playerHp
     this.playerHpStart = playerHp
     this.playerMaxHp = Math.max(playerHp, playerMaxHp)
@@ -507,6 +546,10 @@ export class EncounterState {
     this.phaseEnd = []
     this.grantedUpTo = []
     this.pinTurnsLeft = new Array(topo.arrowCount).fill(0)
+    // ITEM-002: Pocket Gyro gives +1 local Rotate if Rotate is allowed in this encounter
+    if (this.inventory && this.inventory.slots.some((it) => it.id === 'pocket_gyro') && (def.rotate?.allow?.length ?? 0) > 0) {
+      this.localBonusRotate = 1
+    }
     if (def.enemies) {
       this.totalHp = def.enemies.reduce((s, e) => s + e.hp, 0)
       this.enemyHp = def.enemies.map((e) => e.hp)
@@ -531,21 +574,29 @@ export class EncounterState {
     }
   }
 
-  static fromLevel(level: Level, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null, playerMaxHp = playerHp, inventory: Inventory | null = null): EncounterState {
-    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool, playerMaxHp, inventory)
+  static fromLevel(
+    level: Level,
+    def: EncounterDef,
+    playerHp = DEFAULT_PLAYER_HP,
+    rotatePool: RotatePool | null = null,
+    playerMaxHp = playerHp,
+    inventory: Inventory | null = null,
+    relics: readonly RelicId[] = [],
+  ): EncounterState {
+    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool, playerMaxHp, inventory, relics)
   }
 
   clone(): EncounterState {
-    // Seed with the entry-time value (current + already-spent): replaying the logged Rotates
-    // decrements back down to exactly the current value instead of double-spending.
-    const pool = this.rotatePool ? { charges: this.rotatePool.charges + this.rotates } : null
+    // ITEM-002: only non-gyro rotates spent from the pool should be refunded to the pool clone.
+    const poolRotatesSpent = this.log.filter((e) => e.kind === 'rotate' && !e.spentGyro).length
+    const pool = this.rotatePool ? { charges: this.rotatePool.charges + poolRotatesSpent } : null
     // ITEM-001: same trick for items — replaying the log re-spends the charges back down.
     let inv: Inventory | null = null
     if (this.inventory) {
       inv = { slots: this.inventory.slots.map((it) => ({ ...it })) }
       for (const e of this.log) if (e.kind === 'item') inv.slots[e.slot].charges++
     }
-    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart, pool, this.playerMaxHp, inv)
+    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart, pool, this.playerMaxHp, inv, this.relics)
     for (const e of this.log) {
       if (e.kind === 'tap') c.tap(e.id)
       else if (e.kind === 'rotate') c.rotate(e.turn)
@@ -628,9 +679,12 @@ export class EncounterState {
    * reached so far. Enemies mode: `def.rotateCharges` flat pool).
    */
   get rotateCharges(): number {
-    if (this.rotatePool) return this.rotatePool.charges
-    if (this.def.enemies) return (this.def.rotateCharges ?? 0) + this.bonusRotate - this.rotates
-    return this.grantedUpToPhase(this.phaseIndex) - this.rotates
+    const base = this.rotatePool
+      ? this.rotatePool.charges
+      : this.def.enemies
+        ? (this.def.rotateCharges ?? 0) + this.bonusRotate - this.rotates
+        : this.grantedUpToPhase(this.phaseIndex) - this.rotates
+    return base + this.localBonusRotate
   }
   get actions(): EncounterAction[] {
     return this.log.map((e): EncounterAction => (e.kind === 'tap' ? { kind: 'tap', id: e.id } : e.kind === 'rotate' ? { kind: 'rotate', turn: e.turn } : { kind: 'item', id: e.item, target: e.target }))
@@ -790,11 +844,48 @@ export class EncounterState {
     return !this.over && this.rotateCharges > 0 && this.def.rotate.allow.includes(turn)
   }
 
+  hasRelic(id: RelicId): boolean {
+    return this.relics.includes(id)
+  }
+  get isWarHornActive(): boolean {
+    return this.warHornActive
+  }
+  get isWasteConversionReady(): boolean {
+    return this.wasteConversionReady
+  }
+  get isSafetyFuseAvailable(): boolean {
+    return this.hasRelic('safety_fuse') && !this.safetyFuseUsed
+  }
+  get isSafetyFuseUsed(): boolean {
+    return this.safetyFuseUsed
+  }
+  get isKeystoneTriggered(): boolean {
+    return this.keystoneTriggered
+  }
+  get ownedRelics(): readonly RelicId[] {
+    return this.relics
+  }
+  get localRotateCharges(): number {
+    return this.localBonusRotate
+  }
+
   private timerSnapshot(): TimerSnapshot {
     const pinTurnsLeft = [...this.pinTurnsLeft]
+    const base = {
+      playerHp: this.playerHpValue,
+      pinTurnsLeft,
+      worldTurn: this.worldTurn,
+      bonusRotate: this.bonusRotate,
+      ward: this.ward,
+      localBonusRotate: this.localBonusRotate,
+      warHornActive: this.warHornActive,
+      wasteConversionReady: this.wasteConversionReady,
+      keystoneTriggered: this.keystoneTriggered,
+      safetyFuseUsed: this.safetyFuseUsed,
+    }
     if (this.def.enemies) {
       return {
-        playerHp: this.playerHpValue,
+        ...base,
         enemyHp: [...this.enemyHp],
         enemyCountdown: [...this.enemyCountdown],
         enemyHitsThisCycle: [...this.enemyHitsThisCycle],
@@ -803,21 +894,13 @@ export class EncounterState {
         enemyShield: [...this.enemyShield],
         enemySide: [...this.enemySide],
         enemyPending: [...this.enemyPending],
-        pinTurnsLeft,
-        worldTurn: this.worldTurn,
-        bonusRotate: this.bonusRotate,
-        ward: this.ward,
       }
     }
     return {
-      playerHp: this.playerHpValue,
+      ...base,
       countdown: this.countdown,
       hitsThisCycle: this.hitsThisCycle,
       castInterrupted: this.castInterrupted,
-      pinTurnsLeft,
-      worldTurn: this.worldTurn,
-      bonusRotate: this.bonusRotate,
-      ward: this.ward,
     }
   }
   private restoreTimer(t: TimerSnapshot): void {
@@ -826,6 +909,11 @@ export class EncounterState {
     this.worldTurn = t.worldTurn
     this.bonusRotate = t.bonusRotate
     this.ward = t.ward
+    this.localBonusRotate = t.localBonusRotate ?? 0
+    this.warHornActive = t.warHornActive ?? false
+    this.wasteConversionReady = t.wasteConversionReady ?? false
+    this.keystoneTriggered = t.keystoneTriggered ?? false
+    this.safetyFuseUsed = t.safetyFuseUsed ?? false
     if (this.def.enemies) {
       this.enemyHp = t.enemyHp!
       this.enemyCountdown = t.enemyCountdown!
@@ -1093,6 +1181,7 @@ export class EncounterState {
   /** ITEM-001: can `id` be used right now (charges left, encounter running, a target if needed)? */
   canUseItem(id: ItemId, target?: Dir): boolean {
     if (this.over || !this.inventory) return false
+    if (itemIsPassive(id)) return false
     const inst = this.inventory.slots.find((it) => it.id === id)
     if (!inst || inst.charges <= 0) return false
     if (!itemNeedsTarget(id)) return true
@@ -1113,7 +1202,7 @@ export class EncounterState {
     const out: ItemAction[] = []
     const seen = new Set<ItemId>()
     for (const it of this.inventory.slots) {
-      if (it.charges <= 0 || seen.has(it.id)) continue
+      if (it.charges <= 0 || seen.has(it.id) || itemIsPassive(it.id)) continue
       seen.add(it.id)
       if (itemNeedsTarget(it.id)) for (const d of this.liveTargetSides()) out.push({ kind: 'item', id: it.id, target: d })
       else out.push({ kind: 'item', id: it.id })
@@ -1145,12 +1234,27 @@ export class EncounterState {
       this.log.push(entry)
       return this.freeActionResult()
     }
-    // damage
+    if (def.effect.kind === 'buff') {
+      this.warHornActive = true
+      this.log.push(entry)
+      return this.freeActionResult()
+    }
+    if (def.effect.kind === 'passive') {
+      return { ok: false, reason: 'gone', blocker: -1 }
+    }
+    // damage (Bow, Frost Dart)
     const dir = target as Dir
     if (this.def.enemies) {
+      const targetIdx = this.targetIndexAt(dir)
       const res = this.landEnemyHit(dir, def.effect.du, entry)
+      if (def.effect.timerBonus && targetIdx >= 0 && this.enemyHp[targetIdx] > 0) {
+        this.enemyCountdown[targetIdx] += def.effect.timerBonus
+      }
       this.log.push(entry)
       return this.finishEnemiesTurn(dir, res, def.turnCost === 1)
+    }
+    if (def.effect.timerBonus && !this.won && Number.isFinite(this.countdown)) {
+      this.countdown += def.effect.timerBonus
     }
     return this.landBossHitAndAdvance(dir, def.effect.du, entry, def.turnCost === 1)
   }
@@ -1172,14 +1276,44 @@ export class EncounterState {
       // turn, and (like a blocked tap) not undoable individually -- there is nothing to undo.
       return { ok: false, reason: 'pinned', pinTurnsLeft: this.pinTurnsLeft[id], playerHp: this.playerHpValue, playerDead: this.playerDead }
     }
-    const r = this.board.tryRemove(id)
+    const timerBefore = this.timerSnapshot()
+    const freed: number[] = []
+    const r = this.board.tryRemove(id, freed)
     if (!r.ok) {
       if (r.reason === 'gone') return r as { ok: false; reason: 'gone'; blocker: -1 }
-      const damage = this.def.blockedTapDamage ?? 0
+      let damage = this.def.blockedTapDamage ?? 0
+      let safetyFuse = false
+      if (damage > 0 && this.hasRelic('safety_fuse') && !this.safetyFuseUsed) {
+        this.safetyFuseUsed = true
+        damage = 0
+        safetyFuse = true
+      }
       this.playerHpValue = Math.max(0, this.playerHpValue - damage)
-      return { ok: false, reason: 'blocked', blocker: r.blocker, damage, playerHp: this.playerHpValue, playerDead: this.playerDead }
+      return { ok: false, reason: 'blocked', blocker: r.blocker, damage, playerHp: this.playerHpValue, playerDead: this.playerDead, safetyFuse }
     }
-    return this.def.enemies ? this.tapEnemies(id) : this.tapBoss(id)
+    let keystoneTriggered = false
+    if (freed.length >= 2 && this.hasRelic('keystone_release') && !this.keystoneTriggered) {
+      this.keystoneTriggered = true
+      keystoneTriggered = true
+      if (this.def.enemies) {
+        let bestIdx = -1
+        let minCd = Infinity
+        for (let i = 0; i < this.def.enemies.length; i++) {
+          if (this.enemyHp[i] > 0 && !this.isGone(i) && Number.isFinite(this.enemyCountdown[i])) {
+            if (this.enemyCountdown[i] < minCd) {
+              minCd = this.enemyCountdown[i]
+              bestIdx = i
+            }
+          }
+        }
+        if (bestIdx >= 0) {
+          this.enemyCountdown[bestIdx]++
+        }
+      } else if (Number.isFinite(this.countdown)) {
+        this.countdown++
+      }
+    }
+    return this.def.enemies ? this.tapEnemies(id, timerBefore, keystoneTriggered) : this.tapBoss(id, timerBefore, keystoneTriggered)
   }
 
   /** Everything a projectile landing on `arenaDir` does to the enemies (no world advance). */
@@ -1228,13 +1362,39 @@ export class EncounterState {
     return { hit, hitDamage, hitTargetIdx, shieldConsumed, fled, rewards, shifted }
   }
 
-  private tapEnemies(id: number): TapResult {
-    const timerBefore = this.timerSnapshot()
+  private tapEnemies(id: number, timerBefore: TimerSnapshot, keystoneTriggered = false): TapResult {
     const arenaDir = this.arenaDir(id)
     const entry: Entry = { kind: 'tap', id, hit: false, timerBefore }
-    const res = this.landEnemyHit(arenaDir, 1, entry)
+    const targetIdx = this.targetIndexAt(arenaDir)
+    const hit = targetIdx >= 0
+    let du = 1
+    let warHornTriggered = false
+    let wasteConversionTriggered = false
+    if (!hit) {
+      if (this.hasRelic('waste_conversion')) {
+        this.wasteConversionReady = true
+      }
+    } else {
+      if (this.warHornActive) {
+        du += 1
+        this.warHornActive = false
+        warHornTriggered = true
+      }
+      if (this.wasteConversionReady) {
+        du += 1
+        this.wasteConversionReady = false
+        wasteConversionTriggered = true
+      }
+    }
+    const res = this.landEnemyHit(arenaDir, du, entry)
     this.log.push(entry)
-    return this.finishEnemiesTurn(arenaDir, res, true)
+    const out = this.finishEnemiesTurn(arenaDir, res, true)
+    if (out.ok) {
+      if (keystoneTriggered) out.keystoneTriggered = true
+      if (warHornTriggered) out.warHornTriggered = true
+      if (wasteConversionTriggered) out.wasteConversionTriggered = true
+    }
+    return out
   }
 
   /** World advance after a projectile resolved (`advanceWorld` false = free action, e.g. a 0-cost item). */
@@ -1283,11 +1443,36 @@ export class EncounterState {
     }
   }
 
-  private tapBoss(id: number): TapResult {
-    const timerBefore = this.timerSnapshot()
+  private tapBoss(id: number, timerBefore: TimerSnapshot, keystoneTriggered = false): TapResult {
     const arenaDir = this.arenaDir(id)
     const entry: Entry = { kind: 'tap', id, hit: false, timerBefore }
-    return this.landBossHitAndAdvance(arenaDir, 1, entry, true)
+    const hit = arenaDir === this.bossSide
+    let du = 1
+    let warHornTriggered = false
+    let wasteConversionTriggered = false
+    if (!hit) {
+      if (this.hasRelic('waste_conversion')) {
+        this.wasteConversionReady = true
+      }
+    } else {
+      if (this.warHornActive) {
+        du += 1
+        this.warHornActive = false
+        warHornTriggered = true
+      }
+      if (this.wasteConversionReady) {
+        du += 1
+        this.wasteConversionReady = false
+        wasteConversionTriggered = true
+      }
+    }
+    const out = this.landBossHitAndAdvance(arenaDir, du, entry, true)
+    if (out.ok) {
+      if (keystoneTriggered) out.keystoneTriggered = true
+      if (warHornTriggered) out.warHornTriggered = true
+      if (wasteConversionTriggered) out.wasteConversionTriggered = true
+    }
+    return out
   }
 
   /** Boss mode: a projectile of `du` hit-units lands on `arenaDir`, then (optionally) the world advances. */
@@ -1301,7 +1486,7 @@ export class EncounterState {
     if (hit) this.hitCount += units
     const hitDamage = hit ? hpBefore - this.hp : 0
     entry.hit = hit
-    if (entry.kind === 'item') entry.units = units
+    entry.units = units
     this.log.push(entry)
     const phaseAfter = this.phaseIndex
     const granted = phaseAfter !== phaseBefore ? this.grantedUpToPhase(phaseAfter) - this.grantedUpToPhase(phaseBefore) : 0
@@ -1339,11 +1524,17 @@ export class EncounterState {
     if (!this.canRotate(turn)) return false
     const timerBefore = this.timerSnapshot()
     this.rot = (this.rot + turn + 4) & 3
-    this.rotates++
-    // RUN-001: one Rotate = minus 1 charge from the shared run pool (canRotate already ensured
-    // the pool is non-empty via the rotateCharges getter).
-    if (this.rotatePool) this.rotatePool.charges--
-    this.log.push({ kind: 'rotate', turn, timerBefore })
+    let spentGyro = false
+    if (this.localBonusRotate > 0) {
+      this.localBonusRotate--
+      spentGyro = true
+    } else {
+      this.rotates++
+      if (this.rotatePool) {
+        this.rotatePool.charges--
+      }
+    }
+    this.log.push({ kind: 'rotate', turn, timerBefore, spentGyro })
     if (this.def.rotate.advancesTurn) {
       if (this.def.enemies) {
         this.advanceEnemiesTurn(-1)
@@ -1373,7 +1564,7 @@ export class EncounterState {
       this.board.undo()
       // Boss mode only: hitCount is derived state, not part of the timer snapshot. Enemies mode's
       // equivalent (per-enemy hp) is restored wholesale by restoreTimer above.
-      if (!this.def.enemies && e.hit) this.hitCount--
+      if (!this.def.enemies && e.hit) this.hitCount -= e.units ?? 1
       // ACT-I-003: refund a kill reward that went into the shared pool.
       if (e.poolReward && this.rotatePool) this.rotatePool.charges -= e.poolReward
     } else if (e.kind === 'item') {
@@ -1384,10 +1575,12 @@ export class EncounterState {
       if (e.poolReward && this.rotatePool) this.rotatePool.charges -= e.poolReward
     } else {
       this.rot = (this.rot - e.turn + 4) & 3
-      this.rotates--
-      // RUN-001: refund the shared pool charge this Rotate spent (pool membership is fixed for
-      // the encounter instance, so any logged Rotate spent from it).
-      if (this.rotatePool) this.rotatePool.charges++
+      if (!e.spentGyro) {
+        this.rotates--
+        if (this.rotatePool) {
+          this.rotatePool.charges++
+        }
+      }
     }
     return true
   }
@@ -1403,6 +1596,7 @@ export class EncounterState {
    * number of future hits to kill. */
   key(): string {
     const pin = this.pinTurnsLeft.join(',')
+    const buffState = `${this.warHornActive ? 1 : 0}|${this.wasteConversionReady ? 1 : 0}|${this.keystoneTriggered ? 1 : 0}|${this.localBonusRotate}`
     if (this.def.enemies) {
       const cd = this.enemyCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
       const ci = this.enemyCastInterrupted.map((b) => (b ? 1 : 0)).join(',')
@@ -1410,10 +1604,10 @@ export class EncounterState {
       const sh = this.enemyShield.map((b) => (b ? 1 : 0)).join(',')
       const sd = this.enemySide.join(',')
       const pending = this.enemyPending.map((b) => b ? 1 : 0).join(',')
-      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${sd}|${pin}|${this.playerHpValue}|${this.worldTurn}|${this.bonusRotate}|${pending}|${this.ward}|${this.itemKey()}`
+      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${sd}|${pin}|${this.playerHpValue}|${this.worldTurn}|${this.bonusRotate}|${pending}|${this.ward}|${this.itemKey()}|${buffState}`
     }
     const c = Number.isFinite(this.countdown) ? this.countdown : 'inf'
-    return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}|${this.ward}|${this.itemKey()}`
+    return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}|${this.ward}|${this.itemKey()}|${buffState}`
   }
 
   private itemKey(): string {

@@ -163,6 +163,22 @@ body.clean .debug-panel { display: none !important; }
 .reward-card.reward-item .reward-title { color: #d8c0ff; }
 .item-gold { width: 100%; font-size: 11px; color: #e8c15a; font-weight: 700; }
 .reward-card.reward-rotate .reward-title { color: #ffd166; }
+.overlay .card .reward-card.reward-relic { border-color: #5cd0ff; box-shadow: 0 0 14px rgba(92,208,255,0.35); }
+.reward-card.reward-relic .reward-title { color: #7ce0ff; }
 .reward-note { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12px; align-items: center; }
 .reward-draft > .secondary-btn { margin-top: 12px; }
 .overlay .card .reward-note button { margin: 0; padding: 4px 8px; font-size: 12px; }
+
+/* ITEM-002: relics HUD row, passive item styling, active combat buffs */
+.item-slot.passive { border-style: dashed; opacity: 0.85; cursor: default; }
+.item-pips.passive-tag { font-size: 9px; letter-spacing: 0; color: #5cd0ff; }
+.item-buff { width: 100%; font-size: 11px; font-weight: 700; color: #ffd166; display: flex; align-items: center; gap: 4px; }
+.item-buff.horn { color: #ff9e79; }
+.item-buff.waste { color: #ffd166; }
+.relic-row { width: 100%; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; }
+.relic-label { font-size: 10px; opacity: 0.6; font-weight: 700; }
+.relic-chip { font-size: 10px; font-weight: 600; padding: 2px 5px; border-radius: 4px; background: rgba(92,208,255,0.12); border: 1px solid rgba(92,208,255,0.4); color: #a8e8ff; cursor: help; }
+.relic-chip.empty { opacity: 0.5; border-color: var(--panel-border); color: var(--ink-dim); background: transparent; cursor: default; }
+.relic-chip.spent { opacity: 0.4; text-decoration: line-through; border-color: var(--panel-border); }
+.relic-chip.primed { border-color: #ffd166; color: #ffe082; box-shadow: 0 0 6px rgba(255,209,102,0.5); }
+
