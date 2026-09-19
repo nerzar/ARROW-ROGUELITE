@@ -27,6 +27,9 @@ BOARD хранит не только одну текущую задачу, а **
 - ASSET-004: подключены уже нарисованные/откалиброванные attack/attackReady/hit/defeat позы у 7 обычных врагов (были на диске, но не в `assets.js`).
 - LD-007 (принято пользователем 2026-09-19): Act I на плотных досках (`board.profile` short/mixed/long), 0-Rotate линии, ability `shift`, библиотека из 36 арен, designer-инструменты `tools/ld007-audit.mjs` / `ld007-scan.mjs`. Отчёт: `.orchestra/research/LD-007-act1-gameplay-pass.md`.
 - ACT-I-003 (принято): Act I «Край гоблинов» — 18 stage'ов, species goblin-grunt/matron/drunkard, механики `heal`, `shift trigger:hit`, `reward`, `expiresAfter`, `winHeal`.
+- WAVE-001: волны врагов с телеграфом (`arrival.afterKill`/`onTurn`), debug-fixture, campaign не тронута.
+- ITEM-001: run-инвентарь, действие `item` (Bow/Shield/Flask), reward draft 1-из-3 (золото/heal/rotate/предмет), солвер видит предметы. UI — плейсхолдер, ждёт ART-011/012/014.
+- ART-010/ART-010B: exploration визуального языка UI (docs/референсы) — принято к сведению, финальное направление ещё не выбрано пользователем.
 
 Стрелочный renderer/material трек закончен. Старые BUILD-032/033 и VIS/FIX arrow-эксперименты — история/источники отдельных идей.
 
@@ -35,12 +38,8 @@ BOARD хранит не только одну текущую задачу, а **
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
 | ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
-| ART-010 — UI Style Base / Visual Bible v1 | READY | `art/ART-010-ui-style-base` | Зафиксировать единый visual language для HUD/rewards/popups/items: материалы, рамки, кнопки, цвет, glow, typography, motion. |
-| ART-010B — PC-first UI Style Pass | READY | `art/ART-010B-pc-ui-style-pass` | Ещё 3 desktop-first направления по canonical current-game refs: проще, чище, меньше тяжёлого fantasy-декора; финал выбирает пользователь. |
 | ART-011 — Reward Choice Screen Exploration | READY | `art/ART-011-reward-choice-screen` | 2–4 варианта reward screen в общем fantasy-языке; карточки, rarity, hover/select, confirm. Anchor-screen, финал только после user review. |
 | ART-012 — Player HUD Exploration | READY | `art/ART-012-player-hud` | 2–4 варианта HUD: HP, Rotate, active items/charges/statuses. Anchor-screen, не перекрывать board/arena. |
-| ITEM-001 — Run inventory + reward draft 1-of-3 + Bow/Shield/Flask | READY | `build/ITEM-001-inventory-reward-draft` | Первая петля наград: инвентарь в RunState, действие `item`, draft после боя, солвер видит предметы. Плейсхолдер-UI. |
-| WAVE-001 — Волны врагов с телеграфом | READY | `build/WAVE-001-enemy-waves` | `EnemyDef.arrival {afterKill|onTurn}`: враг приходит позже, плашка «следующий: … через N». Debug-fixture, campaign не трогать. |
 | PRESENT-001 — Презентация способностей врагов | READY (кандидат для Gemini) | `build/PRESENT-001-ability-presentation` | Анимация перехода между сторонами, stagger пьяницы, heal-искра матроны, лут, щит. Presentation only. |
 | ASSET-009 — Иконки предметов v1 | READY (арт пользователя) | `art/ASSET-009-item-icons-v1` | 6 активных + 3 реликвии, 512 px, фиксированные пути под ITEM-001/002. |
 | ASSET-010 — Спрайты лут-цели | READY (арт пользователя) | `art/ASSET-010-loot-target-sprites` | species `loot-chest`, 5 поз под текущий пайплайн; заменяет гоблина-носильщика в «Обозе». |
@@ -55,8 +54,8 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task/направление | Статус | Что именно хотим |
 |---|---|---|
-| ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + 3 реликвии | PLANNED (после ITEM-001) | Набор до 6 активных + 3 пассивных; аудит уровней «с набором» (`--kit`). |
-| LD-008 — Act I под предметы и волны | PLANNED (после ITEM-001, WAVE-001) | Новый критерий честности (`baseline / booster-helpful / power-gated` по GAME-CONCEPT §13), ≥4 волновых боя, 9x9 в конце акта. Заменяет RUN-002. |
+| ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + 3 реликвии | PLANNED (ITEM-001 принят, можно заводить) | Набор до 6 активных + 3 пассивных; аудит уровней «с набором» (`--kit`). |
+| LD-008 — Act I под предметы и волны | PLANNED (ITEM-001/WAVE-001 приняты, можно заводить) | Новый критерий честности (`baseline / booster-helpful / power-gated` по GAME-CONCEPT §13), ≥4 волновых боя, 9x9 в конце акта. Заменяет RUN-002. |
 | ART-013 — Victory / Reward / Boss Popup Set | PLANNED | Единое семейство Victory / reward gained / boss intro-warning / unlock popups после выбора anchor-стиля. |
 | ART-014 — Item / Weapon Presentation | PLANNED | Карточка предмета/оружия, rarity, свойства, визуал лута — в стиле Reward Screen. |
 | ART-015 — Mini-Inventory / Loadout UI | PLANNED | Компактные equipped/available slots и замена предметов без RPG-склада. |
