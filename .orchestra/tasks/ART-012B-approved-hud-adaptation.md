@@ -26,14 +26,16 @@ BRANCH: art/ART-012B-approved-hud-adaptation
 ## RESULT / VERIFY / FOUND / STATUS
 
 - RESULT: Реализован канонический индустриальный пайплайн вырезанных рамок (Sliced Frame Overlay + Dynamic Health Fill):
-  1. Вырезаны и очищены прозрачные PNG-скины без запечённых цифр/заливок: `enemy-hp-frame.png`, 3-part модули (`enemy-hp-frame-left.png`, `enemy-hp-frame-mid.png`, `enemy-hp-frame-right.png`), `enemy-nameplate-skin.png`, `player-hp-bar-frame.png` (и его 3-part нарезка), `player-plate-sliced.png`, `crystal-active.png`, `crystal-empty.png`, `rotate-button.png`, `item-slot-bow.png`, `item-slot-frostdarts.png`.
-  2. Все динамические параметры (рубиновая заливка здоровья `0..100%`, числовые значения HP, имена мобов, бейджи таймеров `⏱ 3` / `⏱ 4`, кристаллы маны) рендерятся программно в 4-слойном сэндвиче (Track → Fill → Sliced Frame Overlay → Text).
-  3. Финальный production-ready скриншот `docs/visual-refs/hud/04-hud-approved-adaptation.png` (1280×720) обновлён с использованием аутентичных скинов.
-  4. Создан интерактивный стенд `spikes/arrow-core/viewer/hud-sliced-frame-demo.html` с живыми ползунками урона, сменой имён и динамическим тестом 9-slice масштабирования (от 160px до 360px) без искажения наконечников.
+  1. Интегрированы чистые мастер-вырезки пользователя: `media_1789831410746.png` (Player Plate), `media_1789831409128.png` (Standard Enemy Plate), `media_1789831407628.png` (Boss Plate), `media_1789831974914.jpg` (1024×1024 Master Rotate Medallion).
+  2. Подготовлены прозрачные полые PNG-скины без запечённых цифр/заливок: `player-plate-hollow.png` (чистый портрет, сердце, пустые ромбы, полое окно HP), `enemy-plate-standard-hollow.png`, `enemy-plate-boss-hollow.png`, `crystal-active.png`, `rotate-button.png`, `item-slot-bow.png`, `item-slot-frostdarts.png`.
+  3. Очищена база арены `clean_arena_bg.png` от черновых прототипных артефактов (старые белые карточки, зеленые полосы, кружки вращения, шестерёнка, верхние кнопки браузера) с полным сохранением ночного замка, водопадов, факелов, каменной доски со стрелками и волков.
+  4. Все динамические параметры (рубиновая заливка здоровья `0..100%`, числовые значения HP, имена мобов, бейджи таймеров `⏱ 3` / `⏱ 4`, лазурные кристаллы маны) рендерятся программно в 4-слойном сэндвиче (Track → Fill → Sliced Frame Overlay → Text).
+  5. Финальный production-ready скриншот `docs/visual-refs/hud/04-hud-approved-adaptation.png` (1280×720) обновлён с идеальным позиционированием элементов.
+  6. Создан интерактивный стенд `spikes/arrow-core/viewer/hud-sliced-frame-demo.html` с живыми ползунками урона, переключением между стандартным мобом и боссом, кристаллами маны и динамическим тестом 9-slice масштабирования (от 160px до 360px) без искажения наконечников.
 - VERIFY:
   1. Проверено визуально через `view_file` для `docs/visual-refs/hud/04-hud-approved-adaptation.png` и `docs/visual-refs/hud/05-hud-sliced-frame-demo.png`.
-  2. Проверено в живом браузере на локальном сервере `http://localhost:5177/viewer/hud-sliced-frame-demo.html` и `http://localhost:5177/viewer/hud-approved-adaptation.html`.
+  2. Проверено в живом браузере Microsoft Edge (headless capture с чистым профилем) на локальном сервере `http://localhost:5177/viewer/hud-sliced-frame-demo.html` и `http://localhost:5177/viewer/hud-approved-adaptation.html`.
   3. Рамки масштабируются без артефактов, наложение рамки поверх бара идеально маскирует край заливки под любым процентом HP.
-- FOUND: Вырезка растровых рамок в PNG с прозрачным внутренним окном и наложением поверх динамического бара полностью превосходит векторную верстку на CSS/Canvas — сохраняются 100% художественных сколов камня и металлических фасок, а 3-part нарезка (левый/правый кэп + растягиваемая середина) позволяет применять один и тот же ассет для миньонов, стандартных мобов и боссов.
+- FOUND: Использование качественных растровых рамок-скинов (PNG с прозрачным окном) и наложение поверх динамического бара полностью превосходит векторную верстку на CSS/Canvas — сохраняются 100% художественных сколов камня, фасок и текстур референса, а нулевые вычисления геометрии обеспечивают максимальную производительность на мобильных устройствах.
 - STATUS: DONE
 
