@@ -26,7 +26,7 @@ CURRENT_PLAYABLE_BASE: main
 - run-слой: инвентарь 3 слота, действие `item`, reward draft 1-из-3 (золото — обычная награда, предмет — редкий), run-gold, save/load run-state;
 - предметы v1: Лук, Щит, Ледяной дротик, Карманный гироскоп, Боевой рог + реликвии Утилизация / Замковый камень / Предохранитель (ITEM-002); Зелье и «Стрела» (расходники) — на ветке ITEM-001, ещё не сведены (см. INT-ITEM-001b);
 - презентация: approved HUD (player/enemy card, rotate), projectile flight, light-hit VFX, damage numbers, презентация способностей (shift/heal/loot/shield/pin);
-- route map: движок графа маршрута + иллюстрированная карта на пользовательской approved-картинке — на ветке `art/MAP-001-illustrated-map`, ждёт визуального ACCEPT;
+- route map: движок графа маршрута + иллюстрированная карта на пользовательской approved-картинке — в main (`e69cd10`);
 - пользователь сгенерировал и одобрил референсы reward / map / merchant (персонаж + экран лавки) / level-up — `docs/visual-refs/README.md`.
 
 Главное сейчас — не новые механики, а **сведение**: доинтегрировать потерянные куски, подключить карту и торговца, переписать Act I под предметы/волны (LD-008) и прогнать забег целиком.
@@ -35,7 +35,7 @@ CURRENT_PLAYABLE_BASE: main
 
 Это описание фактической текущей базы, а не обещание неизменяемой production-архитектуры:
 
-- pure TypeScript arrow-core с deterministic generator/solver и seed/property tests (39 test files / 435 tests на main `0e68113`);
+- pure TypeScript arrow-core с deterministic generator/solver и seed/property tests (39 test files / 435 tests на main `e69cd10`);
 - combat-pressure / multi-enemy runtime, concurrent enemy timers, ward (щит), `worldTurn`;
 - enemy ability framework (COMBAT-001): `stone_throw`, `shield`, `shift` (timer или `trigger:'hit'`), `heal`; `EnemyDef.reward`, `expiresAfter`, `EncounterDef.winHeal`, `rewardItem`;
 - волны врагов с телеграфом (WAVE-001): движок в main, в campaign ещё не использованы;
@@ -48,7 +48,8 @@ CURRENT_PLAYABLE_BASE: main
 - approved HUD (ART-012B/BUILD-036), item bar и reward draft (плейсхолдер), presentation способностей (PRESENT-001);
 - arena calibration, Campaign Editor, Pose Editor, species presentation defaults (CAL-005), baked arena loader;
 - filled-arrow renderer, 15 arrow materials, projectile flight v1, light-hit VFX, damage numbers;
-- clean game view (UI-001), FIX-033 HUD fit.
+- clean game view (UI-001), FIX-033 HUD fit;
+- route map MAP-001: `src/route-map.ts` (граф, save/load узла в RunState) + `viewer/visual-proto/route-map-ui.js` (fullscreen иллюстрированная карта, программные подписи).
 
 Стрелочный трек завершён. BUILD-032/033 и старые VIS/FIX arrow-ветки считаются историей/источниками отдельных идей, а не активной основой разработки.
 
@@ -56,8 +57,8 @@ CURRENT_PLAYABLE_BASE: main
 
 AGREED FOR NOW. Порядок — в BOARD «Ближайшая точка сведения». Кратко:
 
-1. **INT-ITEM-001b** — свести `dcbd231` (Зелье, «Стрела», Матрона heal + камни детей, честность «с набором») в main; переписать FIX-034 под реальную Матрону с камнями.
-2. **MAP-001** — пользователь смотрит иллюстрированную карту; при ACCEPT — в main; вход в карту после Prologue reward.
+1. **INT-ITEM-001b** — свести Зелье, «Стрелу», Матрону heal + камни детей и честность «с набором» в main (готово на ветке `099d753`, FIX-034 переписан).
+2. **MAP-001** — в main (`e69cd10`); проверить вход в карту после Prologue reward в едином забеге.
 3. **SHOP-001** — торговец по approved-экрану «Лавка Хрягуна»; тратит существующее run-gold.
 4. **RUN-003** — решение пользователя: входит ли level-up в первый slice (референс уже есть).
 5. **LD-008** — Act I поверх предметов/волн: критерий честности `baseline / booster-helpful / power-gated`, ≥4 волновых боя, 9x9 к концу акта, точки карты ↔ stage'и.
@@ -83,7 +84,7 @@ Vertical slice считается собранным не тогда, когда
 Обязательные части и их состояние:
 - ITEM-001/002: предметы, reward draft, inventory, run-gold — **в main** (расходники Зелье/Стрела — INT-ITEM-001b);
 - WAVE-001: волновые encounters — **движок в main**, контент в LD-008;
-- MAP-001: карта Страны гоблинов с выбором маршрута — **на ветке, ждёт ACCEPT визуала**;
+- MAP-001: карта Страны гоблинов с выбором маршрута — **в main**;
 - SHOP-001: торговец, где run-gold превращается в силу текущего забега — **референсы одобрены, код не начат**;
 - LD-008: rebalance Act I уже поверх предметов/волн — **не начат, разблокирован после INT-ITEM-001b**;
 - approved HUD/reward/presentation слой — **HUD в main; reward/popup/shop/map по референсам — впереди**;

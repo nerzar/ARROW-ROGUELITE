@@ -1,6 +1,6 @@
 # TASK: INT-ITEM-001b — свести Зелье / «Стрела» / Матрона-камни в main
 
-STATUS: READY
+STATUS: DONE ON BRANCH — `build/ITEM-001-inventory-reward-draft` @ `099d753`, ждёт разрешения пользователя на no-ff merge в main
 TYPE: INTEGRATION
 SIZE: M
 AGENT: техлид (Claude) — знает обе стороны конфликта
@@ -43,5 +43,17 @@ BRANCH: `build/ITEM-001-inventory-reward-draft` @ `dcbd231` (merge `origin/main`
 - в браузере на stage «Акт I · 8 · Матрона»: HUD показывает HEAL и THROW, камень пинит стрелу, «Стрела» создаёт стрелу и попадает в Матрону, Зелье лечит и складывается;
 - `?items=arrow,potion,bow` стартовый набор работает;
 - ветка запушена, SHA в отчёте.
+
+## RESULT (2026-09-19, Claude)
+
+- main (`e69cd10`, включая MAP-001) влит в ветку; 5 конфликтов решены с сохранением обеих сторон.
+- `items.ts`: каталог ITEM-002 + `potion`/`arrow` (`weight: 0` — не попадают в редкую карту), `health_flask` удалён.
+- `run-state.ts`: драфт = золото · зелье|rotate · взвешенный редкий предмет/реликвия (30 %) → стрелы ×2 (35 %) → золото ×2.
+- `encounter.ts`: `abilities[]` поверх WAVE-001 (приходящий враг получает countdown на каждую способность), `relics` + `level` в конструкторе/clone.
+- `board-renderer.js`: строка и чип на каждую способность (Матрона: HEAL + THROW); `app.js`: intro собирает `ability` + `abilities[]`.
+- `test/fix-034-matron-stone-pin.test.ts` переписан: Матрона = heal + stone_throw, камень реально пинит, tap по запиненной стреле отклоняется.
+- Проверено в браузере (stage 8): intro «THROW … PINNED … HEAL», камень запинил #0 (`tap #0 !! pinned`), «Стрела» → #15 попала в Матрону, Зелье лечит.
+- `npm run build && npx vitest run`: 40 файлов / 450 тестов зелёные.
+- Осталось после merge: ASSET-009 иконки `potion` / `arrow`; воспроизвести исходный баг-репорт FIX-034 на новом main глазами пользователя.
 
 После сдачи STOP.

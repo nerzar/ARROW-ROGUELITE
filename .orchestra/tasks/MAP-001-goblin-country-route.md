@@ -1,6 +1,6 @@
 # TASK: MAP-001 — Goblin Country Route Map v1
 
-STATUS: USER REVIEW — иллюстрированная карта на `art/MAP-001-illustrated-map` @ `874faea`
+STATUS: DONE — влито в main `e69cd10` (иллюстрированная карта)
 TYPE: BUILD
 SIZE: M
 AGENT:
@@ -64,4 +64,4 @@ BRANCH: art/MAP-001-illustrated-map (движок `src/route-map.ts` + fullscree
 
 - Движок графа маршрута: `spikes/arrow-core/src/route-map.ts`, RunState-интеграция, тест `test/map-001-route-graph.test.ts`, save/load узла.
 - Визуал: fullscreen карта на пользовательском `docs/visual-refs/map/approvedmap.png` / `approvedempty.png` (программные подписи, указатель), `viewer/visual-proto/route-map-ui.js`.
-- Ждёт: пользователь смотрит карту в игре и говорит ACCEPT/FIX. После ACCEPT — no-ff в main, затем LD-008 привязывает stage'и Act I к точкам: Кривой лес → Заброшенный пост → Каменное ущелье / Волчья стая → Шаманские топи → Король гоблинов.
+- Влито в main `e69cd10`. Дальше LD-008 привязывает stage'и Act I к точкам: Кривой лес → Заброшенный пост → Каменное ущелье / Волчья стая → Шаманские топи → Король гоблинов.

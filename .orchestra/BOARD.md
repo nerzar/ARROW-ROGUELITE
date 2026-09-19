@@ -6,7 +6,7 @@ BOARD хранит не только одну текущую задачу, а **
 
 ## База
 
-`main` — текущий рабочий playable baseline (`0e68113`, 39 test files / 435 tests зелёные после `npm run build`).
+`main` — текущий рабочий playable baseline (`e69cd10`, включая иллюстрированную карту MAP-001; 39 test files / 435 tests зелёные после `npm run build`).
 
 Уже сведены и приняты:
 - playable Prologue 5/5; Campaign Editor и Pose Editor; arena calibration / baked arena loader; Goblin King flee intro; Goblin Shaman defeat;
@@ -22,6 +22,7 @@ BOARD хранит не только одну текущую задачу, а **
 - PRESENT-001: презентация способностей врагов (shift/stagger/heal-искра/лут/щит/pin), presentation-only.
 - ART-012B / BUILD-036: одобренный HUD (player/enemy card, rotate-кнопка) в проде.
 - FIX-034 (временно): intro-текст не обещает THROW для Матроны — **будет отменён после INT-ITEM-001b**, потому что у Матроны камни есть по решению пользователя.
+- MAP-001 (влито `e69cd10`): движок графа маршрута `src/route-map.ts` + fullscreen иллюстрированная карта на approved-картинке (`route-map-ui.js`, пункт «🗺️ Карта» в списке сцен); привязка stage'ов к точкам — LD-008.
 - Утверждённые референсы reward / map / merchant / level-up сведены в `docs/visual-refs/` (README, раздел «Утверждённые референсы vertical slice»).
 
 Стрелочный renderer/material трек закончен. Старые BUILD-032/033 и VIS/FIX arrow-эксперименты — история/источники отдельных идей.
@@ -32,9 +33,8 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
-| INT-ITEM-001b — свести Зелье / «Стрела» / Матрона-камни | READY (техлид / Claude) | `build/ITEM-001-inventory-reward-draft` @ `dcbd231` → main | Пробный merge даёт 5 конфликтов (`encounter.ts`, `items.ts`, `run-state.ts`, `app.js`, `board-renderer.js`) — все с ITEM-002/PRESENT-001. Заменить `health_flask` на `potion` в каталоге/весах ITEM-002, переписать `fix-034` тест под Матрону «heal + kids_rocks», вернуть intro-строку THROW для неё. Карточка: `.orchestra/tasks/INT-ITEM-001b-consumables-merge.md`. |
-| MAP-001 — Иллюстрированная карта Страны гоблинов | USER REVIEW | `art/MAP-001-illustrated-map` @ `874faea` (2 коммита над main) | Движок графа (`src/route-map.ts`, тест `map-001-route-graph`) + fullscreen карта на `approvedmap.png` с программными подписями и указателем. Пользователь смотрит; при ACCEPT — no-ff в main. Старый node-map от Gemini (`build/MAP-001-goblin-country-route`) — отклонён, не мержить. |
-| SHOP-001 — Лавка Хрягуна | READY (после MAP-001 ACCEPT; движок можно начинать раньше) | `build/SHOP-001-goblin-merchant` | Экран по `docs/visual-refs/trader/shop-screen-approved.png`, персонаж `merchant-character.png`. Stock data-driven, покупка item/зелье-заряд/Rotate за run-gold. |
+| INT-ITEM-001b — свести Зелье / «Стрела» / Матрона-камни | DONE ON BRANCH / ждёт merge в main | `build/ITEM-001-inventory-reward-draft` @ `099d753` (main уже влит в ветку, конфликты решены) | 40 файлов / 450 тестов зелёные; в браузере на stage 8: intro THROW+HEAL, камень пинит стрелу, «Стрела» попадает в Матрону, Зелье лечит. FIX-034 тест переписан. Merge — no-ff по решению пользователя. Карточка: `.orchestra/tasks/INT-ITEM-001b-consumables-merge.md`. |
+| SHOP-001 — Лавка Хрягуна | READY (карта в main; shop-node открывается с неё) | `build/SHOP-001-goblin-merchant` | Экран по `docs/visual-refs/trader/shop-screen-approved.png`, персонаж `merchant-character.png`. Stock data-driven, покупка item/зелье-заряд/Rotate за run-gold. |
 | FIX-035 — HUD fit + dual Rotate | READY | `fix/FIX-035-hud-fit-dual-rotate` | HUD не вылезает за viewport, две Rotate-кнопки. |
 | FIX-036 — HUD card overflow после BUILD-036 | READY | `fix/FIX-036-hud-card-overflow` | Карточки HUD переполняются после интеграции approved HUD. |
 | ART-011B — Reward screen по approved-референсу | READY | `art/ART-011B-approved-reward-reference` | `reward-approved.png` теперь в `docs/visual-refs/approved-ui/`; один cleaned-up mockup + правила семейства карточек (reward = level-up = shop). |
@@ -73,8 +73,8 @@ AGREED FOR NOW (пользователь, 2026-09-19): усложняем сам
 ## Ближайшая точка сведения / проверки
 
 Порядок vertical slice (обновлён 2026-09-19):
-1. INT-ITEM-001b → main;
-2. MAP-001 ACCEPT → main; вход в карту после Prologue reward;
+1. INT-ITEM-001b → main (готово на ветке `099d753`);
+2. ~~MAP-001~~ — в main `e69cd10`; проверить вход в карту после Prologue reward в едином забеге;
 3. SHOP-001 (движок + экран по референсу);
 4. решение по RUN-003;
 5. LD-008 — Act I поверх предметов/волн, привязка к карте;
@@ -82,7 +82,7 @@ AGREED FOR NOW (пользователь, 2026-09-19): усложняем сам
 7. полный ручной прогон Prologue → reward → карта → бой/лавка → Король гоблинов;
 8. economy tuning (gold/prices/heal/Rotate/item frequency/XP) и финальный balance pass.
 
-От пользователя нужны: ACCEPT карты (шаг 2), решение по RUN-003 (шаг 4), живые ACCEPT/FIX по визуалу (шаг 6) и ощущению забега (шаг 7).
+От пользователя нужны: разрешение на merge INT-ITEM-001b (шаг 1), решение по RUN-003 (шаг 4), живые ACCEPT/FIX по визуалу (шаг 6) и ощущению забега (шаг 7).
 
 ## Отложено пользователем
 
