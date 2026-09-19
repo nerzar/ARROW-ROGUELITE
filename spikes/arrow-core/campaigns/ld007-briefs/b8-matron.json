@@ -18,7 +18,16 @@
     "interval": 2,
     "amount": 2,
     "label": "heal"
-   }
+   },
+   "abilities": [
+    {
+     "id": "kids_rocks",
+     "interval": 3,
+     "targetPolicy": "free-arrow",
+     "pinDuration": 2,
+     "label": "kids throw stones"
+    }
+   ]
   },
   {
    "id": "grunt_e",

@@ -99,7 +99,7 @@ const itemBar = createItemBar(document.querySelector('.hud-left'), {
   onUse: (id, target) => useItem(id, target),
   targetLabel: (side) => {
     const t = run ? renderer.collectTargets(run.encounter, def).find((x) => x.side === side && !x.dead && !x.fled) : null
-    return t?.label ?? DIR_NAMES[side]
+    return t?.label ?? ''
   },
 })
 
@@ -432,7 +432,8 @@ function loadActiveStep() {
   buildBossPoseButtons()
   buildWolfPoseButtons()
   targetsBefore = renderer.collectTargets(run.encounter, def)
-  const abilityHint = abilityIntroHint((def.enemies ?? []).filter((e) => e.ability).map((e) => e.ability.kind))
+  // ITEM-001b: an enemy may carry several abilities (`ability` + `abilities[]`); announce each kind once.
+  const abilityHint = abilityIntroHint((def.enemies ?? []).flatMap((e) => [...(e.ability ? [e.ability] : []), ...(e.abilities ?? [])]).map((a) => a.kind))
   // STORY-001: scripted-flee intro — the encounter opens with an unkillable guest. Generic:
   // any enemy carrying `flee` announces itself, so the next such event needs no new code.
   const fleeGuests = (def.enemies ?? []).filter((e) => e.flee)
@@ -686,6 +687,11 @@ function useItem(id, target) {
     return
   }
   const label = ITEMS[id].label
+  // ITEM-001b: the Arrow item grew the level — the renderer draws `level`, so follow the engine's copy.
+  if (r.spawnedArrow !== undefined && s.level) {
+    level = s.level
+    renderer.resize(level, activeCalibration)
+  }
   const after = renderer.collectTargets(s, def)
   const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
   if (r.hit) {
@@ -716,7 +722,8 @@ function useItem(id, target) {
   let text = `${label}`
   if (r.hit) text += ` · попадание (${r.hitDamage}) · HP целей ${s.hp}/${s.totalHp}`
   if (id === 'shield') text += ` · щит ${s.wardHp}`
-  if (id === 'health_flask') text += ` · HP игрока ${s.playerHp}`
+  if (id === 'potion') text += ` · HP игрока ${s.playerHp}`
+  if (r.spawnedArrow !== undefined) text += ` · стрела #${r.spawnedArrow} на доске`
   if (id === 'war_horn') text += ` · War Horn активен (+1 к следующей стреле)`
   if (id === 'frost_dart') text += ` · таймер цели +2`
   if (r.enemyAttacked) {

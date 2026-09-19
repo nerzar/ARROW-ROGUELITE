@@ -68,11 +68,14 @@ export function createItemBar(host, { onUse, targetLabel }) {
       }
       el.disabled = !usable
       el.onclick = () => {
-        if (def.effect.kind !== 'damage') {
+        if (def.effect.kind !== 'damage' && def.effect.kind !== 'spawn_arrow') {
           onUse(it.id)
           return
         }
-        const sides = enc.liveTargetSides()
+        // Bow: live targets. Arrow: every direction where a placement exists (targets first).
+        const sides = def.effect.kind === 'spawn_arrow'
+          ? [...enc.liveTargetSides(), ...[0, 1, 3, 2].filter((d) => !enc.liveTargetSides().includes(d))].filter((d) => enc.canUseItem(it.id, d))
+          : enc.liveTargetSides()
         if (sides.length === 1) {
           onUse(it.id, sides[0])
           return
@@ -82,11 +85,12 @@ export function createItemBar(host, { onUse, targetLabel }) {
         picker.className = 'item-picker'
         const head = document.createElement('div')
         head.className = 'item-picker-title'
-        head.textContent = `${def.label}: в кого?`
+        head.textContent = def.effect.kind === 'spawn_arrow' ? `${def.label}: в какую сторону?` : `${def.label}: в кого?`
         picker.appendChild(head)
         for (const side of sides) {
           const b = document.createElement('button')
-          b.textContent = `${targetLabel(side)} (${SIDE_RU[side] ?? DIR_NAMES[side]})`
+          const who = targetLabel(side)
+          b.textContent = who ? `${who} (${SIDE_RU[side] ?? DIR_NAMES[side]})` : `${SIDE_RU[side] ?? DIR_NAMES[side]} (пусто)`
           b.onclick = () => {
             closePicker()
             onUse(it.id, side)
