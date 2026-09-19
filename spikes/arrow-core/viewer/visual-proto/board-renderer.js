@@ -1244,9 +1244,10 @@ export function createBoardRenderer(canvas, stageEl) {
           const track = t.isBoss
             ? { x: 0.092, y: 0.568, w: 0.816, h: 0.185 }
             : { x: 0.109, y: 0.568, w: 0.808, h: 0.171 }
-          const tx = cardX + approvedW * track.x
-          const ty = cardY + approvedH * track.y
-          const tw = approvedW * track.w
+          // FIX-036 follow-up: user-verified pixel alignment against the approved PNG.
+          const tx = cardX + approvedW * track.x - 2
+          const ty = cardY + approvedH * track.y - 2
+          const tw = approvedW * track.w + 4
           const th = approvedH * track.h
           const chamfer = Math.min(th * 0.45, tw * 0.035)
           const barPath = (width) => {

@@ -63,9 +63,11 @@ BRANCH: fix/FIX-036-hud-card-overflow
 
 RESULT: Approved HUD overlays now stay inside their source PNG frames: enemy/boss chips use the
 safe 0.80/0.82 right anchors, and the player HP fill/text end at 80.15% of the player frame instead
-of overflowing to 90.35%.
+of overflowing to 90.35%. Final user-guided alignment moves enemy/boss HP 2 px up and expands it
+2 px per side; player HP moves 1 px down and expands 4 px left / 2 px right.
 
 VERIFY: `npm test` (450/450), `npm run typecheck`, `npm run build`; live browser at 1366x768 and
-1920x1080 on player HUD, Matron (ATK + HEAL + THR), ordinary Goblin Grunt, and Goblin King boss.
+1920x1080 on player HUD, Matron (ATK + HEAL + THR), ordinary Goblin Grunt, and Goblin King boss;
+live browser rechecked after the final pixel-alignment feedback.
 
 FOUND: none.
