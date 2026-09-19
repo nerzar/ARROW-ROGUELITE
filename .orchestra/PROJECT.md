@@ -18,7 +18,7 @@ CURRENT_PLAYABLE_BASE: main
 
 ## Текущий этап
 
-Проект находится в стадии **стабильного playable Prologue + поиск combat feel / визуального языка**.
+Проект находится в стадии **сборки первого полноценного vertical slice: Prologue + Act I + rewards/items + route map + merchant + presentation polish**.
 
 Базовая механика уже доказана:
 - Prologue проходится целиком;
@@ -143,6 +143,25 @@ AGREED FOR NOW mobile direction:
 - landscape-first;
 - без отдельного Unity/React Native rewrite;
 - отдельный standalone Android/iOS wrapper рассматривать только позже, если появится реальная необходимость.
+
+## Vertical Slice v1 — обязательный run flow
+
+AGREED FOR NOW.
+
+Vertical slice считается собранным не тогда, когда отдельные бои хороши, а когда работает единый цикл:
+
+`Prologue -> reward -> Goblin Country map -> battle / merchant choice -> rewards/items -> дальнейший маршрут -> Goblin King`
+
+Обязательные части:
+- ITEM-001/002: предметы, reward draft, inventory, run-gold;
+- WAVE-001: волновые encounters;
+- MAP-001: карта Страны гоблинов с выбором маршрута;
+- SHOP-001: торговец, где run-gold превращается в силу текущего забега;
+- LD-008: rebalance Act I уже поверх предметов/волн;
+- approved HUD/reward/presentation слой;
+- затем единый ручной playtest и economy/balance pass.
+
+До полного run-flow цены, частота наград, heal/Rotate economy и power-gating считаются provisional.
 
 ## Более дальний маршрут — обсуждали, но пока не активные задачи
 
