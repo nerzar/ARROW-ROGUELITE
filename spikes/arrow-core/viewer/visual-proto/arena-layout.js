@@ -141,10 +141,13 @@ export function spriteMirror(isBoss, side) {
  * Inputs: slot/char in px, side (0..3), cell, fontPx, lineH, lineCount, barH, maxTextW
  * (measured by the renderer). slotAbsX/boardCx/boardHalfPx (all canvas px) clamp E/W
  * plates outward so a wide plate never reaches the board -- the board stays clickable
- * even for long labels. Returns { bar, plate, badge } rects + the per-line
- * baseline ys in draw order. All boxes are slot-relative (the renderer draws translated).
+ * even for long labels. viewport { w, h, x, y } (optional) clamps the whole stack inside
+ * the visible stage -- bar top / plate bottom / plate sides never leave the canvas.
+ * Returns { bar, plate, badge } rects + the per-line
+ * baseline ys in draw order. All boxes are slot-relative (the renderer draws translated);
+ * viewport.x/y is the canvas position of that slot-relative origin.
  */
-export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, maxTextW, cell, slotAbsX, boardCx, boardHalfPx, offset }) {
+export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, maxTextW, cell, slotAbsX, boardCx, boardHalfPx, offset, viewport }) {
   const down = side === 2 // S slot mirrors the stack below the feet
   const gap = HUD_GAP_PX
   // CAL-005: species-level HUD offset in canvas px (the renderer converts species-presentation.js's
@@ -180,6 +183,33 @@ export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, max
     }
   }
   const r = Math.max(9, cell * 0.2)
+  // FIX-033: last-resort viewport clamp. Tall characters on small stages push the stack
+  // above the head straight off the canvas (measured: N plates at y<0 on 480px stages and
+  // even at 1080p). A plate shifted down over the sprite reads worse than a clear plate but
+  // infinitely better than an invisible one -- and CAL-005 offsets still apply first, this
+  // only trims true viewport overflow. Runs after the E/W board clamp, so visibility wins.
+  // Omitted viewport reproduces exactly the geometry this function always computed.
+  if (viewport && Number.isFinite(viewport.w) && Number.isFinite(viewport.h)) {
+    const m = 2
+    const ox0 = Number.isFinite(viewport.x) ? viewport.x : 0
+    const oy0 = Number.isFinite(viewport.y) ? viewport.y : 0
+    const top = Math.min(bar.y, plate.y) + oy0
+    const bottom = Math.max(bar.y + bar.h, plate.y + plate.h) + oy0
+    let dy = 0
+    if (top < m) dy = m - top
+    else if (bottom > viewport.h - m) dy = viewport.h - m - bottom
+    if (dy !== 0) {
+      bar.y += dy
+      plate.y += dy
+    }
+    let dx = 0
+    if (plate.x + ox0 < m) dx = m - (plate.x + ox0)
+    else if (plate.x + plate.w + ox0 > viewport.w - m) dx = viewport.w - m - (plate.x + plate.w + ox0)
+    if (dx !== 0) {
+      plate.x += dx
+      bar.x += dx
+    }
+  }
   const badge = {
     x: plate.x + plate.w - r * 0.5,
     y: (down ? plate.y + plate.h - r * 0.3 : plate.y + r * 0.3),
