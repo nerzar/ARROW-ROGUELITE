@@ -38,9 +38,9 @@ BOARD хранит не только одну текущую задачу, а **
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
 | ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
-| ART-011 — Reward Choice Screen Exploration | READY | `art/ART-011-reward-choice-screen` | 2–4 варианта reward screen в общем fantasy-языке; карточки, rarity, hover/select, confirm. Anchor-screen, финал только после user review. |
+| ART-011 — Reward Choice Screen Exploration | DONE / USER REVIEW | `art/ART-011-reward-choice-screen` | 4 варианта reward screen готовы; выбрать направление перед production-интеграцией. |
 | ART-012 — Player HUD Exploration | READY | `art/ART-012-player-hud` | 2–4 варианта HUD: HP, Rotate, active items/charges/statuses. Anchor-screen, не перекрывать board/arena. |
-| PRESENT-001 — Презентация способностей врагов | IN PROGRESS (Muse) | `build/PRESENT-001-ability-presentation` | Анимация перехода между сторонами, stagger пьяницы, heal-искра матроны, лут, щит. Presentation only. Не дублировать другому агенту. |
+| PRESENT-001 — Презентация способностей врагов | DONE / AWAITING REVIEW+MERGE | `build/PRESENT-001-ability-presentation` | Shift/stagger/heal/loot/shield/pin presentation готова на ветке, 392/392 зелёные; нужен живой просмотр и интеграция. |
 | ASSET-009 — Иконки предметов v1 | READY (арт пользователя) | `art/ASSET-009-item-icons-v1` | 6 активных + 3 реликвии, 512 px, фиксированные пути под ITEM-001/002. |
 | ASSET-010 — Спрайты лут-цели | READY (арт пользователя) | `art/ASSET-010-loot-target-sprites` | species `loot-chest`, 5 поз под текущий пайплайн; заменяет гоблина-носильщика в «Обозе». |
 | ASSET-011 — Портрет героя | READY (арт пользователя) | `art/ASSET-011-hero-portrait` | portrait / portrait-hurt / full для HUD и reward-экранов. |
@@ -55,6 +55,9 @@ BOARD хранит не только одну текущую задачу, а **
 | Task/направление | Статус | Что именно хотим |
 |---|---|---|
 | ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + 3 реликвии | PLANNED (ITEM-001 принят, можно заводить) | Набор до 6 активных + 3 пассивных; аудит уровней «с набором» (`--kit`). |
+| MAP-001 — Goblin Country Route Map v1 | PLANNED / VERTICAL SLICE | Между боями Act I — карта Страны гоблинов с развилками и выбором следующего узла; battle/shop/boss, save/load route-state, старый linear flow как fallback. |
+| SHOP-001 — Goblin Merchant v1 | PLANNED / VERTICAL SLICE | Торговец как shop-node: тратим уже существующее run-gold на item/heal/Rotate; stock и цены data-driven, баланс позже. |
+| ART-019 — Goblin Country Map + Merchant Visual Direction | PLANNED | Визуальный язык карты маршрута и торговца в текущем premium-fantasy стиле, без generic parchment/RPG UI. |
 | LD-008 — Act I под предметы и волны | PLANNED (ITEM-001/WAVE-001 приняты, можно заводить) | Новый критерий честности (`baseline / booster-helpful / power-gated` по GAME-CONCEPT §13), ≥4 волновых боя, 9x9 в конце акта. Заменяет RUN-002. |
 | ART-013 — Victory / Reward / Boss Popup Set | PLANNED | Единое семейство Victory / reward gained / boss intro-warning / unlock popups после выбора anchor-стиля. |
 | ART-014 — Item / Weapon Presentation | PLANNED | Карточка предмета/оружия, rarity, свойства, визуал лута — в стиле Reward Screen. |
@@ -77,11 +80,25 @@ BOARD хранит не только одну текущую задачу, а **
 
 Для Act I пока сохраняем уже выбранный рабочий подход: интересные seed'ы отбираются руками, их direction/turn timeline смотрится отдельно, а encounters скриптуются поверх. Не лезть раньше времени в generic direction quotas / «бесконечную генерацию» только ради универсальности.
 
-AGREED FOR NOW (пользователь, 2026-09-19): дальше усложняем сами головоломки и число мобов (волны, доски 8x8–10x10, профиль `short`). «100 % без урона голым набором» перестаёт быть критерием обычного боя, как только у героя появятся оружие и предметы (ITEM-001/002); честность считается с базовым набором. Reward-система: сначала draft «1 из 3» без золота и магазина.
+AGREED FOR NOW (пользователь, 2026-09-19): дальше усложняем сами головоломки и число мобов (волны, доски 8x8–10x10, профиль `short`). «100 % без урона голым набором» перестаёт быть критерием обычного боя, как только у героя появятся оружие и предметы (ITEM-001/002); честность считается с базовым набором. Для vertical slice обязательны не только rewards/items, но и **карта Страны гоблинов с выбором маршрута + торговец**, использующий уже существующее run-gold. Полный economy/balance pass делаем только после того, как reward → map → battle/shop → следующий бой работает как единый забег.
 
 Визуальное производство не откладывать «на самый конец»: gameplay/content и нужные для playtest арты/VFX могут двигаться параллельно, но визуальные решения всё равно принимает пользователь глазами.
 
 Конкретные encounter counts, баланс и порядок внутри актов не фиксировать молча — это решается отдельными task/playtest.
+
+## Ближайшая точка сведения / проверки
+
+Не балансировать всё по кускам, пока параллельные ветки ещё не сведены.
+
+Порядок vertical slice:
+1. досвести/просмотреть текущие presentation + HUD/reward визуальные ветки;
+2. ITEM-002 — полный набор предметов v1;
+3. MAP-001 + SHOP-001 — run navigation и merchant;
+4. LD-008 — боевой rebalance Act I уже с предметами/волнами;
+5. полный ручной прогон: Prologue → reward → карта → battle/shop → boss;
+6. только после этого — economy tuning (gold/prices/heal/Rotate/item frequency) и финальный balance pass.
+
+От пользователя на шагах 1/5 нужны живые ACCEPT/FIX по визуалу и ощущению забега; цифры до этого считать provisional.
 
 ## Отложено пользователем
 
