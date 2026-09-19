@@ -20,7 +20,7 @@ BOARD хранит не только одну текущую задачу, а **
 - UI-001: clean game view, убран overlap в левом верхнем углу, честный scene dropdown.
 - FIX-033: HUD-плашки больше не вылезают за viewport, оформленный player HUD.
 - VFX-002: damage number popup (light hit), синхронный с прилётом стрелы, реальный урон.
-- LD-006: shortlist из 7 кандидатов Act I encounter'ов (design-only, см. `.orchestra/tasks/LD-006-shortlist.md`) — выбор конкретного кандидата ещё не сделан.
+- LD-006: shortlist из 7 кандидатов Act I encounter'ов (design-only, см. `.orchestra/research/LD-006-act1-encounter-shortlist.md`) — выбор конкретного кандидата ещё не сделан.
 - REF-001: 12 браузерных VFX-референсов + 20 приёмов (см. `.orchestra/research/REF-001-browser-combat-ui-vfx-references.md`).
 
 Стрелочный renderer/material трек закончен. Старые BUILD-032/033 и VIS/FIX arrow-эксперименты — история/источники отдельных идей.
