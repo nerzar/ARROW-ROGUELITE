@@ -1328,7 +1328,10 @@ export function createBoardRenderer(canvas, stageEl) {
             chips.push({ text: abilityText, color: abilityColor })
           }
           const chipSize = Math.max(7, Math.round(approvedW * (t.isBoss ? 0.032 : 0.043)))
-          let chipRight = cardX + approvedW * 0.875
+          // FIX-036: 0.875 sat past the approved frame's actual name-row right edge (measured
+          // ~0.85 boss / ~0.84 enemy from the PNG alpha), so the chip's rounded cap hung off the
+          // card into the background art. Anchor inside the frame instead.
+          let chipRight = cardX + approvedW * (t.isBoss ? 0.82 : 0.80)
           ctx.font = `800 ${chipSize}px system-ui, -apple-system, sans-serif`
           for (let i = chips.length - 1; i >= 0; i--) {
             const chip = chips[i]
