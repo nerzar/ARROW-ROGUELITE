@@ -72,25 +72,22 @@ const WOLF_RUNTIME = { idle: 'idle.png', attackReady: 'attack-ready.png', attack
 export const WOLF_PACK_BASE = 'assets/enemies/dire-wolf/'
 export const WOLF_MANIFEST = Object.fromEntries(ENEMY_POSES.map((p) => [p, `${WOLF_PACK_BASE}${WOLF_RUNTIME[p]}`]))
 
-// ASSET-002: additional ordinary-enemy species for the campaign authoring tool's enemy catalog
-// (source: magicarrowassets/creatures/<species>). Unlike Dire Wolf, these were generated with the
-// same idle/angry/taunt/cast/stun/death/back pose set as the BOSS roster (goblin-shaman/goblin-
-// king), not Dire Wolf's own idle/attack-ready/attack/hit/defeat set -- so only `idle`, `hit`
-// (<- stun/stun-hit, the literal "reaction to being hit" pose) and `defeat` (<- death) have a real
-// literal filename to map here. `attackReady`/`attack` have no matching source file for these
-// species and are deliberately left unmapped rather than guessed -- ENEMY_POSES's existing
-// pose->idle graceful-degradation (see resolveWolfImage below) already covers it, exactly the same
-// contract every other missing pose on any pack already uses.
-// spider-brute/skeleton-child ship with only a single clean usable frame each (the rest of their
-// source folders are either raw ungrouped batches or a labeled concept/reference sheet, not
-// individually usable sprites) -- idle-only, every other pose falls back to idle.
-const ENEMY_RUNTIME_GREEN_SLIME = { idle: 'idle.png', hit: 'stun-hit.png', defeat: 'death.png' }
-const ENEMY_RUNTIME_SMALL_GREEN_SLIME = { idle: 'idle.png', hit: 'hit-stun.png', defeat: 'death.png' }
-const ENEMY_RUNTIME_SMALL_GOBLIN = { idle: 'idle.png', hit: 'stun.png', defeat: 'death.png' }
-const ENEMY_RUNTIME_SPIDER_BRUTE = { idle: 'idle.png' }
-const ENEMY_RUNTIME_SMALL_SPIDER = { idle: 'idle.png' }
-const ENEMY_RUNTIME_TOXIC_DEMONIC_SPIDER = { idle: 'idle.png', hit: 'stun.png', defeat: 'death.png' }
-const ENEMY_RUNTIME_SKELETON_CHILD = { idle: 'idle.png' }
+// ASSET-002/ASSET-004: additional ordinary-enemy species for the campaign authoring tool's enemy
+// catalog (source: magicarrowassets/creatures/<species>). ASSET-002 originally only had a stun/
+// death-style source pack for these, so attackReady/attack were left unmapped on purpose. CAL-007's
+// pose calibration pass (creature-poses.json) has since added and calibrated a full canonical
+// idle/attackReady/attack/hit/defeat set (real `attack.png`/`attackReady.png`/`hit.png`/`defeat.png`
+// files, not the old stun/death aliases) for every species below -- wire the full set so those
+// poses actually render instead of silently falling back to idle. The old stun/death-named files
+// stay on disk unused (harmless leftovers, not deleted here).
+const ORDINARY_ENEMY_RUNTIME_DEFAULT = { idle: 'idle.png', attackReady: 'attackReady.png', attack: 'attack.png', hit: 'hit.png', defeat: 'defeat.png' }
+const ENEMY_RUNTIME_GREEN_SLIME = ORDINARY_ENEMY_RUNTIME_DEFAULT
+const ENEMY_RUNTIME_SMALL_GREEN_SLIME = ORDINARY_ENEMY_RUNTIME_DEFAULT
+const ENEMY_RUNTIME_SMALL_GOBLIN = ORDINARY_ENEMY_RUNTIME_DEFAULT
+const ENEMY_RUNTIME_SPIDER_BRUTE = ORDINARY_ENEMY_RUNTIME_DEFAULT
+const ENEMY_RUNTIME_SMALL_SPIDER = ORDINARY_ENEMY_RUNTIME_DEFAULT
+const ENEMY_RUNTIME_TOXIC_DEMONIC_SPIDER = ORDINARY_ENEMY_RUNTIME_DEFAULT
+const ENEMY_RUNTIME_SKELETON_CHILD = ORDINARY_ENEMY_RUNTIME_DEFAULT
 
 function enemyManifest(base, runtime) {
   return Object.fromEntries(ENEMY_POSES.filter((p) => runtime[p]).map((p) => [p, `${base}${runtime[p]}`]))
