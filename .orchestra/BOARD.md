@@ -24,7 +24,7 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
-| VFX-001 — Combat Feel Lab | READY | `spike/VFX-001-combat-feel-lab` | Отдельный визуальный стенд: trail, impact, particles, damage number, hit reaction, visual hit-stop, shake, death/boss/reward FX. Сначала пользователь выбирает глазами, потом решаем интеграцию/архитектуру. |
+| VFX-002 — Damage Number Integration | READY | `build/VFX-002-damage-number-integration` | Первый из 10 эффектов VFX-001-лабы, выбранный пользователем для интеграции в реальную игру: damage number (light hit). Написан так, чтобы эффекты 5-10 добавлялись тем же паттерном (`fxFor(key)`), без отдельного fx-scheduler заранее. |
 | UI-001 — Game Shell Cleanup | READY | `fix/UI-001-game-shell-cleanup` | Скрываемый admin/debug UI, убрать кашу в левом верхнем углу, scene dropdown всегда показывает фактически активную runtime scene. Это обычный game-shell fix, не mobile-задача. |
 | REF-001 — Browser Combat UI / VFX References | READY | `research/REF-001-browser-combat-ui-vfx-references` | Посмотреть браузерные игры ради HUD animations, hit/damage feedback, cast/attack telegraphs, boss/death/reward presentation и собрать конкретные приёмы для вдохновения. |
 
@@ -38,7 +38,7 @@ BOARD хранит не только одну текущую задачу, а **
 |---|---|---|
 | ACT-I-002 — Act I Vertical Slice | PLANNED | Развить уже существующие первые Act I encounters в короткий кусок настоящего акта, который интересно проходить, а не просто технически тестировать. |
 | RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, небольшой понятный набор апгрейдов, желание сделать ещё один забег. |
-| VFX integration | WAITING FOR VFX-001 | В игру попадают только эффекты, которые пользователь реально выбрал в lab/reference-pass. Reusable VFX-система строится под выбранные эффекты, а не заранее. |
+| VFX integration (эффекты 5-10) | WAITING FOR VFX-002 | Пользователь посмотрел лабу VFX-001 и решил забрать все 10 эффектов по одному, начиная с damage number (VFX-002). Следующие карточки — по одному эффекту за раз, тем же паттерном, после того как VFX-002 принят на плейтесте. |
 | AUDIO-001 — Combat Audio | PLANNED LATER | После принятого визуального combat feel: hit/cast/death/reward SFX, без преждевременного большого sound-system. |
 | VK production pass | PLANNED LATER | SDK, saves, lifecycle/fullscreen, audio rules, rewarded ads, analytics, слабые устройства — после приятного vertical slice. |
 

@@ -104,6 +104,16 @@ function spritePivotsFor(calibration) {
 
 const EASE = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
+// VFX-002: damage-number popup, ported from spike/VFX-001-combat-feel-lab's `FX.dmg`/`dmg()`
+// light-hit preset (dmgDur:620, dmgSize:0.9, style 'light'). Pop-in with overshoot, drift up,
+// fade out. Only the 'light' style is wired here -- see onTapResult/drawTarget's dmgText field
+// for how a later lab effect (crit/heavy/magic styling, or an entirely different card like enemy
+// recoil) reuses the same one-field-on-fx pattern instead of a new system.
+const DMG_MS = 620
+const DMG_STYLE_LIGHT = { fill: '#fff3d0', stroke: '#4a2c06' }
+const easeOutCubic = (p) => 1 - (1 - p) ** 3
+const easeOutBack = (p, s = 1.8) => 1 + (s + 1) * (p - 1) ** 3 + s * (p - 1) ** 2
+const smoothstep = (p) => p * p * (3 - 2 * p)
 
 export function createBoardRenderer(canvas, stageEl) {
   const ctx = canvas.getContext('2d')
@@ -138,7 +148,7 @@ export function createBoardRenderer(canvas, stageEl) {
   function fxFor(key) {
     let fx = targetFx.get(key)
     if (!fx) {
-      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9, fleeT: -1e9, fleeBackT: -1e9, fleeExitT: -1e9 }
+      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9, fleeT: -1e9, fleeBackT: -1e9, fleeExitT: -1e9, dmgText: null }
       targetFx.set(key, fx)
     }
     return fx
@@ -289,6 +299,11 @@ export function createBoardRenderer(canvas, stageEl) {
         pendingHp.set(targetKey(hitTarget), { hp: hitTarget.hp, dead: hitTarget.dead, until: now + FLIGHT_MS })
         const fx = fxFor(targetKey(hitTarget))
         fx.hitT = now + FLIGHT_MS // impact flash syncs with the projectile's arrival, not the tap
+        // VFX-002: damage-number popup, arrival-synced like the impact flash above (same
+        // `now + FLIGHT_MS`) -- r.hitDamage is the real HP delta the engine applied to this
+        // target this tap, never a presentation-layer guess. A later lab effect (recoil, sparks,
+        // ...) adds its own field here the same way, on the same fx object.
+        if (r.hitDamage > 0) fx.dmgText = { value: r.hitDamage, at: now + FLIGHT_MS }
         // EXP-011/VS-001: only a genuine cast-interrupt gets the "CAST INTERRUPTED" burst -- the
         // legacy EXP-010 interruptOnHit reset (r.interrupted without r.castInterrupted) is unused
         // by any current content and isn't a cast, so it gets no burst text.
@@ -437,6 +452,8 @@ export function createBoardRenderer(canvas, stageEl) {
       // STORY-001: an exit slide is also a function of `now` — keep the loop alive until it
       // plays out. (The taunt hold needs no extra rule: a fled enemy counts as alive above.)
       if (now - fx.fleeExitT < FLEE_EXIT_MS) animating = true
+      // VFX-002: damage-number popup is also a function of `now` until it fades out.
+      if (fx.dmgText && now - fx.dmgText.at < DMG_MS) animating = true
     }
     for (const fx of arrowFx.values()) {
       if (now - fx.pinT < 500 || now - fx.unpinT < 550 || now - fx.deniedT < 320) animating = true
@@ -837,6 +854,34 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.textAlign = 'center'
         ctx.fillText('CAST INTERRUPTED', 0, -charH / 2 - 10 - p * 12)
         ctx.restore()
+      }
+
+      // VFX-002: damage-number popup -- pop in with overshoot, drift up, fade out. Offset to the
+      // upper-right of the head (like the lab's hit-point offset) so it never sits exactly under
+      // the HUD plate above. `dmgText.at` is the same `now + FLIGHT_MS` timestamp as `fx.hitT`,
+      // so the number appears exactly when the projectile arrives, not when the player tapped.
+      if (fx.dmgText) {
+        const dmgP = (now - fx.dmgText.at) / DMG_MS
+        if (dmgP >= 0 && dmgP < 1) {
+          const pop = dmgP < 0.22 ? easeOutBack(dmgP / 0.22) : 1
+          const rise = easeOutCubic(dmgP) * charCell * 1.1
+          const fade = dmgP < 0.62 ? 1 : 1 - smoothstep(clamp01((dmgP - 0.62) / 0.38))
+          const size = Math.max(10, charCell * 0.34 * 0.9) * (0.7 + 0.3 * pop)
+          ctx.save()
+          ctx.globalAlpha = clamp01(fade)
+          ctx.translate(charW * 0.28, -charH / 2 - rise)
+          ctx.scale(pop, pop)
+          ctx.font = `800 ${size}px system-ui, sans-serif`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.lineJoin = 'round'
+          ctx.lineWidth = Math.max(2, size * 0.14)
+          ctx.strokeStyle = DMG_STYLE_LIGHT.stroke
+          ctx.strokeText(String(fx.dmgText.value), 0, 0)
+          ctx.fillStyle = DMG_STYLE_LIGHT.fill
+          ctx.fillText(String(fx.dmgText.value), 0, 0)
+          ctx.restore()
+        }
       }
 
       // VIS-007: debug layout record in canvas coords, for automated checks (HUD clear of
