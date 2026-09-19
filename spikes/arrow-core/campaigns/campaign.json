@@ -693,56 +693,56 @@
         "profile": "short"
       },
       "presentation": {
-        "arena": "imported-goblinas-na-approved-1789716079863",
-        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "arena": "goblin-arena-dusk",
+        "background": "assets/arenas/library/goblin-arena-dusk.jpg",
         "calibration": {
-          "id": "prologue-5x5-good",
-          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "id": "goblin-arena-dusk",
+          "background": "assets/arenas/library/goblin-arena-dusk.jpg",
           "boardSizeLocked": 6,
           "boardPlaneFrac": {
             "tl": [
-              0.35482595564653957,
-              0.41824894339321783
+              0.3548,
+              0.4182
             ],
             "tr": [
-              0.6459652167819395,
-              0.41824894339321783
+              0.646,
+              0.4182
             ],
             "br": [
-              0.6855221783297312,
-              0.8036217412639407
+              0.6855,
+              0.8036
             ],
             "bl": [
-              0.3128955824417937,
-              0.8036217412639407
+              0.3129,
+              0.8036
             ]
           },
           "anchors": {
             "top": {
-              "x": 0.5027689676916272,
-              "y": 0.3044877646498292
+              "x": 0.5028,
+              "y": 0.3045
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.146,
+              "y": 0.4436
             },
             "right": {
-              "x": 0.8445411516800271,
-              "y": 0.4646880293719555
+              "x": 0.854,
+              "y": 0.4337
             }
           },
           "effectAnchors": {
             "top": {
-              "x": 0.5019778405324979,
-              "y": 0.31593062900914937
+              "x": 0.502,
+              "y": 0.3159
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.127,
+              "y": 0.4576
             },
             "right": {
-              "x": 0.8627373177765313,
-              "y": 0.46039696205769565
+              "x": 0.8627,
+              "y": 0.4604
             }
           },
           "actorScale": {
@@ -822,56 +822,56 @@
         "profile": "short"
       },
       "presentation": {
-        "arena": "imported-goblinas-na-approved-1789716079863",
-        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "arena": "goblin-arena-hills",
+        "background": "assets/arenas/library/goblin-arena-hills.jpg",
         "calibration": {
-          "id": "prologue-5x5-good",
-          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "id": "goblin-arena-hills",
+          "background": "assets/arenas/library/goblin-arena-hills.jpg",
           "boardSizeLocked": 6,
           "boardPlaneFrac": {
             "tl": [
-              0.35482595564653957,
-              0.41824894339321783
+              0.3548,
+              0.4182
             ],
             "tr": [
-              0.6459652167819395,
-              0.41824894339321783
+              0.646,
+              0.4182
             ],
             "br": [
-              0.6855221783297312,
-              0.8036217412639407
+              0.6855,
+              0.8036
             ],
             "bl": [
-              0.3128955824417937,
-              0.8036217412639407
+              0.3129,
+              0.8036
             ]
           },
           "anchors": {
             "top": {
-              "x": 0.5027689676916272,
-              "y": 0.3044877646498292
+              "x": 0.5028,
+              "y": 0.3045
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.146,
+              "y": 0.4436
             },
             "right": {
-              "x": 0.8445411516800271,
-              "y": 0.4646880293719555
+              "x": 0.854,
+              "y": 0.4337
             }
           },
           "effectAnchors": {
             "top": {
-              "x": 0.5019778405324979,
-              "y": 0.31593062900914937
+              "x": 0.502,
+              "y": 0.3159
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.127,
+              "y": 0.4576
             },
             "right": {
-              "x": 0.8627373177765313,
-              "y": 0.46039696205769565
+              "x": 0.8627,
+              "y": 0.4604
             }
           },
           "actorScale": {
@@ -951,56 +951,56 @@
         "profile": "short"
       },
       "presentation": {
-        "arena": "imported-goblinas-na-approved-1789716079863",
-        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "arena": "goblin-arena-bridge",
+        "background": "assets/arenas/library/goblin-arena-bridge.jpg",
         "calibration": {
-          "id": "prologue-5x5-good",
-          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "id": "goblin-arena-bridge",
+          "background": "assets/arenas/library/goblin-arena-bridge.jpg",
           "boardSizeLocked": 6,
           "boardPlaneFrac": {
             "tl": [
-              0.35482595564653957,
-              0.41824894339321783
+              0.3548,
+              0.4182
             ],
             "tr": [
-              0.6459652167819395,
-              0.41824894339321783
+              0.646,
+              0.4182
             ],
             "br": [
-              0.6855221783297312,
-              0.8036217412639407
+              0.6855,
+              0.8036
             ],
             "bl": [
-              0.3128955824417937,
-              0.8036217412639407
+              0.3129,
+              0.8036
             ]
           },
           "anchors": {
             "top": {
-              "x": 0.5027689676916272,
-              "y": 0.3044877646498292
+              "x": 0.5028,
+              "y": 0.3045
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.146,
+              "y": 0.4436
             },
             "right": {
-              "x": 0.8445411516800271,
-              "y": 0.4646880293719555
+              "x": 0.854,
+              "y": 0.4337
             }
           },
           "effectAnchors": {
             "top": {
-              "x": 0.5019778405324979,
-              "y": 0.31593062900914937
+              "x": 0.502,
+              "y": 0.3159
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.127,
+              "y": 0.4576
             },
             "right": {
-              "x": 0.8627373177765313,
-              "y": 0.46039696205769565
+              "x": 0.8627,
+              "y": 0.4604
             }
           },
           "actorScale": {
@@ -1075,7 +1075,274 @@
     },
     {
       "id": "act1-stage-5",
-      "title": "Акт I · 5 · Засада с трёх сторон",
+      "title": "Акт I · 5 · Пьяный дозор",
+      "board": {
+        "preset": "square-6",
+        "size": 6,
+        "seed": 27,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "goblin-outpost-sunset",
+        "background": "assets/arenas/library/goblin-outpost-sunset.jpg",
+        "calibration": {
+          "id": "goblin-outpost-sunset",
+          "background": "assets/arenas/library/goblin-outpost-sunset.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b5_drunk",
+        "title": "Акт I · 5 · Пьяный дозор",
+        "enemies": [
+          {
+            "id": "drunk_e",
+            "species": "goblin-drunkard",
+            "label": "Goblin Drunkard",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            },
+            "ability": {
+              "id": "stagger",
+              "kind": "shift",
+              "interval": 99,
+              "sides": [
+                1,
+                3
+              ],
+              "trigger": "hit",
+              "label": "stagger"
+            }
+          },
+          {
+            "id": "lookout_n",
+            "species": "small-goblin",
+            "label": "Goblin Lookout",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-6",
+      "title": "Акт I · 6 · Волчья тропа",
+      "board": {
+        "preset": "square-7",
+        "size": 7,
+        "seed": 108,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "elven-podiums-day",
+        "background": "assets/arenas/library/elven-podiums-day.jpg",
+        "calibration": {
+          "id": "elven-podiums-day",
+          "background": "assets/arenas/library/elven-podiums-day.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b6_wolves",
+        "title": "Акт I · 6 · Волчья тропа",
+        "enemies": [
+          {
+            "id": "wolf_e",
+            "species": "dire-wolf",
+            "label": "Dire Wolf",
+            "side": 1,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 2,
+              "damage": 1
+            }
+          },
+          {
+            "id": "wolf_w",
+            "species": "dire-wolf",
+            "label": "Dire Wolf",
+            "side": 3,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 1
+            }
+          },
+          {
+            "id": "loot_n",
+            "species": "small-goblin",
+            "label": "Goblin Looter",
+            "side": 0,
+            "hp": 1,
+            "mandatory": false,
+            "expiresAfter": 5,
+            "reward": {
+              "heal": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-7",
+      "title": "Акт I · 7 · Засада с трёх сторон",
       "board": {
         "preset": "square-7",
         "size": 7,
@@ -1083,56 +1350,56 @@
         "profile": "short"
       },
       "presentation": {
-        "arena": "imported-goblinas-na-approved-1789716079863",
-        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "arena": "goblin-fortress-banners",
+        "background": "assets/arenas/library/goblin-fortress-banners.jpg",
         "calibration": {
-          "id": "prologue-5x5-good",
-          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "id": "goblin-fortress-banners",
+          "background": "assets/arenas/library/goblin-fortress-banners.jpg",
           "boardSizeLocked": 6,
           "boardPlaneFrac": {
             "tl": [
-              0.35482595564653957,
-              0.41824894339321783
+              0.3548,
+              0.4182
             ],
             "tr": [
-              0.6459652167819395,
-              0.41824894339321783
+              0.646,
+              0.4182
             ],
             "br": [
-              0.6855221783297312,
-              0.8036217412639407
+              0.6855,
+              0.8036
             ],
             "bl": [
-              0.3128955824417937,
-              0.8036217412639407
+              0.3129,
+              0.8036
             ]
           },
           "anchors": {
             "top": {
-              "x": 0.5027689676916272,
-              "y": 0.3044877646498292
+              "x": 0.5028,
+              "y": 0.3045
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.146,
+              "y": 0.4436
             },
             "right": {
-              "x": 0.8445411516800271,
-              "y": 0.4646880293719555
+              "x": 0.854,
+              "y": 0.4337
             }
           },
           "effectAnchors": {
             "top": {
-              "x": 0.5019778405324979,
-              "y": 0.31593062900914937
+              "x": 0.502,
+              "y": 0.3159
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.127,
+              "y": 0.4576
             },
             "right": {
-              "x": 0.8627373177765313,
-              "y": 0.46039696205769565
+              "x": 0.8627,
+              "y": 0.4604
             }
           },
           "actorScale": {
@@ -1158,7 +1425,7 @@
       },
       "encounter": {
         "id": "ld7_a4_three",
-        "title": "Акт I · 5 · Засада с трёх сторон",
+        "title": "Акт I · 7 · Засада с трёх сторон",
         "enemies": [
           {
             "id": "grunt_n",
@@ -1207,8 +1474,277 @@
       }
     },
     {
-      "id": "act1-stage-6",
-      "title": "Акт I · 6 · Капитан стражи",
+      "id": "act1-stage-8",
+      "title": "Акт I · 8 · Матрона",
+      "board": {
+        "preset": "square-7",
+        "size": 7,
+        "seed": 71,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "fae-podiums",
+        "background": "assets/arenas/library/fae-podiums.jpg",
+        "calibration": {
+          "id": "fae-podiums",
+          "background": "assets/arenas/library/fae-podiums.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b8_matron",
+        "title": "Акт I · 8 · Матрона",
+        "enemies": [
+          {
+            "id": "matron_n",
+            "species": "goblin-matron",
+            "label": "Goblin Matron",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 12,
+              "damage": 1
+            },
+            "ability": {
+              "id": "matron_heal",
+              "kind": "heal",
+              "interval": 2,
+              "amount": 2,
+              "label": "heal"
+            }
+          },
+          {
+            "id": "grunt_e",
+            "species": "goblin-grunt",
+            "label": "Goblin Grunt",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 7,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-9",
+      "title": "Акт I · 9 · Семейная ссора",
+      "board": {
+        "preset": "square-7",
+        "size": 7,
+        "seed": 118,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "goblin-camp-podium",
+        "background": "assets/arenas/library/goblin-camp-podium.jpg",
+        "calibration": {
+          "id": "goblin-camp-podium",
+          "background": "assets/arenas/library/goblin-camp-podium.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.356,
+              0.42
+            ],
+            "tr": [
+              0.646,
+              0.42
+            ],
+            "br": [
+              0.677,
+              0.815
+            ],
+            "bl": [
+              0.324,
+              0.815
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5,
+              "y": 0.31
+            },
+            "left": {
+              "x": 0.145,
+              "y": 0.45
+            },
+            "right": {
+              "x": 0.855,
+              "y": 0.45
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5,
+              "y": 0.32
+            },
+            "left": {
+              "x": 0.13,
+              "y": 0.46
+            },
+            "right": {
+              "x": 0.87,
+              "y": 0.46
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b9_family",
+        "title": "Акт I · 9 · Семейная ссора",
+        "enemies": [
+          {
+            "id": "matron_n",
+            "species": "goblin-matron",
+            "label": "Goblin Matron",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 6,
+              "damage": 1
+            },
+            "ability": {
+              "id": "matron_heal",
+              "kind": "heal",
+              "interval": 3,
+              "amount": 1,
+              "label": "heal"
+            }
+          },
+          {
+            "id": "drunk_e",
+            "species": "goblin-drunkard",
+            "label": "Goblin Drunkard",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            },
+            "ability": {
+              "id": "stagger",
+              "kind": "shift",
+              "interval": 99,
+              "sides": [
+                1,
+                3
+              ],
+              "trigger": "hit",
+              "label": "stagger"
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-10",
+      "title": "Акт I · 10 · Капитан стражи",
       "board": {
         "preset": "square-7",
         "size": 7,
@@ -1291,11 +1827,11 @@
       },
       "encounter": {
         "id": "ld7_a5_captain",
-        "title": "Акт I · 6 · Капитан стражи",
+        "title": "Акт I · 10 · Капитан стражи",
         "enemies": [
           {
             "id": "captain_e",
-            "species": "small-goblin",
+            "species": "goblin-grunt",
             "label": "Goblin Guard Captain",
             "side": 1,
             "hp": 3,
@@ -1335,8 +1871,594 @@
       }
     },
     {
-      "id": "act1-stage-7",
-      "title": "Акт I · 7 · Ритуальные ворота",
+      "id": "act1-stage-11",
+      "title": "Акт I · 11 · Обоз",
+      "board": {
+        "preset": "square-7",
+        "size": 7,
+        "seed": 67,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "elven",
+        "background": "assets/arenas/library/elven.jpg",
+        "calibration": {
+          "id": "elven",
+          "background": "assets/arenas/library/elven.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b11_wagon",
+        "title": "Акт I · 11 · Обоз",
+        "enemies": [
+          {
+            "id": "porter_n",
+            "species": "small-goblin",
+            "label": "Goblin Porter (loot)",
+            "side": 0,
+            "hp": 1,
+            "mandatory": false,
+            "expiresAfter": 6,
+            "reward": {
+              "heal": 3
+            }
+          },
+          {
+            "id": "grunt_e",
+            "species": "goblin-grunt",
+            "label": "Goblin Grunt",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 2
+            },
+            "ability": {
+              "id": "guard_shield",
+              "kind": "shield",
+              "interval": 2,
+              "label": "shield"
+            }
+          },
+          {
+            "id": "raider_w",
+            "species": "small-goblin",
+            "label": "Goblin Raider",
+            "side": 3,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 2
+            }
+          }
+        ],
+        "winHeal": 2,
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-12",
+      "title": "Акт I · 12 · Паучий подвал",
+      "board": {
+        "preset": "square-7",
+        "size": 7,
+        "seed": 53,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "cemetery",
+        "background": "assets/arenas/library/cemetery.jpg",
+        "calibration": {
+          "id": "cemetery",
+          "background": "assets/arenas/library/cemetery.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b12_spiders",
+        "title": "Акт I · 12 · Паучий подвал",
+        "enemies": [
+          {
+            "id": "brute_w",
+            "species": "spider-brute",
+            "label": "Spider Brute",
+            "side": 3,
+            "hp": 4,
+            "attackTimer": {
+              "interval": 6,
+              "damage": 3
+            }
+          },
+          {
+            "id": "spider_n",
+            "species": "small-spider",
+            "label": "Small Spider",
+            "side": 0,
+            "hp": 1,
+            "attackTimer": {
+              "interval": 2,
+              "damage": 1
+            }
+          },
+          {
+            "id": "spider_e",
+            "species": "small-spider",
+            "label": "Small Spider",
+            "side": 1,
+            "hp": 1,
+            "attackTimer": {
+              "interval": 3,
+              "damage": 1
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-13",
+      "title": "Акт I · 13 · Шаманский круг",
+      "board": {
+        "preset": "square-8",
+        "size": 8,
+        "seed": 44,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "moon-podium-shrine",
+        "background": "assets/arenas/library/moon-podium-shrine.jpg",
+        "calibration": {
+          "id": "moon-podium-shrine",
+          "background": "assets/arenas/library/moon-podium-shrine.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b13_circle",
+        "title": "Акт I · 13 · Шаманский круг",
+        "enemies": [
+          {
+            "id": "shaman_n",
+            "species": "goblin-shaman",
+            "label": "Goblin Shaman",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 4,
+              "kind": "cast",
+              "interruptible": true,
+              "interruptedAttack": {
+                "interval": 3,
+                "damage": 2,
+                "kind": "normal"
+              }
+            }
+          },
+          {
+            "id": "shaman_w",
+            "species": "goblin-shaman",
+            "label": "Goblin Shaman",
+            "side": 3,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 6,
+              "damage": 4,
+              "kind": "cast",
+              "interruptible": true,
+              "interruptedAttack": {
+                "interval": 3,
+                "damage": 2,
+                "kind": "normal"
+              }
+            }
+          },
+          {
+            "id": "drunk_e",
+            "species": "goblin-drunkard",
+            "label": "Goblin Drunkard",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 2
+            },
+            "ability": {
+              "id": "stagger",
+              "kind": "shift",
+              "interval": 99,
+              "sides": [
+                1,
+                0,
+                3
+              ],
+              "trigger": "hit",
+              "label": "stagger"
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-14",
+      "title": "Акт I · 14 · Стена щитов",
+      "board": {
+        "preset": "square-8",
+        "size": 8,
+        "seed": 9,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "alliance-dark",
+        "background": "assets/arenas/library/alliance-dark.jpg",
+        "calibration": {
+          "id": "alliance-dark",
+          "background": "assets/arenas/library/alliance-dark.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b14_shieldwall",
+        "title": "Акт I · 14 · Стена щитов",
+        "enemies": [
+          {
+            "id": "grunt_e",
+            "species": "goblin-grunt",
+            "label": "Goblin Grunt",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 9,
+              "damage": 2
+            },
+            "ability": {
+              "id": "guard_shield",
+              "kind": "shield",
+              "interval": 3,
+              "label": "shield"
+            }
+          },
+          {
+            "id": "grunt_w",
+            "species": "goblin-grunt",
+            "label": "Goblin Grunt",
+            "side": 3,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 9,
+              "damage": 2
+            },
+            "ability": {
+              "id": "guard_shield",
+              "kind": "shield",
+              "interval": 3,
+              "label": "shield"
+            }
+          },
+          {
+            "id": "matron_n",
+            "species": "goblin-matron",
+            "label": "Goblin Matron",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 10,
+              "damage": 1
+            },
+            "ability": {
+              "id": "matron_heal",
+              "kind": "heal",
+              "interval": 3,
+              "amount": 1,
+              "label": "heal"
+            }
+          }
+        ],
+        "winHeal": 2,
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-15",
+      "title": "Акт I · 15 · Ритуальные ворота",
       "board": {
         "preset": "square-8",
         "size": 8,
@@ -1374,12 +2496,12 @@
               "y": 0.3044877646498292
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.14596518660237293,
+              "y": 0.4435654425547892
             },
             "right": {
-              "x": 0.8445411516800271,
-              "y": 0.4646880293719555
+              "x": 0.8540347983078438,
+              "y": 0.4337201432866853
             }
           },
           "effectAnchors": {
@@ -1388,8 +2510,8 @@
               "y": 0.31593062900914937
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.12697784807738957,
+              "y": 0.45763014046563344
             },
             "right": {
               "x": 0.8627373177765313,
@@ -1419,7 +2541,7 @@
       },
       "encounter": {
         "id": "ld7_a6_gate",
-        "title": "Акт I · 7 · Ритуальные ворота",
+        "title": "Акт I · 15 · Ритуальные ворота",
         "enemies": [
           {
             "id": "caster_n",
@@ -1482,8 +2604,309 @@
       }
     },
     {
-      "id": "act1-stage-8",
-      "title": "Акт I · 8 · Goblin King",
+      "id": "act1-stage-16",
+      "title": "Акт I · 16 · Ночная охота",
+      "board": {
+        "preset": "square-8",
+        "size": 8,
+        "seed": 75,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "night-podiums-moon",
+        "background": "assets/arenas/library/night-podiums-moon.jpg",
+        "calibration": {
+          "id": "night-podiums-moon",
+          "background": "assets/arenas/library/night-podiums-moon.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b16_nighthunt",
+        "title": "Акт I · 16 · Ночная охота",
+        "enemies": [
+          {
+            "id": "wolf_e",
+            "species": "dire-wolf",
+            "label": "Dire Wolf",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 1
+            }
+          },
+          {
+            "id": "alpha_w",
+            "species": "dire-wolf",
+            "label": "Alpha Wolf",
+            "side": 3,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 1
+            },
+            "ability": {
+              "id": "prowl",
+              "kind": "shift",
+              "interval": 2,
+              "sides": [
+                3,
+                0
+              ],
+              "label": "prowl"
+            }
+          },
+          {
+            "id": "loot_n",
+            "species": "small-goblin",
+            "label": "Goblin Looter",
+            "side": 0,
+            "hp": 1,
+            "mandatory": false,
+            "expiresAfter": 5,
+            "reward": {
+              "heal": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-17",
+      "title": "Акт I · 17 · Королевская стража",
+      "board": {
+        "preset": "square-8",
+        "size": 8,
+        "seed": 76,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "frost-podiums",
+        "background": "assets/arenas/library/frost-podiums.jpg",
+        "calibration": {
+          "id": "frost-podiums",
+          "background": "assets/arenas/library/frost-podiums.jpg",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.3548,
+              0.4182
+            ],
+            "tr": [
+              0.646,
+              0.4182
+            ],
+            "br": [
+              0.6855,
+              0.8036
+            ],
+            "bl": [
+              0.3129,
+              0.8036
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5028,
+              "y": 0.3045
+            },
+            "left": {
+              "x": 0.146,
+              "y": 0.4436
+            },
+            "right": {
+              "x": 0.854,
+              "y": 0.4337
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.502,
+              "y": 0.3159
+            },
+            "left": {
+              "x": 0.127,
+              "y": 0.4576
+            },
+            "right": {
+              "x": 0.8627,
+              "y": 0.4604
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_b17_royal",
+        "title": "Акт I · 17 · Королевская стража",
+        "enemies": [
+          {
+            "id": "captain_e",
+            "species": "goblin-grunt",
+            "label": "Royal Guard",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 7,
+              "damage": 3
+            },
+            "ability": {
+              "id": "guard_shield",
+              "kind": "shield",
+              "interval": 3,
+              "label": "shield"
+            }
+          },
+          {
+            "id": "drunk_w",
+            "species": "goblin-drunkard",
+            "label": "Goblin Drunkard",
+            "side": 3,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 6,
+              "damage": 2
+            },
+            "ability": {
+              "id": "stagger",
+              "kind": "shift",
+              "interval": 99,
+              "sides": [
+                3,
+                0
+              ],
+              "trigger": "hit",
+              "label": "stagger"
+            }
+          },
+          {
+            "id": "matron_n",
+            "species": "goblin-matron",
+            "label": "Goblin Matron",
+            "side": 0,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 10,
+              "damage": 1
+            },
+            "ability": {
+              "id": "matron_heal",
+              "kind": "heal",
+              "interval": 3,
+              "amount": 1,
+              "label": "heal"
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-18",
+      "title": "Акт I · 18 · Goblin King",
       "board": {
         "preset": "square-8",
         "size": 8,
@@ -1491,56 +2914,56 @@
         "profile": "short"
       },
       "presentation": {
-        "arena": "imported-goblinas-na-approved-1789716079863",
-        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "arena": "goblin-fortress-banners",
+        "background": "assets/arenas/library/goblin-fortress-banners.jpg",
         "calibration": {
-          "id": "prologue-5x5-good",
-          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "id": "goblin-fortress-banners",
+          "background": "assets/arenas/library/goblin-fortress-banners.jpg",
           "boardSizeLocked": 6,
           "boardPlaneFrac": {
             "tl": [
-              0.35482595564653957,
-              0.41824894339321783
+              0.3548,
+              0.4182
             ],
             "tr": [
-              0.6459652167819395,
-              0.41824894339321783
+              0.646,
+              0.4182
             ],
             "br": [
-              0.6855221783297312,
-              0.8036217412639407
+              0.6855,
+              0.8036
             ],
             "bl": [
-              0.3128955824417937,
-              0.8036217412639407
+              0.3129,
+              0.8036
             ]
           },
           "anchors": {
             "top": {
-              "x": 0.5027689676916272,
-              "y": 0.3044877646498292
+              "x": 0.5028,
+              "y": 0.3045
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.146,
+              "y": 0.4436
             },
             "right": {
-              "x": 0.8445411516800271,
-              "y": 0.4646880293719555
+              "x": 0.854,
+              "y": 0.4337
             }
           },
           "effectAnchors": {
             "top": {
-              "x": 0.5019778405324979,
-              "y": 0.31593062900914937
+              "x": 0.502,
+              "y": 0.3159
             },
             "left": {
-              "x": 0.17,
-              "y": 0.62
+              "x": 0.127,
+              "y": 0.4576
             },
             "right": {
-              "x": 0.8627373177765313,
-              "y": 0.46039696205769565
+              "x": 0.8627,
+              "y": 0.4604
             }
           },
           "actorScale": {
@@ -1566,7 +2989,7 @@
       },
       "encounter": {
         "id": "ld7_a7_king",
-        "title": "Акт I · 8 · Goblin King",
+        "title": "Акт I · 18 · Goblin King",
         "boss": {
           "id": "goblin-king",
           "phases": [

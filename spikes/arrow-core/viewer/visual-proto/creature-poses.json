@@ -1,310 +1,400 @@
 {
-  "goblin-shaman": {
-    "poses": {
-      "idle": "assets/enemies/goblin-shaman/idle.png",
-      "taunt": "assets/enemies/goblin-shaman/taunt.png",
-      "cast": "assets/enemies/goblin-shaman/cast.png",
-      "stunned": "assets/enemies/goblin-shaman/stunned.png",
-      "angry": "assets/enemies/goblin-shaman/angry.png",
-      "defeat": "assets/enemies/goblin-shaman/defeat.png",
-      "back": "assets/enemies/goblin-shaman/back.png"
-    },
-    "sourceFiles": {
-      "idle": "idle.png",
-      "taunt": "taunt.png",
-      "cast": "cast.png",
-      "stunned": "stunned - hit.png",
-      "angry": "angry.png",
-      "defeat": "defeat.png",
-      "back": "back.png"
-    },
-    "pivot": {
-      "x": 0.4672812184979839,
-      "y": 0.9104938271604939
-    },
-    "scale": 0.7,
-    "hudOffset": {
-      "x": 0,
-      "y": 0.515
-    },
-    "hudScale": 0.5,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0.04
-    }
+ "goblin-shaman": {
+  "poses": {
+   "idle": "assets/enemies/goblin-shaman/idle.png",
+   "taunt": "assets/enemies/goblin-shaman/taunt.png",
+   "cast": "assets/enemies/goblin-shaman/cast.png",
+   "stunned": "assets/enemies/goblin-shaman/stunned.png",
+   "angry": "assets/enemies/goblin-shaman/angry.png",
+   "defeat": "assets/enemies/goblin-shaman/defeat.png",
+   "back": "assets/enemies/goblin-shaman/back.png"
   },
-  "skeleton-child": {
-    "poses": {
-      "idle": "assets/enemies/skeleton-child/idle.png",
-      "attackReady": "assets/enemies/skeleton-child/attackReady.png",
-      "attack": "assets/enemies/skeleton-child/attack.png",
-      "hit": "assets/enemies/skeleton-child/hit.png",
-      "defeat": "assets/enemies/skeleton-child/defeat.png"
-    },
-    "sourceFiles": {
-      "idle": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (2).png",
-      "attackReady": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (2).png",
-      "attack": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (5).png",
-      "hit": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (6).png",
-      "defeat": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (8).png"
-    },
-    "pivot": {
-      "x": 0.5250001130280672,
-      "y": 0.8620369522659866
-    },
-    "scale": 0.505,
-    "hudOffset": {
-      "x": 0,
-      "y": 0
-    },
-    "hudScale": 1,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0
-    }
+  "sourceFiles": {
+   "idle": "idle.png",
+   "taunt": "taunt.png",
+   "cast": "cast.png",
+   "stunned": "stunned - hit.png",
+   "angry": "angry.png",
+   "defeat": "defeat.png",
+   "back": "back.png"
   },
-  "dire-wolf": {
-    "poses": {
-      "idle": "assets/enemies/dire-wolf/idle.png",
-      "attackReady": "assets/enemies/dire-wolf/attackReady.png",
-      "attack": "assets/enemies/dire-wolf/attack.png",
-      "hit": "assets/enemies/dire-wolf/hit.png",
-      "defeat": "assets/enemies/dire-wolf/defeat.png"
-    },
-    "sourceFiles": {
-      "idle": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (3).png",
-      "attackReady": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (3).png",
-      "attack": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (4).png",
-      "hit": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (5).png",
-      "defeat": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (6).png"
-    },
-    "pivot": {
-      "x": 0.5,
-      "y": 0.92
-    },
-    "scale": 0.505,
-    "hudOffset": {
-      "x": 0,
-      "y": 0.605
-    },
-    "hudScale": 1,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0
-    }
+  "pivot": {
+   "x": 0.4672812184979839,
+   "y": 0.9104938271604939
   },
-  "goblin-taunter": {
-    "poses": {
-      "idle": "assets/enemies/goblin-taunter/idle.png",
-      "taunt": "assets/enemies/goblin-taunter/taunt.png",
-      "cast": "assets/enemies/goblin-taunter/cast.png",
-      "stunned": "assets/enemies/goblin-taunter/stunned.png",
-      "angry": "assets/enemies/goblin-taunter/angry.png",
-      "defeat": "assets/enemies/goblin-taunter/defeat.png",
-      "back": "assets/enemies/goblin-taunter/back.png"
-    },
-    "sourceFiles": {
-      "idle": "indle.png",
-      "taunt": "taunt.png",
-      "cast": "cast.png",
-      "stunned": "stuned.png",
-      "angry": "angry-with-bg-or-cast.png",
-      "defeat": "defeat.png",
-      "back": "back.png"
-    },
-    "pivot": {
-      "x": 0.5,
-      "y": 0.92
-    },
-    "scale": 0.7,
-    "hudOffset": {
-      "x": 0.04,
-      "y": 0.37
-    },
-    "hudScale": 0.6,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0.045
-    }
+  "scale": 0.7,
+  "hudOffset": {
+   "x": 0,
+   "y": 0.515
   },
-  "green-slime": {
-    "poses": {
-      "idle": "assets/enemies/green-slime/idle.png",
-      "attackReady": "assets/enemies/green-slime/attackReady.png",
-      "attack": "assets/enemies/green-slime/attack.png",
-      "hit": "assets/enemies/green-slime/hit.png",
-      "defeat": "assets/enemies/green-slime/defeat.png"
-    },
-    "sourceFiles": {
-      "idle": "idle.png",
-      "attackReady": "angry.png",
-      "attack": "cast  shot.png",
-      "hit": "stun-hit.png",
-      "defeat": "death.png"
-    },
-    "pivot": {
-      "x": 0.5,
-      "y": 0.92
-    },
-    "scale": 0.505,
-    "hudOffset": {
-      "x": 0,
-      "y": 0
-    },
-    "hudScale": 1,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  "small-goblin": {
-    "poses": {
-      "idle": "assets/enemies/small-goblin/idle.png",
-      "attackReady": "assets/enemies/small-goblin/attackReady.png",
-      "attack": "assets/enemies/small-goblin/attack.png",
-      "hit": "assets/enemies/small-goblin/hit.png",
-      "defeat": "assets/enemies/small-goblin/defeat.png"
-    },
-    "sourceFiles": {
-      "idle": "idle.png",
-      "attackReady": "angry.png",
-      "attack": "cast-end-attack.png",
-      "hit": "stun.png",
-      "defeat": "death.png"
-    },
-    "pivot": {
-      "x": 0.5,
-      "y": 0.92
-    },
-    "scale": 0.55,
-    "hudOffset": {
-      "x": 0,
-      "y": 0.53
-    },
-    "hudScale": 0.7,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  "spider-brute": {
-    "poses": {
-      "idle": "assets/enemies/spider-brute/idle.png",
-      "attackReady": "assets/enemies/spider-brute/attackReady.png",
-      "attack": "assets/enemies/spider-brute/attack.png",
-      "hit": "assets/enemies/spider-brute/hit.png",
-      "defeat": "assets/enemies/spider-brute/defeat.png"
-    },
-    "sourceFiles": {
-      "idle": "ChatGPT Image Sep 17, 2026, 01_37_38 PM (2).png",
-      "attackReady": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (4).png",
-      "attack": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (5).png",
-      "hit": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (6).png",
-      "defeat": "ChatGPT Image Sep 17, 2026, 01_37_40 PM (8).png"
-    },
-    "pivot": {
-      "x": 0.5,
-      "y": 0.92
-    },
-    "scale": 1,
-    "hudOffset": {
-      "x": 0,
-      "y": 0
-    },
-    "hudScale": 1,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  "small-spider": {
-    "poses": {
-      "idle": "assets/enemies/small-spider/idle.png",
-      "attackReady": "assets/enemies/small-spider/attackReady.png",
-      "attack": "assets/enemies/small-spider/attack.png",
-      "hit": "assets/enemies/small-spider/hit.png",
-      "defeat": "assets/enemies/small-spider/defeat.png"
-    },
-    "sourceFiles": {
-      "idle": "ChatGPT Image Sep 17, 2026, 01_53_23 PM (4).png",
-      "attackReady": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (7).png",
-      "attack": "ChatGPT Image Sep 17, 2026, 01_53_23 PM (5).png",
-      "hit": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (8).png",
-      "defeat": "ChatGPT Image Sep 17, 2026, 01_53_21 PM (2).png"
-    },
-    "pivot": {
-      "x": 0.5,
-      "y": 0.92
-    },
-    "scale": 1,
-    "hudOffset": {
-      "x": 0,
-      "y": 0
-    },
-    "hudScale": 1,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  "toxic-demonic-spider": {
-    "poses": {
-      "idle": "assets/enemies/toxic-demonic-spider/idle.png",
-      "attackReady": "assets/enemies/toxic-demonic-spider/attackReady.png",
-      "attack": "assets/enemies/toxic-demonic-spider/attack.png",
-      "hit": "assets/enemies/toxic-demonic-spider/hit.png",
-      "defeat": "assets/enemies/toxic-demonic-spider/defeat.png"
-    },
-    "sourceFiles": {
-      "idle": "idle.png",
-      "attackReady": "angry.png",
-      "attack": "cast.png",
-      "hit": "stun.png",
-      "defeat": "death.png"
-    },
-    "pivot": {
-      "x": 0.5,
-      "y": 0.92
-    },
-    "scale": 1,
-    "hudOffset": {
-      "x": 0,
-      "y": 0
-    },
-    "hudScale": 1,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  "small-green-slime": {
-    "poses": {
-      "idle": "assets/enemies/small-green-slime/idle.png",
-      "attackReady": "assets/enemies/small-green-slime/attackReady.png",
-      "attack": "assets/enemies/small-green-slime/attack.png",
-      "hit": "assets/enemies/small-green-slime/hit.png",
-      "defeat": "assets/enemies/small-green-slime/defeat.png"
-    },
-    "sourceFiles": {
-      "idle": "idle.png",
-      "attackReady": "down - jump.png",
-      "attack": "taunt. - jump -up.png",
-      "hit": "hit stun.png",
-      "defeat": "death.png"
-    },
-    "pivot": {
-      "x": 0.5,
-      "y": 0.92
-    },
-    "scale": 1,
-    "hudOffset": {
-      "x": 0,
-      "y": 0
-    },
-    "hudScale": 1,
-    "shadowOffset": {
-      "x": 0,
-      "y": 0
-    }
+  "hudScale": 0.5,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0.04
   }
+ },
+ "skeleton-child": {
+  "poses": {
+   "idle": "assets/enemies/skeleton-child/idle.png",
+   "attackReady": "assets/enemies/skeleton-child/attackReady.png",
+   "attack": "assets/enemies/skeleton-child/attack.png",
+   "hit": "assets/enemies/skeleton-child/hit.png",
+   "defeat": "assets/enemies/skeleton-child/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (2).png",
+   "attackReady": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (2).png",
+   "attack": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (5).png",
+   "hit": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (6).png",
+   "defeat": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (8).png"
+  },
+  "pivot": {
+   "x": 0.5250001130280672,
+   "y": 0.8620369522659866
+  },
+  "scale": 0.505,
+  "hudOffset": {
+   "x": 0,
+   "y": 0
+  },
+  "hudScale": 1,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "dire-wolf": {
+  "poses": {
+   "idle": "assets/enemies/dire-wolf/idle.png",
+   "attackReady": "assets/enemies/dire-wolf/attackReady.png",
+   "attack": "assets/enemies/dire-wolf/attack.png",
+   "hit": "assets/enemies/dire-wolf/hit.png",
+   "defeat": "assets/enemies/dire-wolf/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (3).png",
+   "attackReady": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (3).png",
+   "attack": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (4).png",
+   "hit": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (5).png",
+   "defeat": "ChatGPT Image Sep 17, 2026, 11_11_00 AM (6).png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 0.505,
+  "hudOffset": {
+   "x": 0,
+   "y": 0.605
+  },
+  "hudScale": 1,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "goblin-taunter": {
+  "poses": {
+   "idle": "assets/enemies/goblin-taunter/idle.png",
+   "taunt": "assets/enemies/goblin-taunter/taunt.png",
+   "cast": "assets/enemies/goblin-taunter/cast.png",
+   "stunned": "assets/enemies/goblin-taunter/stunned.png",
+   "angry": "assets/enemies/goblin-taunter/angry.png",
+   "defeat": "assets/enemies/goblin-taunter/defeat.png",
+   "back": "assets/enemies/goblin-taunter/back.png"
+  },
+  "sourceFiles": {
+   "idle": "indle.png",
+   "taunt": "taunt.png",
+   "cast": "cast.png",
+   "stunned": "stuned.png",
+   "angry": "angry-with-bg-or-cast.png",
+   "defeat": "defeat.png",
+   "back": "back.png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 0.7,
+  "hudOffset": {
+   "x": 0.04,
+   "y": 0.37
+  },
+  "hudScale": 0.6,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0.045
+  }
+ },
+ "green-slime": {
+  "poses": {
+   "idle": "assets/enemies/green-slime/idle.png",
+   "attackReady": "assets/enemies/green-slime/attackReady.png",
+   "attack": "assets/enemies/green-slime/attack.png",
+   "hit": "assets/enemies/green-slime/hit.png",
+   "defeat": "assets/enemies/green-slime/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "idle.png",
+   "attackReady": "angry.png",
+   "attack": "cast  shot.png",
+   "hit": "stun-hit.png",
+   "defeat": "death.png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 0.505,
+  "hudOffset": {
+   "x": 0,
+   "y": 0
+  },
+  "hudScale": 1,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "small-goblin": {
+  "poses": {
+   "idle": "assets/enemies/small-goblin/idle.png",
+   "attackReady": "assets/enemies/small-goblin/attackReady.png",
+   "attack": "assets/enemies/small-goblin/attack.png",
+   "hit": "assets/enemies/small-goblin/hit.png",
+   "defeat": "assets/enemies/small-goblin/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "idle.png",
+   "attackReady": "angry.png",
+   "attack": "cast-end-attack.png",
+   "hit": "stun.png",
+   "defeat": "death.png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 0.55,
+  "hudOffset": {
+   "x": 0,
+   "y": 0.53
+  },
+  "hudScale": 0.7,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "spider-brute": {
+  "poses": {
+   "idle": "assets/enemies/spider-brute/idle.png",
+   "attackReady": "assets/enemies/spider-brute/attackReady.png",
+   "attack": "assets/enemies/spider-brute/attack.png",
+   "hit": "assets/enemies/spider-brute/hit.png",
+   "defeat": "assets/enemies/spider-brute/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "ChatGPT Image Sep 17, 2026, 01_37_38 PM (2).png",
+   "attackReady": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (4).png",
+   "attack": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (5).png",
+   "hit": "ChatGPT Image Sep 17, 2026, 01_37_39 PM (6).png",
+   "defeat": "ChatGPT Image Sep 17, 2026, 01_37_40 PM (8).png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 1,
+  "hudOffset": {
+   "x": 0,
+   "y": 0
+  },
+  "hudScale": 1,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "small-spider": {
+  "poses": {
+   "idle": "assets/enemies/small-spider/idle.png",
+   "attackReady": "assets/enemies/small-spider/attackReady.png",
+   "attack": "assets/enemies/small-spider/attack.png",
+   "hit": "assets/enemies/small-spider/hit.png",
+   "defeat": "assets/enemies/small-spider/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "ChatGPT Image Sep 17, 2026, 01_53_23 PM (4).png",
+   "attackReady": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (7).png",
+   "attack": "ChatGPT Image Sep 17, 2026, 01_53_23 PM (5).png",
+   "hit": "ChatGPT Image Sep 17, 2026, 01_53_24 PM (8).png",
+   "defeat": "ChatGPT Image Sep 17, 2026, 01_53_21 PM (2).png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 1,
+  "hudOffset": {
+   "x": 0,
+   "y": 0
+  },
+  "hudScale": 1,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "toxic-demonic-spider": {
+  "poses": {
+   "idle": "assets/enemies/toxic-demonic-spider/idle.png",
+   "attackReady": "assets/enemies/toxic-demonic-spider/attackReady.png",
+   "attack": "assets/enemies/toxic-demonic-spider/attack.png",
+   "hit": "assets/enemies/toxic-demonic-spider/hit.png",
+   "defeat": "assets/enemies/toxic-demonic-spider/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "idle.png",
+   "attackReady": "angry.png",
+   "attack": "cast.png",
+   "hit": "stun.png",
+   "defeat": "death.png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 1,
+  "hudOffset": {
+   "x": 0,
+   "y": 0
+  },
+  "hudScale": 1,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "small-green-slime": {
+  "poses": {
+   "idle": "assets/enemies/small-green-slime/idle.png",
+   "attackReady": "assets/enemies/small-green-slime/attackReady.png",
+   "attack": "assets/enemies/small-green-slime/attack.png",
+   "hit": "assets/enemies/small-green-slime/hit.png",
+   "defeat": "assets/enemies/small-green-slime/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "idle.png",
+   "attackReady": "down - jump.png",
+   "attack": "taunt. - jump -up.png",
+   "hit": "hit stun.png",
+   "defeat": "death.png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 1,
+  "hudOffset": {
+   "x": 0,
+   "y": 0
+  },
+  "hudScale": 1,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "goblin-drunkard": {
+  "poses": {
+   "idle": "assets/enemies/goblin-drunkard/idle.png",
+   "attackReady": "assets/enemies/goblin-drunkard/attackReady.png",
+   "attack": "assets/enemies/goblin-drunkard/attack.png",
+   "hit": "assets/enemies/goblin-drunkard/hit.png",
+   "defeat": "assets/enemies/goblin-drunkard/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "ChatGPT Image Sep 19, 2026, 09_36_36 AM (2).png",
+   "attackReady": "ChatGPT Image Sep 19, 2026, 09_36_37 AM (8).png",
+   "attack": "ChatGPT Image Sep 19, 2026, 09_36_36 AM (5).png",
+   "hit": "ChatGPT Image Sep 19, 2026, 09_36_36 AM (6).png",
+   "defeat": "ChatGPT Image Sep 19, 2026, 09_36_37 AM (7).png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 0.6,
+  "hudOffset": {
+   "x": 0,
+   "y": 0.5
+  },
+  "hudScale": 0.7,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "goblin-matron": {
+  "poses": {
+   "idle": "assets/enemies/goblin-matron/idle.png",
+   "attackReady": "assets/enemies/goblin-matron/attackReady.png",
+   "attack": "assets/enemies/goblin-matron/attack.png",
+   "hit": "assets/enemies/goblin-matron/hit.png",
+   "defeat": "assets/enemies/goblin-matron/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "ChatGPT Image Sep 19, 2026, 09_29_56 AM (2).png",
+   "attackReady": "ChatGPT Image Sep 19, 2026, 09_29_57 AM (4).png",
+   "attack": "ChatGPT Image Sep 19, 2026, 09_29_57 AM (5).png",
+   "hit": "ChatGPT Image Sep 19, 2026, 09_29_57 AM (6).png",
+   "defeat": "ChatGPT Image Sep 19, 2026, 09_29_57 AM (7).png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 0.58,
+  "hudOffset": {
+   "x": 0,
+   "y": 0.5
+  },
+  "hudScale": 0.7,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ },
+ "goblin-grunt": {
+  "poses": {
+   "idle": "assets/enemies/goblin-grunt/idle.png",
+   "attackReady": "assets/enemies/goblin-grunt/attackReady.png",
+   "attack": "assets/enemies/goblin-grunt/attack.png",
+   "hit": "assets/enemies/goblin-grunt/hit.png",
+   "defeat": "assets/enemies/goblin-grunt/defeat.png"
+  },
+  "sourceFiles": {
+   "idle": "ChatGPT Image Sep 19, 2026, 09_12_27 AM (2).png",
+   "attackReady": "ChatGPT Image Sep 19, 2026, 09_12_28 AM (4).png",
+   "attack": "ChatGPT Image Sep 19, 2026, 09_12_28 AM (6).png",
+   "hit": "ChatGPT Image Sep 19, 2026, 09_12_28 AM (7).png",
+   "defeat": "ChatGPT Image Sep 19, 2026, 09_12_28 AM (8).png"
+  },
+  "pivot": {
+   "x": 0.5,
+   "y": 0.92
+  },
+  "scale": 0.58,
+  "hudOffset": {
+   "x": 0,
+   "y": 0.53
+  },
+  "hudScale": 0.7,
+  "shadowOffset": {
+   "x": 0,
+   "y": 0
+  }
+ }
 }

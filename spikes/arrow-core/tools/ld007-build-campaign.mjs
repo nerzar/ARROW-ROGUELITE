@@ -17,15 +17,25 @@ const { findArena } = await import(pathToFileURL(resolve(here, '../viewer/visual
 
 /** The provisional chain. `size`/`profile`/`seed` are the LD-007 picks (see the LD-007 report). */
 export const LD007_ACT1 = [
+  // ACT-I-003 «Край гоблинов»: 18 stages. `arena` = library/catalog id; seeds from tools/ld007-scan.mjs.
   { id: 'act1-stage-1', brief: 'a1-patrol', size: 6, profile: 'short', seed: 11, presentationFrom: 'act1-stage-1' },
-  { id: 'act1-stage-2', brief: 'a2-caster', size: 6, profile: 'short', seed: 126, presentationFrom: 'act1-stage-3' },
-  { id: 'act1-stage-3', brief: 'a3-rock', size: 7, profile: 'short', seed: 21, presentationFrom: 'act1-stage-4' },
-  { id: 'act1-stage-4', brief: 'a3b-scout', size: 7, profile: 'short', seed: 53, presentationFrom: 'act1-stage-2' },
-  { id: 'act1-stage-5', brief: 'a4-three', size: 7, profile: 'short', seed: 50, presentationFrom: 'act1-stage-5' },
-  // LD-007: user asked for a scene with a centre podium here -> library arena (see arena-library.js TUNED).
-  { id: 'act1-stage-6', brief: 'a5-captain', size: 7, profile: 'mixed', seed: 54, arena: 'goblin-camp-podium' },
-  { id: 'act1-stage-7', brief: 'a6-gate', size: 8, profile: 'short', seed: 65, presentationFrom: 'act1-stage-7' },
-  { id: 'act1-stage-8', brief: 'a7-king', size: 8, profile: 'short', seed: 73, presentationFrom: 'act1-stage-8' },
+  { id: 'act1-stage-2', brief: 'a2-caster', size: 6, profile: 'short', seed: 126, arena: 'goblin-arena-dusk' },
+  { id: 'act1-stage-3', brief: 'a3-rock', size: 7, profile: 'short', seed: 21, arena: 'goblin-arena-hills' },
+  { id: 'act1-stage-4', brief: 'a3b-scout', size: 7, profile: 'short', seed: 53, arena: 'goblin-arena-bridge' },
+  { id: 'act1-stage-5', brief: 'b5-drunk', size: 6, profile: 'short', seed: 27, arena: 'goblin-outpost-sunset' },
+  { id: 'act1-stage-6', brief: 'b6-wolves', size: 7, profile: 'short', seed: 108, arena: 'elven-podiums-day' },
+  { id: 'act1-stage-7', brief: 'a4-three', size: 7, profile: 'short', seed: 50, arena: 'goblin-fortress-banners' },
+  { id: 'act1-stage-8', brief: 'b8-matron', size: 7, profile: 'short', seed: 71, arena: 'fae-podiums' },
+  { id: 'act1-stage-9', brief: 'b9-family', size: 7, profile: 'short', seed: 118, arena: 'goblin-camp-podium' },
+  { id: 'act1-stage-10', brief: 'a5-captain', size: 7, profile: 'mixed', seed: 54, arena: 'goblin-camp-podium' },
+  { id: 'act1-stage-11', brief: 'b11-wagon', size: 7, profile: 'short', seed: 67, arena: 'elven' },
+  { id: 'act1-stage-12', brief: 'b12-spiders', size: 7, profile: 'short', seed: 53, arena: 'cemetery' },
+  { id: 'act1-stage-13', brief: 'b13-circle', size: 8, profile: 'short', seed: 44, arena: 'moon-podium-shrine' },
+  { id: 'act1-stage-14', brief: 'b14-shieldwall', size: 8, profile: 'short', seed: 9, arena: 'alliance-dark' },
+  { id: 'act1-stage-15', brief: 'a6-gate', size: 8, profile: 'short', seed: 65, presentationFrom: 'act1-stage-1' },
+  { id: 'act1-stage-16', brief: 'b16-nighthunt', size: 8, profile: 'short', seed: 75, arena: 'night-podiums-moon' },
+  { id: 'act1-stage-17', brief: 'b17-royal', size: 8, profile: 'short', seed: 76, arena: 'frost-podiums' },
+  { id: 'act1-stage-18', brief: 'a7-king', size: 8, profile: 'short', seed: 73, arena: 'goblin-fortress-banners' },
 ]
 
 const campaign = JSON.parse(readFileSync(campaignPath, 'utf8'))

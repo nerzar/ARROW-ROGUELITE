@@ -1,0 +1,48 @@
+{
+ "id": "ld7_b12_spiders",
+ "title": "Акт I · 12 · Паучий подвал",
+ "enemies": [
+  {
+   "id": "brute_w",
+   "species": "spider-brute",
+   "label": "Spider Brute",
+   "side": 3,
+   "hp": 4,
+   "attackTimer": {
+    "interval": 6,
+    "damage": 3
+   }
+  },
+  {
+   "id": "spider_n",
+   "species": "small-spider",
+   "label": "Small Spider",
+   "side": 0,
+   "hp": 1,
+   "attackTimer": {
+    "interval": 2,
+    "damage": 1
+   }
+  },
+  {
+   "id": "spider_e",
+   "species": "small-spider",
+   "label": "Small Spider",
+   "side": 1,
+   "hp": 1,
+   "attackTimer": {
+    "interval": 3,
+    "damage": 1
+   }
+  }
+ ],
+ "rotate": {
+  "allow": [
+   1,
+   -1
+  ],
+  "advancesTurn": false,
+  "useRunPool": true
+ },
+ "blockedTapDamage": 1
+}
