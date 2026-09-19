@@ -1,6 +1,6 @@
 # TASK: VFX-003 — Complete the light-hit feel (flash + sparks + squash + camera impulse)
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT:
@@ -89,8 +89,12 @@ VFX-002 (уже в main) реализовал из него только всп�
 
 ## Итог
 
-RESULT:
+RESULT: все 4 эффекта на том же `fxFor(key)` паттерне, все stamped `now + FLIGHT_MS`. Flash заменён с плоской заливки на лабовый burst (additive glow + hot core + lens streak, flashScale 0.85); pose-tint остался отдельно тихим. Sparks: прекомpute 14 частиц (srand-детерминизм, разлёт назад по incoming, гравитация). Squash: scale о ground point + recoil 7px по направлению прилёта (punch 260мс), накрывает арт+флеш. Camera: мировой translate 2px/200мс/24Гц вокруг board+targets+shots, HUD/plate/dmg/layout вычтены обратно. Новый pure `hit-fx.js` (LIGHT_HIT/srand/punch/sparkParts/camOffset) — точка расширения под эффекты 5+: enemy recoil = ещё одно поле + та же обёртка сквоша.
 
-VERIFY:
+VERIFY: tests 363 OK (32 файла; новый `vfx-003-light-hit.test.ts`, 10 тестов: пресет, punch, детерминизм, камера); typecheck/build OK; браузер cp-e4: 24 хот-пикселя до → 15395 в прилёт → 22 после, хит засчитан, второй хит подряд чисто, pageerrors 0; calibration editor грузится.
 
 FOUND:
+- Дублирующийся `easeOutCubic` в импорте ронял весь app-модуль (pageerror, пустая страница) — убран из импорта, используется локальный.
+- 404 на legacy `assets/boss-*.png` — предсуществующие (есть и без моих изменений), не регрессия.
+- Squash виден слабо на still-кадрах (10%/7px/260мс — лабовые числа); оценивать живьём.
+- Camera 2px специально минимальная (lab light-hit); хиттест на время импульса расходится ≤2px — пренебрежимо и не персистит.
