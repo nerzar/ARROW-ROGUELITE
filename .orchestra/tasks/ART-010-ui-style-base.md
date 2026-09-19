@@ -16,6 +16,18 @@ BRANCH: art/ART-010-ui-style-base
 
 Открой текущую игру и ориентируйся на живой экран, а не на абстрактный UI-kit.
 
+## Референсы (обязательно)
+
+Канонические скрины текущей игры — `docs/visual-refs/`:
+
+- `docs/visual-refs/README.md` — индекс: что канон, что нельзя ломать;
+- `docs/visual-refs/current-game/01-combat-main.png` — базовая композиция;
+- `docs/visual-refs/current-game/04-scene-composition.png` — multi-enemy сцена;
+- `docs/visual-refs/current-game/02-combat-overlay.png` — текущий язык попапов;
+- `docs/visual-refs/current-game/03-hud-player.png` — текущий player HUD.
+
+Мокапы должны выглядеть как часть этих сцен. Скриншоты в чат пересылать не нужно — всё уже в репозитории.
+
 ## Нужно
 
 Подготовить 2–3 согласованных направления и для каждого показать:
@@ -41,7 +53,6 @@ BRANCH: art/ART-010-ui-style-base
 - результат можно быстро посмотреть глазами.
 
 После сдачи STOP.
-
 
 ## RESULT
 
