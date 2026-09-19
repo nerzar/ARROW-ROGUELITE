@@ -1,6 +1,6 @@
 # TASK: LD-006 — Act I encounter shortlist (design only, no implementation)
 
-STATUS: READY
+STATUS: DONE
 TYPE: EXP
 SIZE: M
 AGENT:
@@ -49,8 +49,13 @@ RESULT_SHA:
 
 ## Итог
 
-RESULT:
+RESULT: shortlist в `LD-006-shortlist.md` рядом (7 кандидатов валидированы, 5 подробно по §4, LD-E отклонён с причиной). Рекомендация DESIGN SHORTLIST: e4 = LD-A, e5 = LD-C, далее LD-D; LD-G — S-проба после проверки S-визуала; LD-F — после ретюна; LD-H — после тюнинга и валидации чисел. Production encounters не тронуты.
 
-VERIFY:
+VERIFY: скан ~1100 досок (easy 1–800, medium 1–300); все числа — из `analyze`/`encounter` CLI (команды в документе, levelHash зафиксированы); min-damage/example-sequence — из валидатора, не на глаз; board-clear survival — честно UNKNOWN (валидатор не считает).
 
 FOUND:
+- Механик сундука/reward-цели в движке нет — кандидатов с ними нет; дуга «temporary reward target» ждёт механики.
+- Shield и прочие архетипы — только после RUN-002 (исполнитель уже работает в параллельном worktree, не трогал); раскладка построена на Grunt+pin+cast.
+- LD-E отклонён: 20-таповая дочистка + 10 неизбежного урона (~весь run HP).
+- LD-H: min damage 7 не доказан оптимальным, example sequence валидатор не построил — числа-черновик.
+- LD-G: S-side ни разу не использовался; HUD/подиум S в рендере есть, но в игре не проверен — сначала визуальная проверка.
