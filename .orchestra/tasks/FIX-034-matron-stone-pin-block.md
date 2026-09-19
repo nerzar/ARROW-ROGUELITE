@@ -1,6 +1,7 @@
 # TASK: FIX-034 — Stone Pin blocks arrow correctly in Matron encounter
 
 STATUS: READY
+AGENT: Laguna C2 / OpenRouter
 TYPE: FIX
 SIZE: S
 AGENT:
@@ -30,5 +31,7 @@ BRANCH: fix/FIX-034-matron-stone-pin-block
 - pinned arrow реально не может быть выпущена до снятия pin;
 - Matron scene ведёт себя так же, как остальные Stone Pin encounter'ы;
 - tests/typecheck/build зелёные.
+
+После проверки оставь локальный viewer-сервер запущенным на `http://localhost:5177/viewer/`, укажи точный URL сцены для быстрой проверки пользователем.
 
 После сдачи STOP.
