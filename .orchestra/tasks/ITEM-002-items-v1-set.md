@@ -1,6 +1,6 @@
 # TASK: ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + первые реликвии
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Gemini / Antigravity
@@ -40,3 +40,41 @@ Draft-пул: веса/редкость условные (`common/rare`), но �
 Перед сдачей запусти tests/typecheck/build и реальный viewer. Оставь локальный viewer-сервер запущенным и укажи URL для быстрой пользовательской проверки.
 
 После сдачи STOP.
+
+## Итог выполнения
+
+1. **Active Items & Relics Definition (`items.ts`)**:
+   - Добавлены `frost_dart`, `pocket_gyro`, `war_horn` в `ITEMS` со спецификацией из `BALANCE-SYSTEM.md` и полями `rarity` (`common`/`rare`) и `weight`.
+   - Добавлены реликвии `waste_conversion`, `keystone_release`, `safety_fuse` в `RELICS` с полями `rarity` и `weight`.
+   - Экспортированы `RELIC_IDS`, `itemNeedsTarget(id)`, `itemIsPassive(id)`.
+
+2. **Core Encounter Logic (`encounter.ts`, `state.ts`)**:
+   - `Pocket Gyro`: даёт +1 локальный `localBonusRotate` при входе в бой (если повороты разрешены). Тратится до shared pool, не раздувает пул при clone/undo.
+   - `Frost Dart`: наносит 1 DU + добавляет +2 к таймеру цели (`ATTACK IN`/`CAST IN`), сдвигает ход мира (Turn Cost 1).
+   - `War Horn`: активирует бафф `warHornActive` (Turn Cost 0), усиливающий следующую попавшую стрелу с поля на +1 DU. Промахи и выстрелы предметов не сжигают и не тратят бафф.
+   - `Waste Conversion`: промах стрелы в пустую сторону взводит `wasteConversionReady`; следующее попадание наносит +1 DU (не стакается).
+   - `Keystone Release`: при первом за бой освобождении ≥2 стрел одним тапом, ближайший живой враг получает +1 к таймеру (`isKeystoneTriggered`).
+   - `Safety Fuse`: первый blocked tap в бою снимает 0 HP (`safetyFuseUsed = true`), последующие наносят стандартный урон.
+   - Поддержка `timerSnapshot`, `restoreTimer`, `clone`, `undo`, `key` для всех новых состояний.
+
+3. **RunState & Draft (`run-state.ts`)**:
+   - Поддержка списка реликвий `run.relics`, `addRelic`, `hasRelic`, `startingRelics` в конфигурации забега.
+   - Взвешенный draft на 3-й карте по `weight` среди неполученных предметов и реликвий.
+   - Полная сериализация и восстановление реликвий (`toJSON`/`fromJSON`).
+
+4. **Audit Tool (`tools/ld007-audit.mjs` & `spikes/arrow-core/tools/ld007-audit.mjs`)**:
+   - Добавлен флаг `--kit <items,relics>`.
+   - Создаёт инвентарь и реликвии, симулирует шаги с действиями предметов, выводит аудит с учётом кита.
+
+5. **Visual Proto Viewer (`viewer/visual-proto/`)**:
+   - `items-ui.js`: добавлена строчка `.relic-row` со статусом реликвий (`.relic-chip`, `.spent`, `.primed`), индикаторы активных баффов (`.item-buff.horn`, `.item-buff.waste`), пассивный стиль для `pocket_gyro` (`(пассив)`). Поддержка драфта карт реликвий (`.reward-relic`).
+   - `app.js`: парсинг `?relics=` из URL query params в `runConfig.startingRelics`.
+   - `style.css`: стили для строки реликвий, чипов, баффов и карт наград.
+
+6. **Тесты и верификация**:
+   - Добавлен специализированный набор тестов `test/item-002-items-v1.test.ts` (14 тестов, покрывающих все 9 эффектов, солвер, драфт и персистентность).
+   - Все 38 тестовых файлов (431 тест) проходят чисто: `npm test` ✅.
+   - `npm run build` компилируется без ошибок: `tsc -p tsconfig.json` ✅.
+   - Аудит проверен: `node tools/ld007-audit.mjs --kit bow,shield,waste_conversion` ✅.
+   - Локальный сервер запущен: `http://localhost:5179/viewer/visual-proto/?items=frost_dart,pocket_gyro,war_horn&relics=waste_conversion,keystone_release,safety_fuse`
+

@@ -4,7 +4,7 @@
 // 16:9 desktop shell: board-renderer.js draws the board/targets, this file owns scene loading,
 // input, HUD DOM, and the win/loss overlay. No combat rule is duplicated here.
 import {
-  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, ITEMS, PRESETS, RunState, validateEncounter,
+  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, ITEMS, PRESETS, RELICS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
@@ -83,10 +83,12 @@ const wolfPosesLoaded = ENEMY_POSES.filter((p) => wolfPack[p]).length
 applyDomAssets(assets)
 
 const runConfig = await fetchJson('../../encounters/cp-run-config.json').catch(() => ({ playerMaxHp: 10 }))
-// ITEM-001 debug: `?items=bow,shield` starts every run with those items (playtest shortcut, no effect otherwise).
+// ITEM-001/002 debug: `?items=bow,shield&relics=safety_fuse` starts every run with those items/relics (playtest shortcut).
 {
   const q = new URLSearchParams(location.search).get('items')
   if (q) runConfig.startingItems = q.split(',').map((x) => x.trim()).filter((x) => x in ITEMS)
+  const qr = new URLSearchParams(location.search).get('relics')
+  if (qr) runConfig.startingRelics = qr.split(',').map((x) => x.trim()).filter((x) => x in RELICS)
 }
 // ITEM-001: item bar (placeholder look) under the player card; the reward draft lives in the overlay.
 const itemBar = createItemBar(document.querySelector('.hud-left'), {
@@ -608,6 +610,8 @@ function useItem(id, target) {
   if (r.hit) text += ` · попадание (${r.hitDamage}) · HP целей ${s.hp}/${s.totalHp}`
   if (id === 'shield') text += ` · щит ${s.wardHp}`
   if (id === 'health_flask') text += ` · HP игрока ${s.playerHp}`
+  if (id === 'war_horn') text += ` · War Horn активен (+1 к следующей стреле)`
+  if (id === 'frost_dart') text += ` · таймер цели +2`
   if (r.enemyAttacked) {
     text += ` · ВРАГ АТАКУЕТ (HP игрока ${r.playerHp})`
     flashPlayerHit()

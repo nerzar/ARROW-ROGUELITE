@@ -1,14 +1,23 @@
 // ITEM-001: item bar + reward draft screen. Placeholder presentation (plain DOM, the current
 // panel look) — ART-011/012/014/015 replace the visuals; this file only owns "what the player can
 // click". No combat rule lives here: every decision goes through RunState/EncounterState.
-import { DIR_NAMES, ITEMS } from '../../dist/src/index.js'
+import { DIR_NAMES, ITEMS, RELICS } from '../../dist/src/index.js'
 
 const SIDE_RU = { 0: 'сверху', 1: 'справа', 2: 'снизу', 3: 'слева' }
 
 /** Player-facing name of a reward card. */
 export function describeOffer(o) {
   if (o.kind === 'gold') return { title: `${o.amount} золота`, text: 'Обычная добыча. Пригодится у торговца.' }
-  if (o.kind === 'item') return { title: ITEMS[o.id].label, text: `Редкий предмет. ${ITEMS[o.id].text}` }
+  if (o.kind === 'item') {
+    const it = ITEMS[o.id]
+    const rarity = it?.rarity === 'rare' ? 'Редкий' : 'Обычный'
+    return { title: it?.label ?? o.id, text: `${rarity} предмет. ${it?.text ?? ''}` }
+  }
+  if (o.kind === 'relic') {
+    const rel = RELICS[o.id]
+    const rarity = rel?.rarity === 'rare' ? 'Редкая' : 'Обычная'
+    return { title: rel?.label ?? o.id, text: `${rarity} реликвия. ${rel?.text ?? ''}` }
+  }
   if (o.kind === 'heal') return { title: `+${o.hp} HP`, text: 'Восстановить здоровье.' }
   return { title: `+${o.charges} Rotate`, text: 'Ещё один поворот доски в общий запас.' }
 }
@@ -47,10 +56,16 @@ export function createItemBar(host, { onUse, targetLabel }) {
         continue
       }
       const def = ITEMS[it.id]
+      const isPassive = def.effect.kind === 'passive' || def.charges === 0
       const usable = enc.canUseItem(it.id)
-      el.classList.toggle('spent', it.charges <= 0)
+      el.classList.toggle('spent', !isPassive && it.charges <= 0)
+      el.classList.toggle('passive', isPassive)
       el.title = `${def.label}: ${def.text}`
-      el.innerHTML = `<span class="item-name">${def.label}</span><span class="item-pips">${'●'.repeat(it.charges)}${'○'.repeat(Math.max(0, def.charges - it.charges))}</span>`
+      if (isPassive) {
+        el.innerHTML = `<span class="item-name">${def.label}</span><span class="item-pips passive-tag">пассив</span>`
+      } else {
+        el.innerHTML = `<span class="item-name">${def.label}</span><span class="item-pips">${'●'.repeat(it.charges)}${'○'.repeat(Math.max(0, def.charges - it.charges))}</span>`
+      }
       el.disabled = !usable
       el.onclick = () => {
         if (def.effect.kind !== 'damage') {
@@ -97,6 +112,47 @@ export function createItemBar(host, { onUse, targetLabel }) {
       w.textContent = `Щит: ${enc.wardHp}`
       bar.appendChild(w)
     }
+    if (enc.isWarHornActive) {
+      const b = document.createElement('div')
+      b.className = 'item-buff horn'
+      b.textContent = 'Horn: +1 DU'
+      b.title = 'War Horn: следующее попадание стрелы с поля нанесет +1 DU'
+      bar.appendChild(b)
+    }
+    if (enc.isWasteConversionReady) {
+      const b = document.createElement('div')
+      b.className = 'item-buff waste'
+      b.textContent = 'Waste: +1 DU'
+      b.title = 'Waste Conversion: следующее попадание нанесет +1 DU'
+      bar.appendChild(b)
+    }
+
+    // ITEM-002: Relic HUD placeholder row
+    const relicRow = document.createElement('div')
+    relicRow.className = 'relic-row'
+    if (run.relics.length === 0) {
+      const empty = document.createElement('span')
+      empty.className = 'relic-chip empty'
+      empty.textContent = 'Реликвии: —'
+      relicRow.appendChild(empty)
+    } else {
+      const label = document.createElement('span')
+      label.className = 'relic-label'
+      label.textContent = 'Реликвии:'
+      relicRow.appendChild(label)
+      for (const rid of run.relics) {
+        const rdef = RELICS[rid]
+        const chip = document.createElement('span')
+        chip.className = 'relic-chip'
+        if (rid === 'safety_fuse' && enc.isSafetyFuseUsed) chip.classList.add('spent')
+        if (rid === 'keystone_release' && enc.isKeystoneTriggered) chip.classList.add('spent')
+        if (rid === 'waste_conversion' && enc.isWasteConversionReady) chip.classList.add('primed')
+        chip.title = `${rdef?.label ?? rid}: ${rdef?.text ?? ''}`
+        chip.textContent = rdef?.label ?? rid
+        relicRow.appendChild(chip)
+      }
+    }
+    bar.appendChild(relicRow)
   }
   return { render, closePicker }
 }
