@@ -33,3 +33,26 @@
 
 Все visual/art-задачи (ART-010…) стартуют с этих скринов. Мокапы должны выглядеть как часть этих сцен.
 Полный язык — в `docs/VISUAL-DIRECTION.md` (§1, §8).
+
+## Исследования HUD (`hud/`, задача ART-012)
+
+| Файл | Описание |
+|---|---|
+| `hud/00-hud-comparison-board.png` | Сводный сравнительный борд 3 вариантов с зумом деталей (1920×1080) |
+| `hud/01-hud-moonlit-bronze.png` | Вариант 1 · Moonlit Bronze (канонический фасочный стиль, рекомендован) |
+| `hud/02-hud-gilded-slate.png` | Вариант 2 · Slate & Gilded Trim (PC-first low profile, единый Rotate Dock) |
+| `hud/03-hud-runeforge.png` | Вариант 3 · Arcane Runeforge (боевой тактический стиль, сегментированный HP) |
+| `docs/ART-012-PLAYER-HUD-EXPLORATION.md` | Полный аналитический отчёт с разбором плюсов/минусов и рекомендацией |
+
+## Утверждённая адаптация HUD (`hud/`, задача ART-012B)
+
+| Файл | Описание |
+|---|---|
+| `approved-ui/approved-hud-reference.png` | Канонический утверждённый референс HUD-языка (из `magicarrowassets/gameplay-reference/hud-approved.png`) |
+| `hud/04-hud-approved-adaptation.png` | **Финальная адаптация (1280×720)**: утверждённый HUD со sliced-скинами на каноническом live screenshot (Moonlit Fortress) |
+| `hud/05-hud-sliced-frame-demo.png` | Скриншот живого интерактивного пайплайна (Sliced Frame Overlay + Dynamic Health Fill + Scalable 9-Slice) |
+| `hud/skins/` | Набор чистых вырезанных рамок и элементов без запечённых цифр и полос (`enemy-hp-frame.png`, `player-hp-bar-frame.png`, и др.) |
+| `docs/ART-012B-APPROVED-HUD-ADAPTATION.md` | Полный отчёт по архитектуре адаптации, компоновке, пайплайну рамок и соблюдению ограничений |
+
+
+

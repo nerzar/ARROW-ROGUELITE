@@ -28,7 +28,8 @@ const ui = {
   stage: $('stage'), bgLayer: $('bgLayer'), scenePick: $('scenePick'), sceneTitle: $('sceneTitle'),
   restartBtn: $('restartBtn'), hintBtn: $('hintBtn'), debugToggle: $('debugToggle'), debugPanel: $('debugPanel'),
   msgLine: $('msgLine'), canvas: $('arena'), status: $('status'), log: $('log'), report: $('report'),
-  playerCard: $('playerCard'), playerHpFill: $('playerHpFill'), playerHpText: $('playerHpText'),
+  playerCard: $('playerCard'), playerHudSkin: $('playerHudSkin'), playerHpFill: $('playerHpFill'), playerHpText: $('playerHpText'), playerCharges: $('playerCharges'),
+  rotateSkin: $('rotateSkin'),
   rotCw: $('rotCw'), rotCcw: $('rotCcw'), rotateCharges: $('rotateCharges'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
@@ -379,12 +380,10 @@ function applyDomAssets(store) {
     $('boardFrame').style.backgroundPosition = 'center'
     $('boardFrame').style.backgroundRepeat = 'no-repeat'
   }
-  if (store.playerPortrait) {
-    ui.playerCard.style.backgroundImage = `url(${store.playerPortrait.src})`
-    ui.playerCard.style.backgroundSize = 'cover'
-    ui.playerCard.style.backgroundPosition = 'center top'
-    ui.playerCard.classList.add('has-portrait') // CSS applies the blend mode
-  }
+  // BUILD-036: the approved player/Rotate PNGs are shown whole and unmodified. Portrait and
+  // decorative diamonds belong to the player skin; live HP/charge state remains separate DOM.
+  if (store.playerHudFrame && ui.playerHudSkin) ui.playerHudSkin.src = store.playerHudFrame.src
+  if (store.rotateButton && ui.rotateSkin) ui.rotateSkin.src = store.rotateButton.src
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -832,6 +831,9 @@ function renderPanel() {
   ui.playerHpFill.style.width = `${Math.max(0, (hp / max) * 100)}%`
   ui.playerHpFill.classList.toggle('low', hp / max <= 0.3)
   ui.playerHpText.textContent = `${hp}/${max}`
+  const chargeSlots = [...(ui.playerCharges?.querySelectorAll('.charge-diamond') ?? [])]
+  chargeSlots.forEach((slot, index) => slot.classList.toggle('filled', index < s.rotateCharges))
+  if (ui.playerCharges) ui.playerCharges.setAttribute('aria-label', `${s.rotateCharges} Rotate charges`)
   ui.rotCw.disabled = !s.canRotate(1) || def.rotate.allow.length === 0
   ui.rotCcw.disabled = !s.canRotate(-1) || def.rotate.allow.length === 0
   ui.rotCw.style.visibility = def.rotate.allow.includes(1) ? 'visible' : 'hidden'
@@ -839,7 +841,8 @@ function renderPanel() {
   // RUN-001: the count is pool-backed for post-prologue encounters (EncounterState reports the
   // live shared pool via the same getter), encounter-local otherwise. At 0 the buttons stay
   // visible but disabled (disabled comes from canRotate below); the label always shows the count.
-  ui.rotateCharges.textContent = def.rotate.allow.length === 0 ? '' : `Rotate ×${s.rotateCharges}`
+  ui.rotateCharges.textContent = `×${s.rotateCharges}`
+  document.querySelector('.rotate-controls')?.classList.toggle('is-hidden', def.rotate.allow.length === 0)
   itemBar.render(run)
   const statusLines = [
     `${def.title ?? def.id}`,

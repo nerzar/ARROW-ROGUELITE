@@ -1168,6 +1168,10 @@ export function createBoardRenderer(canvas, stageEl) {
       if (!t.dead && !t.fled && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
         if (t.abilityKind === 'shield') {
           lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD ${t.abilityCountdown}`, bold: true, color: col.cast })
+        } else if (t.abilityKind === 'heal') {
+          lines.push({ text: `HEAL ${t.abilityCountdown}`, bold: true, color: col.good })
+        } else if (t.abilityKind === 'shift') {
+          lines.push({ text: `SHIFT ${t.abilityCountdown}`, bold: true, color: col.aim })
         } else {
           lines.push({ text: `THROW ${t.abilityCountdown}`, bold: true, color: col.rock })
         }
@@ -1195,6 +1199,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // shaken"). Everything above (telegraph, shadow, art, flash, sparks) is world and shakes.
       ctx.save()
       ctx.translate(-frameCam.x, -frameCam.y)
+      let renderedHudRect = { ...hud.plate }
       if (!t.dead) {
         const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
         const isLow = frac <= 0.25
@@ -1214,6 +1219,137 @@ export function createBoardRenderer(canvas, stageEl) {
         if (cardX + cardW + slot.x > g.stageW - pad) cardX = g.stageW - pad - cardW - slot.x
         if (cardY + slot.y < pad) cardY = pad - slot.y
         if (cardY + cardH + slot.y > g.stageH - pad) cardY = g.stageH - pad - cardH - slot.y
+
+        const approvedSkin = t.isBoss ? assets.bossHudFrame : assets.enemyHudFrame
+        if (approvedSkin) {
+          // BUILD-036: draw the approved source PNG whole, without crop/slicing/reconstruction.
+          // Species HUD scale and offset still feed this exact card position and size.
+          const approvedW = Math.round((t.isBoss ? 520 : 235) * hudScale)
+          const approvedH = approvedW / 3
+          cardX = Math.round(hud.plate.x + (hud.plate.w - approvedW) / 2)
+          cardY = Math.round(isDown ? hud.bar.y : hud.bar.y + hud.bar.h - approvedH)
+          if (cardX + slot.x < pad) cardX = pad - slot.x
+          if (cardX + approvedW + slot.x > g.stageW - pad) cardX = g.stageW - pad - approvedW - slot.x
+          if (cardY + slot.y < pad) cardY = pad - slot.y
+          if (cardY + approvedH + slot.y > g.stageH - pad) cardY = g.stageH - pad - approvedH - slot.y
+          renderedHudRect = { x: cardX, y: cardY, w: approvedW, h: approvedH }
+
+          ctx.save()
+          ctx.imageSmoothingEnabled = true
+          ctx.drawImage(approvedSkin, cardX, cardY, approvedW, approvedH)
+
+          const track = t.isBoss
+            ? { x: 0.092, y: 0.568, w: 0.816, h: 0.185 }
+            : { x: 0.109, y: 0.568, w: 0.808, h: 0.171 }
+          const tx = cardX + approvedW * track.x
+          const ty = cardY + approvedH * track.y
+          const tw = approvedW * track.w
+          const th = approvedH * track.h
+          const chamfer = Math.min(th * 0.45, tw * 0.035)
+          const barPath = (width) => {
+            const right = tx + Math.max(0, width)
+            ctx.beginPath()
+            ctx.moveTo(tx + chamfer, ty)
+            ctx.lineTo(Math.max(tx + chamfer, right - chamfer), ty)
+            ctx.lineTo(right, ty + th / 2)
+            ctx.lineTo(Math.max(tx + chamfer, right - chamfer), ty + th)
+            ctx.lineTo(tx + chamfer, ty + th)
+            ctx.lineTo(tx, ty + th / 2)
+            ctx.closePath()
+          }
+
+          // The regular approved art contains a reference red fill. An opaque live track covers
+          // that sample before the real HP fraction is painted over it.
+          barPath(tw)
+          ctx.fillStyle = 'rgba(16, 5, 9, 0.96)'
+          ctx.fill()
+          if (frac > 0) {
+            const fillW = Math.max(th * 0.9, tw * frac)
+            barPath(fillW)
+            const hpGrad = ctx.createLinearGradient(tx, ty, tx + fillW, ty)
+            hpGrad.addColorStop(0, isLow ? '#ff5a62' : '#f52b42')
+            hpGrad.addColorStop(0.55, isLow ? '#d60820' : '#c90826')
+            hpGrad.addColorStop(1, '#72000f')
+            ctx.fillStyle = hpGrad
+            ctx.fill()
+            ctx.strokeStyle = 'rgba(255, 190, 111, 0.62)'
+            ctx.lineWidth = Math.max(0.7, approvedW * 0.003)
+            ctx.stroke()
+          }
+
+          const displayName = t.isBoss
+            ? (bossSpeciesFor(t.id) === 'goblin-taunter' ? 'Goblin King' : 'Goblin Shaman')
+            : (t.label ?? t.id)
+          const statusCount = (Number.isFinite(t.countdown) ? 1 : 0) +
+            (t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown) ? 1 : 0)
+          const nameCenter = t.isBoss ? 0.5 : statusCount > 1 ? 0.43 : statusCount === 1 ? 0.47 : 0.5
+          const nameWidth = t.isBoss ? 0.45 : statusCount > 1 ? 0.27 : statusCount === 1 ? 0.34 : 0.42
+          const nameY = cardY + approvedH * (t.isBoss ? 0.315 : 0.327)
+          const nameSize = Math.max(8, Math.round(approvedW * (t.isBoss ? 0.052 : 0.061)))
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.font = `800 ${nameSize}px system-ui, -apple-system, sans-serif`
+          ctx.lineJoin = 'round'
+          ctx.lineWidth = Math.max(2, nameSize * 0.2)
+          ctx.strokeStyle = 'rgba(0,0,0,0.88)'
+          ctx.strokeText(displayName, cardX + approvedW * nameCenter, nameY, approvedW * nameWidth)
+          ctx.fillStyle = '#fff4dc'
+          ctx.fillText(displayName, cardX + approvedW * nameCenter, nameY, approvedW * nameWidth)
+
+          const hpSize = Math.max(8, Math.round(approvedW * (t.isBoss ? 0.045 : 0.056)))
+          ctx.font = `900 ${hpSize}px system-ui, -apple-system, sans-serif`
+          ctx.lineWidth = Math.max(2, hpSize * 0.22)
+          const hpText = `${t.hp}/${t.hpMax}`
+          ctx.strokeStyle = 'rgba(20,0,3,0.92)'
+          ctx.strokeText(hpText, tx + tw / 2, ty + th / 2, tw - 10)
+          ctx.fillStyle = '#fff8ed'
+          ctx.fillText(hpText, tx + tw / 2, ty + th / 2, tw - 10)
+
+          const chips = []
+          if (Number.isFinite(t.countdown)) chips.push({
+            text: `${isCast ? 'CAST' : 'ATK'}${t.countdown}`,
+            color: isUrgent ? '#ef4444' : isCast ? '#8b5cf6' : '#78350f',
+          })
+          if (t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
+            const abilityText = t.abilityKind === 'shield'
+              ? (t.shielded ? 'SHD↑' : `SHD${t.abilityCountdown}`)
+              : t.abilityKind === 'heal'
+                ? `HEAL${t.abilityCountdown}`
+                : t.abilityKind === 'shift'
+                  ? `SHIFT${t.abilityCountdown}`
+                  : `THR${t.abilityCountdown}`
+            const abilityColor = t.abilityKind === 'shield'
+              ? '#6d28d9'
+              : t.abilityKind === 'heal'
+                ? '#166534'
+                : t.abilityKind === 'shift'
+                  ? '#075985'
+                  : '#92400e'
+            chips.push({ text: abilityText, color: abilityColor })
+          }
+          const chipSize = Math.max(7, Math.round(approvedW * (t.isBoss ? 0.032 : 0.043)))
+          let chipRight = cardX + approvedW * 0.875
+          ctx.font = `800 ${chipSize}px system-ui, -apple-system, sans-serif`
+          for (let i = chips.length - 1; i >= 0; i--) {
+            const chip = chips[i]
+            const chipW = ctx.measureText(chip.text).width + chipSize * 0.9
+            const chipH = chipSize * 1.55
+            const chipX = chipRight - chipW
+            const chipY = nameY - chipH / 2
+            ctx.fillStyle = chip.color
+            roundRect(chipX, chipY, chipW, chipH, chipH * 0.22)
+            ctx.fill()
+            ctx.strokeStyle = 'rgba(255,224,164,0.78)'
+            ctx.lineWidth = 0.8
+            ctx.stroke()
+            ctx.fillStyle = '#fff8e7'
+            ctx.textAlign = 'center'
+            ctx.fillText(chip.text, chipX + chipW / 2, nameY)
+            chipRight = chipX - chipSize * 0.35
+          }
+          ctx.restore()
+        } else {
+          renderedHudRect = { x: cardX, y: cardY, w: cardW, h: cardH }
 
         // Card Backdrop & Depth Shadow
         ctx.save()
@@ -1466,6 +1602,7 @@ export function createBoardRenderer(canvas, stageEl) {
           ctx.fillText(hpLabel, cardX + cardW - 9 - hpValW, rowMidY)
           ctx.restore()
         }
+        }
       }
 
       // CAST INTERRUPTED / SHIELD BLOCKED bursts rise just above the HUD plate -- local
@@ -1567,7 +1704,7 @@ export function createBoardRenderer(canvas, stageEl) {
         key, side: t.side, isBoss: t.isBoss,
         char: charR,
         face: faceRect(charR),
-        plate: { x: ax + hud.plate.x, y: ay + hud.plate.y, w: hud.plate.w, h: hud.plate.h },
+        plate: { x: ax + renderedHudRect.x, y: ay + renderedHudRect.y, w: renderedHudRect.w, h: renderedHudRect.h },
         badge: { x: ax + hud.badge.x, y: ay + hud.badge.y },
         // CAL-005: ground-shadow center in canvas coords -- for automated checks that the
         // shadow follows only its own species offset, never the art pivot.
