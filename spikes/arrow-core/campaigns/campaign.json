@@ -107,7 +107,7 @@
           "allow": []
         },
         "blockedTapDamage": 0,
-        "notes": "Stage 1 (STORY-001): first story beat. Goblin King (goblin-taunter art) holds center/TOP (side 0), 3 HP, passive, flee.afterHits 2 — unkillable by construction (only two N arrows exist on this board). After the 2nd hit he taunts and flees; the fight does NOT end — the player finishes the puzzle (kill the 1 HP Skeleton Child on RIGHT with arrow #3, clear the board) for a board-clear win. Board 5x5 seed 1107. 5 arrows: #0 (N, free) hits King, #2 (N) triggers flee, #4/#3/#1 clear. 0 damage."
+        "notes": "Stage 1 (STORY-001): first story beat. Goblin King (goblin-taunter art) holds center/TOP (side 0), 3 HP, passive, flee.afterHits 2 — unkillable by construction (only two N arrows exist on this board). After the 2nd hit he taunts and flees; the fight does NOT end — the player finishes the puzzle (clear the board, no other targets) for a board-clear win. Board 5x5 seed 1107. 0 damage."
       }
     },
     {

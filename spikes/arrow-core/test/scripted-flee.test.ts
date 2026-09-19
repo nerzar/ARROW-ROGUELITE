@@ -160,14 +160,14 @@ describe('STORY-001: stage-1 Goblin King beat end-to-end (campaign.json)', () =>
   const stage1Raw = campaignRaw.levels[0]
   const step = convertLevelToStep(stage1Raw)
 
-  it('stage 1 fields the unkillable King on TOP plus a killable target on RIGHT', () => {
+  it('stage 1 fields only the unkillable King, cleared via board-clear win', () => {
     expect(stage1Raw.id).toBe('prologue-stage-1')
-    const [king, mob] = step.def.enemies!
+    expect(step.def.enemies!.length).toBe(1)
+    const [king] = step.def.enemies!
     expect(king.id).toBe('goblin_king')
     expect(king.side).toBe(0)
     expect(king.flee).toMatchObject({ afterHits: 2 })
     expect(king.flee!.afterHits).toBeLessThan(king.hp) // structurally unkillable
-    expect(mob.side).toBe(1)
     expect(() => checkEncounter(step.def)).not.toThrow()
   })
 
