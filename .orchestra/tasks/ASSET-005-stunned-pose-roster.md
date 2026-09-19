@@ -56,6 +56,32 @@ SIZE: M
 - Не создавать `angry`/`taunt`/`cast`/`back` для обычных врагов — это боссовые позы, `green-slime`
   и `small-goblin` уже случайно нахватали такие файлы, они не используются кодом и не нужны.
 
+## Готовые промпты для ChatGPT (по одному на вид, из репозитория на GitHub)
+
+Один и тот же шаблон на все 8 — просто подставить species и путь. Референсы (`idle.png` +
+`hit.png` этого вида) уже в репозитории на GitHub, ChatGPT может открыть их напрямую по пути.
+
+```
+Reference: spikes/arrow-core/viewer/visual-proto/assets/enemies/<SPECIES>/idle.png and
+.../hit.png (this repo, already pushed to GitHub).
+
+Generate ONE new pose for <SPECIES>, matching the exact art style, palette, lighting,
+proportions and camera angle of those two reference images:
+
+STUNNED — dazed/incapacitated (crowd-control state, not a damage flinch): dizzy
+stars or spiral over the head, unsteady/off-balance stance, weapon or limbs
+lowered, unfocused half-closed eyes. This must read as clearly different from
+the existing HIT pose (short pain/anger flinch, still braced and ready) even as
+a single still frame.
+
+Transparent background, same crop/framing convention as the reference images
+(bottom-center ground contact, no extra padding beyond what idle.png already has).
+```
+
+Подставить `<SPECIES>` = `dire-wolf`, `green-slime`, `small-green-slime`, `small-goblin`,
+`spider-brute`, `small-spider`, `toxic-demonic-spider`, `skeleton-child` — восемь отдельных
+запусков, не один общий.
+
 ## Готово, если
 
 - [ ] 8 файлов `assets/enemies/<species>/stunned.png`, по одному на вид выше
