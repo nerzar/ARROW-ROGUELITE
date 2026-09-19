@@ -2,6 +2,7 @@ import { type EncounterDef, EncounterState, type RotatePool } from './encounter.
 import { type Inventory, INVENTORY_SLOTS, type ItemId, type ItemInstance, ITEM_IDS, ITEMS, type RelicId, RELIC_IDS, RELICS } from './items.js'
 import type { Level } from './level.js'
 import { createRng, deriveSeed, hashString } from './rng.js'
+import { getAvailableRouteNodes, type RouteGraph, type RouteNode } from './route-map.js'
 
 /**
  * EXP-010: a thin run-level wrapper around the per-encounter EncounterState, needed because HP now
@@ -46,6 +47,12 @@ export interface RunConfig {
   /** ITEM-001: gold of the common card = base + perStep * stepIndex (defaults 8 / 2). */
   goldBase?: number
   goldPerStep?: number
+  /** MAP-001: data-driven route graph for branching act traversal. If omitted, linear step-order flow is used. */
+  routeGraph?: RouteGraph | null
+  /** MAP-001: optional initial route node to start on. */
+  initialRouteNodeId?: string | null
+  /** MAP-001: whether to start on the route map awaiting initial node selection (default false, starts at initialRouteNodeId/entryNodeIds[0]). */
+  startOnRouteMap?: boolean
 }
 
 /**
@@ -64,7 +71,7 @@ export type RewardOffer =
 export const REWARD_HEAL = 3
 export const REWARD_ROTATE = 1
 
-/** ITEM-001: what survives between sessions. */
+/** ITEM-001 / MAP-001: what survives between sessions. */
 export interface RunSave {
   v: 1
   stepIndex: number
@@ -73,6 +80,11 @@ export interface RunSave {
   inventory: ItemInstance[]
   relics?: RelicId[]
   gold?: number
+  /** MAP-001: route map node state */
+  currentNodeId?: string | null
+  visitedNodeIds?: string[]
+  routeMapPending?: boolean
+  inShop?: boolean
 }
 
 export class RunState {
@@ -103,6 +115,15 @@ export class RunState {
   private entryRelics: RelicId[] = []
   private encounterState: EncounterState
 
+  // MAP-001: Route map state
+  private readonly routeGraph: RouteGraph | null = null
+  private currentNodeIdValue: string | null = null
+  private visitedNodeIdsValue: string[] = []
+  private entryCurrentNodeId: string | null = null
+  private entryVisitedNodeIds: string[] = []
+  private routeMapPendingValue = false
+  private inShopValue = false
+
   constructor(config: RunConfig, steps: readonly RunStep[]) {
     if (steps.length === 0) throw new Error('RunState needs at least one step')
     this.config = config
@@ -114,6 +135,35 @@ export class RunState {
     this.relicList = [...(config.startingRelics ?? [])]
     this.entryRelics = [...this.relicList]
     this.entryInventory = this.snapshotInventory()
+
+    this.routeGraph = config.routeGraph ?? null
+    if (this.routeGraph) {
+      if (config.initialRouteNodeId) {
+        this.currentNodeIdValue = config.initialRouteNodeId
+        const node = this.routeGraph.nodes[config.initialRouteNodeId]
+        if (node?.stepId) {
+          const sIdx = steps.findIndex((s) => s.id === node.stepId)
+          if (sIdx >= 0) this.idx = sIdx
+        }
+        this.routeMapPendingValue = Boolean(config.startOnRouteMap)
+      } else if (config.startOnRouteMap) {
+        this.currentNodeIdValue = null
+        this.routeMapPendingValue = true
+      } else {
+        this.currentNodeIdValue = this.routeGraph.entryNodeIds[0] ?? null
+        if (this.currentNodeIdValue) {
+          const node = this.routeGraph.nodes[this.currentNodeIdValue]
+          if (node?.stepId) {
+            const sIdx = steps.findIndex((s) => s.id === node.stepId)
+            if (sIdx >= 0) this.idx = sIdx
+          }
+        }
+        this.routeMapPendingValue = false
+      }
+      this.entryCurrentNodeId = this.currentNodeIdValue
+      this.entryVisitedNodeIds = []
+    }
+
     this.encounterState = this.buildEncounterState()
   }
 
@@ -284,9 +334,17 @@ export class RunState {
     return this.config.playerMaxHp
   }
   get isFirstStep(): boolean {
+    if (this.hasRouteGraph) {
+      return this.visitedNodeIdsValue.length === 0
+    }
     return this.stepIndex === 0
   }
   get isLastStep(): boolean {
+    if (this.hasRouteGraph) {
+      if (this.currentNode?.type === 'boss') return true
+      if (this.availableRouteNodes.length === 0 && !this.routeMapPendingValue) return true
+      return false
+    }
     return this.stepIndex === this.steps.length - 1
   }
   /** The whole run is cleared: the last step's encounter is won. */
@@ -298,12 +356,92 @@ export class RunState {
     return this.encounterState.lost
   }
 
+  // ---- MAP-001: route map progression ----
+
+  get hasRouteGraph(): boolean {
+    return this.routeGraph !== null
+  }
+  get routeGraphDef(): RouteGraph | null {
+    return this.routeGraph
+  }
+  get currentNode(): RouteNode | null {
+    if (!this.routeGraph || !this.currentNodeIdValue) return null
+    return this.routeGraph.nodes[this.currentNodeIdValue] ?? null
+  }
+  get currentNodeId(): string | null {
+    return this.currentNodeIdValue
+  }
+  get visitedNodeIds(): readonly string[] {
+    return this.visitedNodeIdsValue
+  }
+  get routeMapPending(): boolean {
+    return this.hasRouteGraph ? this.routeMapPendingValue : false
+  }
+  get inShop(): boolean {
+    return this.hasRouteGraph ? this.inShopValue : false
+  }
+  get availableRouteNodes(): RouteNode[] {
+    if (!this.routeGraph) return []
+    return getAvailableRouteNodes(this.routeGraph, this.currentNodeIdValue, this.visitedNodeIdsValue)
+  }
+  get availableRouteNodeIds(): string[] {
+    return this.availableRouteNodes.map((n) => n.id)
+  }
+
+  /**
+   * Selects an available route node to progress the run.
+   * If a battle or boss node is selected, switches active encounter to its step and clears map pending.
+   * If a shop node is selected, sets inShop = true for SHOP-001 handling.
+   */
+  selectRouteNode(nodeId: string): boolean {
+    if (!this.hasRouteGraph || !this.routeGraph) return false
+    const targetNode = this.routeGraph.nodes[nodeId]
+    if (!targetNode) return false
+    const available = this.availableRouteNodeIds
+    if (!available.includes(nodeId)) return false
+
+    this.currentNodeIdValue = nodeId
+    this.entryCurrentNodeId = nodeId
+    this.entryVisitedNodeIds = [...this.visitedNodeIdsValue]
+    this.routeMapPendingValue = false
+
+    if (targetNode.type === 'shop') {
+      this.inShopValue = true
+      return true
+    }
+
+    this.inShopValue = false
+    if (targetNode.stepId) {
+      const sIdx = this.steps.findIndex((s) => s.id === targetNode.stepId)
+      if (sIdx >= 0) {
+        this.idx = sIdx
+      }
+    }
+    this.encounterState = this.buildEncounterState()
+    return true
+  }
+
+  /**
+   * Completes a visit to a shop node (SHOP-001 beat) and transitions back to route map
+   * so the player can pick the next node.
+   */
+  leaveShop(): void {
+    if (!this.inShopValue) return
+    if (this.currentNodeIdValue && !this.visitedNodeIdsValue.includes(this.currentNodeIdValue)) {
+      this.visitedNodeIdsValue.push(this.currentNodeIdValue)
+    }
+    this.inShopValue = false
+    this.routeMapPendingValue = true
+  }
+
   /**
    * Moves on to the next step, carrying over the HP the player finished the current step with.
    * Also claims the completed step's `winRotateReward` (e.g. prologue boss +2) into the shared
    * pool exactly once — `advance()` is a one-way gate (no-op unless the current step is won),
-   * so a reward can never be granted twice. Returns false (no-op) if the current step is not
-   * won yet, or it was the last step.
+   * so a reward can never be granted twice.
+   * In route map mode, marks current node as visited and sets routeMapPending = true instead
+   * of advancing a linear index.
+   * Returns false (no-op) if the current step is not won yet, or it was the last step.
    */
   advance(): boolean {
     if (!this.encounterState.won || this.isLastStep) return false
@@ -315,6 +453,15 @@ export class RunState {
     this.entryInventory = this.snapshotInventory()
     this.entryRelics = [...this.relicList]
     this.entryGold = this.goldValue
+
+    if (this.hasRouteGraph) {
+      if (this.currentNodeIdValue && !this.visitedNodeIdsValue.includes(this.currentNodeIdValue)) {
+        this.visitedNodeIdsValue.push(this.currentNodeIdValue)
+      }
+      this.routeMapPendingValue = true
+      return true
+    }
+
     this.idx++
     this.encounterState = this.buildEncounterState()
     return true
@@ -327,6 +474,12 @@ export class RunState {
     this.relicList = [...this.entryRelics]
     this.pendingHeal = 0
     this.goldValue = this.entryGold
+    if (this.hasRouteGraph) {
+      this.currentNodeIdValue = this.entryCurrentNodeId
+      this.visitedNodeIdsValue = [...this.entryVisitedNodeIds]
+      this.routeMapPendingValue = false
+      this.inShopValue = false
+    }
     this.encounterState = this.buildEncounterState()
   }
 
@@ -344,13 +497,35 @@ export class RunState {
     this.pendingHeal = 0
     this.goldValue = 0
     this.entryGold = 0
+
+    if (this.hasRouteGraph) {
+      this.visitedNodeIdsValue = []
+      this.entryVisitedNodeIds = []
+      this.inShopValue = false
+
+      if (this.config.startOnRouteMap) {
+        this.currentNodeIdValue = null
+        this.entryCurrentNodeId = null
+        this.routeMapPendingValue = true
+      } else {
+        this.currentNodeIdValue = this.config.initialRouteNodeId ?? this.routeGraph!.entryNodeIds[0] ?? null
+        this.entryCurrentNodeId = this.currentNodeIdValue
+        this.routeMapPendingValue = false
+        if (this.currentNodeIdValue && this.routeGraph!.nodes[this.currentNodeIdValue]?.stepId) {
+          const sId = this.routeGraph!.nodes[this.currentNodeIdValue].stepId
+          const sIdx = this.steps.findIndex((s) => s.id === sId)
+          if (sIdx >= 0) this.idx = sIdx
+        }
+      }
+    }
+
     this.encounterState = this.buildEncounterState()
   }
 
-  // ---- ITEM-001: persistence (run-level only; the active encounter restarts on load) ----
+  // ---- ITEM-001 / MAP-001: persistence (run-level only; the active encounter restarts on load) ----
 
   toJSON(): RunSave {
-    return {
+    const save: RunSave = {
       v: 1,
       stepIndex: this.idx,
       entryHp: this.entryHp,
@@ -359,6 +534,13 @@ export class RunState {
       relics: [...this.entryRelics],
       gold: this.entryGold,
     }
+    if (this.hasRouteGraph) {
+      save.currentNodeId = this.currentNodeIdValue
+      save.visitedNodeIds = [...this.visitedNodeIdsValue]
+      save.routeMapPending = this.routeMapPendingValue
+      save.inShop = this.inShopValue
+    }
+    return save
   }
 
   /** Restores a save onto the same step list: the saved step restarts from its entry snapshot. */
@@ -375,6 +557,16 @@ export class RunState {
     run.entryRelics = [...run.relicList]
     run.goldValue = Math.max(0, save.gold ?? 0)
     run.entryGold = run.goldValue
+
+    if (run.hasRouteGraph) {
+      run.currentNodeIdValue = save.currentNodeId ?? null
+      run.visitedNodeIdsValue = Array.isArray(save.visitedNodeIds) ? [...save.visitedNodeIds] : []
+      run.entryCurrentNodeId = run.currentNodeIdValue
+      run.entryVisitedNodeIds = [...run.visitedNodeIdsValue]
+      run.routeMapPendingValue = Boolean(save.routeMapPending)
+      run.inShopValue = Boolean(save.inShop)
+    }
+
     run.encounterState = run.buildEncounterState()
     return run
   }
@@ -383,6 +575,44 @@ export class RunState {
   debugJumpTo(stepIndex: number, rotateCharges?: number): void {
     if (stepIndex < 0 || stepIndex >= this.steps.length) throw new Error(`bad step index ${stepIndex}`)
     this.idx = stepIndex
+    this.entryHp = this.config.playerMaxHp
+    if (rotateCharges !== undefined) {
+      this.rotatePool.charges = rotateCharges
+    }
+    this.entryRotate = this.rotatePool.charges
+    this.entryInventory = this.snapshotInventory()
+
+    if (this.hasRouteGraph && this.routeGraph) {
+      const targetStepId = this.steps[stepIndex].id
+      const foundEntry = Object.entries(this.routeGraph.nodes).find(([, n]) => n.stepId === targetStepId)
+      if (foundEntry) {
+        this.currentNodeIdValue = foundEntry[0]
+        this.entryCurrentNodeId = foundEntry[0]
+      }
+      this.routeMapPendingValue = false
+      this.inShopValue = false
+    }
+
+    this.encounterState = this.buildEncounterState()
+  }
+
+  /** MAP-001: Debug jumps directly to a specific route node. */
+  debugJumpToNode(nodeId: string, rotateCharges?: number): void {
+    if (!this.hasRouteGraph || !this.routeGraph) throw new Error('No route graph configured')
+    const node = this.routeGraph.nodes[nodeId]
+    if (!node) throw new Error(`Unknown node "${nodeId}"`)
+    this.currentNodeIdValue = nodeId
+    this.entryCurrentNodeId = nodeId
+    this.routeMapPendingValue = false
+    if (node.type === 'shop') {
+      this.inShopValue = true
+      return
+    }
+    this.inShopValue = false
+    if (node.stepId) {
+      const sIdx = this.steps.findIndex((s) => s.id === node.stepId)
+      if (sIdx >= 0) this.idx = sIdx
+    }
     this.entryHp = this.config.playerMaxHp
     if (rotateCharges !== undefined) {
       this.rotatePool.charges = rotateCharges
