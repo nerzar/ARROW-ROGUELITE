@@ -118,6 +118,11 @@ Seed 428 в LD-006 — 12 стрел 2/5/1/4; в campaign — 7 стрел 1/2/1
   min damage @0/1/2 Rotate, kills по ходам, choice/forced turns, forced tail, options per turn,
   unlock moves, naive-player damage/death rate. Скан ранжирует seed'ы по design-score,
   а не по solver «VALID».
+- `viewer/visual-proto/arena-library.js` + `assets/arenas/library/*.jpg` — все 36 ещё не подключённых арен
+  из `magicarrowassets/arenas` (дубли и 8 уже импортированных пропущены; JPEG q92 вместо PNG, чтобы репо
+  не выросло на ~110 MB — при желании меняется на PNG). Видны в Campaign Editor; у каждой есть
+  стартовая калибровка по одному из двух шаблонов (podium / dais). Stage 6 «Капитан стражи» переведён
+  на `goblin-camp-podium` (сцена с центральным подиумом) с ручной калибровкой.
 - `test/build-027-square-prologue.test.ts` — обновлён под новую цепочку + новый тест
   «у каждого Act I stage есть 0-damage линия при 0 Rotate».
 

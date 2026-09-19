@@ -1216,60 +1216,60 @@
         "profile": "mixed"
       },
       "presentation": {
-        "arena": "6x6-5",
-        "background": "assets/arenas/prologue-act1/6x6-5.png",
+        "arena": "goblin-camp-podium",
+        "background": "assets/arenas/library/goblin-camp-podium.jpg",
         "calibration": {
-          "id": "6x6-5",
-          "background": "assets/arenas/prologue-act1/6x6-5.png",
+          "id": "goblin-camp-podium",
+          "background": "assets/arenas/library/goblin-camp-podium.jpg",
           "boardSizeLocked": 6,
           "boardPlaneFrac": {
             "tl": [
-              0.3342563175339479,
-              0.3929324978842111
+              0.356,
+              0.42
             ],
             "tr": [
-              0.657832305246277,
-              0.3887130992414708
+              0.646,
+              0.42
             ],
             "br": [
-              0.7029272172671063,
-              0.7994022889686356
+              0.677,
+              0.815
             ],
             "bl": [
-              0.2915348171700729,
-              0.7994022889686356
+              0.324,
+              0.815
             ]
           },
           "anchors": {
             "top": {
               "x": 0.5,
-              "y": 0.155
+              "y": 0.31
             },
             "left": {
-              "x": 0.17,
-              "y": 0.6
+              "x": 0.145,
+              "y": 0.45
             },
             "right": {
-              "x": 0.83,
-              "y": 0.6
+              "x": 0.855,
+              "y": 0.45
             }
           },
           "effectAnchors": {
             "top": {
               "x": 0.5,
-              "y": 0.155
+              "y": 0.32
             },
             "left": {
-              "x": 0.17,
-              "y": 0.6
+              "x": 0.13,
+              "y": 0.46
             },
             "right": {
-              "x": 0.83,
-              "y": 0.6
+              "x": 0.87,
+              "y": 0.46
             }
           },
           "actorScale": {
-            "top": 0.55,
+            "top": 1,
             "left": 1,
             "right": 1
           },
@@ -1280,11 +1280,11 @@
             },
             "left": {
               "dx": 0,
-              "dy": 0.08
+              "dy": 0
             },
             "right": {
               "dx": 0,
-              "dy": 0.08
+              "dy": 0
             }
           }
         }
