@@ -307,7 +307,7 @@ describe('shield-spike.json: the debug Shield encounter', () => {
       if (a.kind === 'tap') {
         const r = s.tap(a.id)
         if (r.ok && ((r.shieldRaised && r.shieldRaised.length) || (r.shieldConsumed && r.shieldConsumed.length))) sawShield = true
-      } else {
+      } else if (a.kind === 'rotate') {
         s.rotate(a.turn)
       }
     }

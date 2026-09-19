@@ -180,7 +180,7 @@ describe('STORY-001: stage-1 Goblin King beat end-to-end (campaign.json)', () =>
     const play = EncounterState.fromLevel(step.level, step.def, 10, null)
     let fledAt = -1
     win.sequence.forEach((a, i) => {
-      const r = a.kind === 'tap' ? play.tap(a.id) : (play.rotate(a.turn), null)
+      const r = a.kind === 'tap' ? play.tap(a.id) : a.kind === 'rotate' ? (play.rotate(a.turn), null) : null
       if (a.kind === 'tap' && r && r.ok && (r.fled ?? []).length > 0 && fledAt < 0) fledAt = i
     })
     expect(fledAt).toBeGreaterThanOrEqual(0) // the beat always fires on the winning line
