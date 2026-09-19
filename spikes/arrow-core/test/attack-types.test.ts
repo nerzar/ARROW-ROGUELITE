@@ -180,7 +180,7 @@ describe('mini-boss phase 2 (seed 1571): cast-interrupt removes the EXP-010b 1-d
         if (s.phaseIndex === 1 && s.attackKind === 'cast') sawCast = true
         const r = s.tap(a.id)
         if (r.ok && r.castInterrupted) sawCastInterrupted = true
-      } else {
+      } else if (a.kind === 'rotate') {
         s.rotate(a.turn)
       }
     }

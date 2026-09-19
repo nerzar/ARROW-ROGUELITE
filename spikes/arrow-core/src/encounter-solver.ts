@@ -38,6 +38,8 @@ import { BoardTopology } from './topology.js'
 export interface WinQuery {
   /** At most this many Rotates may be used (still limited by granted charges). Default: unlimited. */
   maxRotates?: number
+  /** ITEM-001: at most this many item uses (still limited by charges). Default: unlimited; 0 = "bare hands". */
+  maxItems?: number
   /** Search node limit; if hit, the answer is not proven. Default 2 000 000. */
   nodeBudget?: number
 }
@@ -74,10 +76,12 @@ export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
   const s = start.clone()
   const base = s.actions.length
   const maxRotates = q.maxRotates ?? Infinity
+  const maxItems = q.maxItems ?? Infinity
   const budget = q.nodeBudget ?? DEFAULT_BUDGET
   const failed = new Set<string>()
   let nodes = 0
   let aborted = false
+  let itemsUsed = 0
 
   const visit = (): boolean => {
     if (s.won) return true
@@ -108,6 +112,15 @@ export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
         s.undo()
       }
     }
+    if (itemsUsed < maxItems) {
+      for (const a of s.itemActions()) {
+        s.useItem(a.id, a.target)
+        itemsUsed++
+        if (visit()) return true
+        itemsUsed--
+        s.undo()
+      }
+    }
     for (const id of free) if (!s.wouldHit(id) && tryTap(id)) return true
     if (!aborted) failed.add(key)
     return false
@@ -130,6 +143,8 @@ export function findWin(start: EncounterState, q: WinQuery = {}): WinResult {
 export function maxHits(start: EncounterState, q: WinQuery = {}): { hits: number; proven: boolean; nodes: number } {
   const s = start.clone()
   const maxRotates = q.maxRotates ?? Infinity
+  const maxItems = q.maxItems ?? Infinity
+  let itemsUsed = 0
   const budget = q.nodeBudget ?? DEFAULT_BUDGET
   const memo = new Map<string, number>()
   let nodes = 0
@@ -159,6 +174,17 @@ export function maxHits(start: EncounterState, q: WinQuery = {}): { hits: number
         if (!s.canRotate(turn)) continue
         s.rotate(turn)
         best = Math.max(best, visit())
+        s.undo()
+        if (best >= cap) break
+      }
+    }
+    if (best < cap && itemsUsed < maxItems) {
+      for (const a of s.itemActions()) {
+        const before = s.hits
+        s.useItem(a.id, a.target)
+        itemsUsed++
+        best = Math.max(best, s.hits - before + visit())
+        itemsUsed--
         s.undo()
         if (best >= cap) break
       }
@@ -194,11 +220,13 @@ export interface MinDamageResult {
 export function minDamageToWin(start: EncounterState, q: WinQuery = {}): MinDamageResult {
   const s = start.clone()
   const maxRotates = q.maxRotates ?? Infinity
+  const maxItems = q.maxItems ?? Infinity
   const budget = q.nodeBudget ?? DEFAULT_BUDGET
   const memo = new Map<string, number>()
   const choice = new Map<string, EncounterAction>()
   let nodes = 0
   let aborted = false
+  let itemsUsed = 0
 
   const visit = (): number => {
     if (s.won) return 0
@@ -234,6 +262,22 @@ export function minDamageToWin(start: EncounterState, q: WinQuery = {}): MinDama
         if (rest !== Infinity && dmg + rest < best) {
           best = dmg + rest
           bestAction = { kind: 'rotate', turn }
+        }
+        s.undo()
+        if (best === 0) break
+      }
+    }
+    if (best !== 0 && itemsUsed < maxItems) {
+      for (const a of s.itemActions()) {
+        const hpBefore = s.playerHp
+        s.useItem(a.id, a.target)
+        itemsUsed++
+        const dmg = hpBefore - s.playerHp
+        const rest = visit()
+        itemsUsed--
+        if (rest !== Infinity && dmg + rest < best) {
+          best = dmg + rest
+          bestAction = a
         }
         s.undo()
         if (best === 0) break
@@ -339,6 +383,21 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
       const ok = s.rotate(a.turn)
       let text = `${n}. ${formatAction(a)}${ok ? '' : '  !! illegal'}  -> rotation ${s.rotation * 90}°, charges ${s.rotateCharges}`
       if (ok && s.playerHp !== hpBefore) text += `  ENEMY ATTACK -${hpBefore - s.playerHp} hp (player ${s.playerHp})`
+      lines.push(text)
+      return
+    }
+    if (a.kind === 'item') {
+      const hpBefore = s.playerHp
+      const r = s.useItem(a.id, a.target)
+      let text = `${n}. ${formatAction(a)}${r.ok ? '' : '  !! illegal'}`
+      if (r.ok) {
+        if (r.hit) text += `  HIT (${r.hitDamage})  hp ${s.hp}/${s.totalHp}`
+        if (s.wardHp > 0) text += `  WARD ${s.wardHp}`
+        if (s.playerHp > hpBefore) text += `  +${s.playerHp - hpBefore} hp (player ${s.playerHp})`
+        if (r.enemyAttacks && r.enemyAttacks.length) text += `  ENEMY ATTACK: ${r.enemyAttacks.map((e) => `${e.id} -${e.damage}`).join(', ')} (player ${r.playerHp})`
+        else if (r.enemyAttacked) text += `  ENEMY ATTACK -${r.enemyDamage} hp (player ${r.playerHp})`
+        if (r.won) text += '  => WIN'
+      }
       lines.push(text)
       return
     }

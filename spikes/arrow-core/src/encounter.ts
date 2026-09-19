@@ -2,6 +2,7 @@ import { type Dir, DIR_NAMES, rotateDir } from './dir.js'
 import { generateLevel } from './generator.js'
 import { type Level, levelHash } from './level.js'
 import { PRESETS, type PresetName } from './presets.js'
+import { type Inventory, type ItemAction, type ItemId, ITEMS, itemNeedsTarget } from './items.js'
 import { BoardState } from './state.js'
 import { BoardTopology } from './topology.js'
 
@@ -314,7 +315,7 @@ export interface EncounterDef {
   notes?: string
 }
 
-export type EncounterAction = { kind: 'tap'; id: number } | { kind: 'rotate'; turn: Turn }
+export type EncounterAction = { kind: 'tap'; id: number } | { kind: 'rotate'; turn: Turn } | ItemAction
 
 /**
  * RUN-001: the shared run-level Rotate pool. A mutable holder owned by RunState and passed into
@@ -385,6 +386,17 @@ export type TapResult =
       playerDead: boolean
     }
 
+/** ITEM-001: what `landEnemyHit` resolved, before the world advances. */
+interface EnemyHitResolution {
+  hit: boolean
+  hitDamage: number
+  hitTargetIdx: number
+  shieldConsumed: { id: string }[]
+  fled: { id: string; label?: string }[]
+  rewards: { id: string; heal: number; rotate: number }[]
+  shifted: { id: string; from: Dir; to: Dir }[]
+}
+
 interface TimerSnapshot {
   playerHp: number
   /** Boss mode. */
@@ -410,9 +422,15 @@ interface TimerSnapshot {
   /** ACT-I-003 */
   worldTurn: number
   bonusRotate: number
+  /** ITEM-001: player ward HP (Shield item) still up. */
+  ward: number
 }
 
-type Entry = ({ kind: 'tap'; id: number; hit: boolean; poolReward?: number } | { kind: 'rotate'; turn: Turn }) & { timerBefore: TimerSnapshot }
+type Entry = (
+  | { kind: 'tap'; id: number; hit: boolean; poolReward?: number }
+  | { kind: 'rotate'; turn: Turn }
+  | { kind: 'item'; item: ItemId; target?: Dir; hit: boolean; poolReward?: number; slot: number; units?: number }
+) & { timerBefore: TimerSnapshot }
 
 export class EncounterState {
   readonly def: EncounterDef
@@ -454,6 +472,10 @@ export class EncounterState {
   private playerHpValue: number
   /** ACT-I-003: cap for `reward.heal`. Defaults to the starting HP when the caller has no run. */
   readonly playerMaxHp: number
+  /** ITEM-001: ward HP from the Shield item; absorbs enemy attack damage before HP. */
+  private ward = 0
+  /** ITEM-001: the run inventory, by handle (charges are spent here directly, undo refunds). Null = no items. */
+  private readonly inventory: Inventory | null
   /** The HP this encounter started with (constructor param), needed to replay it exactly in clone(). */
   readonly playerHpStart: number
   /**
@@ -464,10 +486,11 @@ export class EncounterState {
   private readonly rotatePool: RotatePool | null
   private readonly log: Entry[] = []
 
-  constructor(topo: BoardTopology, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null, playerMaxHp = playerHp) {
+  constructor(topo: BoardTopology, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null, playerMaxHp = playerHp, inventory: Inventory | null = null) {
     checkEncounter(def)
     this.def = def
     this.board = new BoardState(topo)
+    this.inventory = inventory
     this.playerHpValue = playerHp
     this.playerHpStart = playerHp
     this.playerMaxHp = Math.max(playerHp, playerMaxHp)
@@ -498,18 +521,25 @@ export class EncounterState {
     }
   }
 
-  static fromLevel(level: Level, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null, playerMaxHp = playerHp): EncounterState {
-    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool, playerMaxHp)
+  static fromLevel(level: Level, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null, playerMaxHp = playerHp, inventory: Inventory | null = null): EncounterState {
+    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool, playerMaxHp, inventory)
   }
 
   clone(): EncounterState {
     // Seed with the entry-time value (current + already-spent): replaying the logged Rotates
     // decrements back down to exactly the current value instead of double-spending.
     const pool = this.rotatePool ? { charges: this.rotatePool.charges + this.rotates } : null
-    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart, pool, this.playerMaxHp)
+    // ITEM-001: same trick for items — replaying the log re-spends the charges back down.
+    let inv: Inventory | null = null
+    if (this.inventory) {
+      inv = { slots: this.inventory.slots.map((it) => ({ ...it })) }
+      for (const e of this.log) if (e.kind === 'item') inv.slots[e.slot].charges++
+    }
+    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart, pool, this.playerMaxHp, inv)
     for (const e of this.log) {
       if (e.kind === 'tap') c.tap(e.id)
-      else c.rotate(e.turn)
+      else if (e.kind === 'rotate') c.rotate(e.turn)
+      else c.useItem(e.item, e.target)
     }
     return c
   }
@@ -593,7 +623,7 @@ export class EncounterState {
     return this.grantedUpToPhase(this.phaseIndex) - this.rotates
   }
   get actions(): EncounterAction[] {
-    return this.log.map((e) => (e.kind === 'tap' ? { kind: 'tap', id: e.id } : { kind: 'rotate', turn: e.turn }))
+    return this.log.map((e): EncounterAction => (e.kind === 'tap' ? { kind: 'tap', id: e.id } : e.kind === 'rotate' ? { kind: 'rotate', turn: e.turn } : { kind: 'item', id: e.item, target: e.target }))
   }
   /**
    * Enemies mode: current state of every enemy, for the validator/analyzer/viewer (boss mode has no
@@ -742,6 +772,7 @@ export class EncounterState {
         pinTurnsLeft,
         worldTurn: this.worldTurn,
         bonusRotate: this.bonusRotate,
+        ward: this.ward,
       }
     }
     return {
@@ -752,6 +783,7 @@ export class EncounterState {
       pinTurnsLeft,
       worldTurn: this.worldTurn,
       bonusRotate: this.bonusRotate,
+      ward: this.ward,
     }
   }
   private restoreTimer(t: TimerSnapshot): void {
@@ -759,6 +791,7 @@ export class EncounterState {
     this.pinTurnsLeft = t.pinTurnsLeft
     this.worldTurn = t.worldTurn
     this.bonusRotate = t.bonusRotate
+    this.ward = t.ward
     if (this.def.enemies) {
       this.enemyHp = t.enemyHp!
       this.enemyCountdown = t.enemyCountdown!
@@ -945,7 +978,7 @@ export class EncounterState {
     }
     this.countdown--
     if (this.countdown <= 0) {
-      this.playerHpValue = Math.max(0, this.playerHpValue - at.damage)
+      this.applyPlayerDamage(at.damage)
       this.countdown = at.interval
       this.hitsThisCycle = 0
       return { interrupted: false, castInterrupted: false, attacked: true, damage: at.damage }
@@ -994,7 +1027,7 @@ export class EncounterState {
       }
       this.enemyCountdown[i]--
       if (this.enemyCountdown[i] <= 0) {
-        this.playerHpValue = Math.max(0, this.playerHpValue - at.damage)
+        this.applyPlayerDamage(at.damage)
         this.enemyCountdown[i] = at.interval
         this.enemyHitsThisCycle[i] = 0
         attacked = true
@@ -1003,6 +1036,97 @@ export class EncounterState {
       }
     }
     return { interrupted, castInterrupted, attacked, damage, attacks }
+  }
+
+  /** ITEM-001: enemy attack damage goes through the ward first (Shield item), then HP. */
+  private applyPlayerDamage(damage: number): void {
+    const absorbed = Math.min(this.ward, damage)
+    this.ward -= absorbed
+    this.playerHpValue = Math.max(0, this.playerHpValue - (damage - absorbed))
+  }
+
+  /** ITEM-001: ward HP currently protecting the player (0 = none). */
+  get wardHp(): number {
+    return this.ward
+  }
+
+  /** ITEM-001: the live inventory slots (empty when this encounter has no run inventory). */
+  get items(): readonly { slot: number; id: ItemId; charges: number }[] {
+    return this.inventory ? this.inventory.slots.map((it, slot) => ({ slot, id: it.id, charges: it.charges })) : []
+  }
+
+  /** ITEM-001: can `id` be used right now (charges left, encounter running, a target if needed)? */
+  canUseItem(id: ItemId, target?: Dir): boolean {
+    if (this.over || !this.inventory) return false
+    const inst = this.inventory.slots.find((it) => it.id === id)
+    if (!inst || inst.charges <= 0) return false
+    if (!itemNeedsTarget(id)) return true
+    if (target === undefined) return this.liveTargetSides().length > 0
+    return this.liveTargetSides().includes(target)
+  }
+
+  /** ITEM-001: arena sides that currently hold a hittable target. */
+  liveTargetSides(): Dir[] {
+    if (this.over) return []
+    if (this.def.enemies) return ([0, 1, 2, 3] as Dir[]).filter((d) => this.targetIndexAt(d) >= 0)
+    return this.bossSide >= 0 ? [this.bossSide as Dir] : []
+  }
+
+  /** ITEM-001: every legal item action from this state (for the solver and the UI). */
+  itemActions(): ItemAction[] {
+    if (this.over || !this.inventory) return []
+    const out: ItemAction[] = []
+    const seen = new Set<ItemId>()
+    for (const it of this.inventory.slots) {
+      if (it.charges <= 0 || seen.has(it.id)) continue
+      seen.add(it.id)
+      if (itemNeedsTarget(it.id)) for (const d of this.liveTargetSides()) out.push({ kind: 'item', id: it.id, target: d })
+      else out.push({ kind: 'item', id: it.id })
+    }
+    return out
+  }
+
+  /**
+   * ITEM-001: uses an item. A `damage` item is a projectile hit on `target` with every downstream
+   * rule of an arrow hit (shield absorb, cast interrupt, kill reward, hit-shift); `turnCost: 1`
+   * items then advance the world exactly like a successful tap. `ward`/`heal` are free actions:
+   * no world turn, timers untouched. Logged and undoable like tap/rotate.
+   */
+  useItem(id: ItemId, target?: Dir): TapResult {
+    if (this.over) return { ok: false, reason: 'over', blocker: -1 }
+    if (!this.canUseItem(id, target)) return { ok: false, reason: 'gone', blocker: -1 }
+    const def = ITEMS[id]
+    const slot = this.inventory!.slots.findIndex((it) => it.id === id && it.charges > 0)
+    const timerBefore = this.timerSnapshot()
+    const entry: Entry = { kind: 'item', item: id, target, hit: false, slot, timerBefore }
+    this.inventory!.slots[slot].charges--
+    if (def.effect.kind === 'ward') {
+      this.ward = Math.max(this.ward, def.effect.absorb)
+      this.log.push(entry)
+      return this.freeActionResult()
+    }
+    if (def.effect.kind === 'heal') {
+      this.playerHpValue = Math.min(this.playerMaxHp, this.playerHpValue + def.effect.hp)
+      this.log.push(entry)
+      return this.freeActionResult()
+    }
+    // damage
+    const dir = target as Dir
+    if (this.def.enemies) {
+      const res = this.landEnemyHit(dir, def.effect.du, entry)
+      this.log.push(entry)
+      return this.finishEnemiesTurn(dir, res, def.turnCost === 1)
+    }
+    return this.landBossHitAndAdvance(dir, def.effect.du, entry, def.turnCost === 1)
+  }
+
+  /** A logged free action (ward/heal): nothing in the world moved. */
+  private freeActionResult(): TapResult {
+    return {
+      ok: true, arenaDir: 0, hit: false, hitDamage: 0, phaseBefore: this.phaseIndex, phaseAfter: this.phaseIndex, granted: 0,
+      interrupted: false, castInterrupted: false, enemyAttacked: false, enemyDamage: 0,
+      playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
+    }
   }
 
   tap(id: number): TapResult {
@@ -1023,9 +1147,8 @@ export class EncounterState {
     return this.def.enemies ? this.tapEnemies(id) : this.tapBoss(id)
   }
 
-  private tapEnemies(id: number): TapResult {
-    const timerBefore = this.timerSnapshot()
-    const arenaDir = this.arenaDir(id)
+  /** Everything a projectile landing on `arenaDir` does to the enemies (no world advance). */
+  private landEnemyHit(arenaDir: Dir, du: number, entry: Entry & { kind: 'tap' | 'item' }): EnemyHitResolution {
     const targetIdx = this.targetIndexAt(arenaDir)
     // COMBAT-001: a raised shield absorbs exactly one projectile hit — HP is untouched and the
     // shield drops. The projectile still reached the enemy (`hit: true`, `hitDamage: 0`), but for
@@ -1036,10 +1159,9 @@ export class EncounterState {
     const hitTargetIdx = shielded ? -1 : targetIdx
     const hit = targetIdx >= 0
     const hpBefore = hit && !shielded ? this.enemyHp[targetIdx] : 0
-    if (hit && !shielded) this.enemyHp[targetIdx] = Math.max(0, this.enemyHp[targetIdx] - 1)
+    if (hit && !shielded) this.enemyHp[targetIdx] = Math.max(0, this.enemyHp[targetIdx] - du)
     const hitDamage = hit && !shielded ? hpBefore - this.enemyHp[targetIdx] : 0
-    const entry: Entry = { kind: 'tap', id, hit, timerBefore }
-    this.log.push(entry)
+    entry.hit = hit
     // STORY-001: a hit target could never have been fled before this tap (targetIndexAt skips
     // fled), so a fled check right after the decrement is exactly "fled this turn".
     const hitEnemy = hit ? this.def.enemies![targetIdx] : undefined
@@ -1060,7 +1182,7 @@ export class EncounterState {
       rewards.push({ id: hitEnemy!.id, heal, rotate })
     }
     // ACT-I-003: hit-triggered shift — a landed, non-killing hit knocks the target to its next side.
-    let shifted: { id: string; from: Dir; to: Dir }[] = []
+    const shifted: { id: string; from: Dir; to: Dir }[] = []
     if (hit && !shielded && this.enemyHp[targetIdx] > 0 && !this.isFled(targetIdx)) {
       const ab = hitEnemy!.ability
       if (ab && abilityKind(ab) === 'shift' && (ab as ShiftAbility).trigger === 'hit') {
@@ -1068,7 +1190,22 @@ export class EncounterState {
         if (moved) shifted.push(moved)
       }
     }
+    return { hit, hitDamage, hitTargetIdx, shieldConsumed, fled, rewards, shifted }
+  }
 
+  private tapEnemies(id: number): TapResult {
+    const timerBefore = this.timerSnapshot()
+    const arenaDir = this.arenaDir(id)
+    const entry: Entry = { kind: 'tap', id, hit: false, timerBefore }
+    const res = this.landEnemyHit(arenaDir, 1, entry)
+    this.log.push(entry)
+    return this.finishEnemiesTurn(arenaDir, res, true)
+  }
+
+  /** World advance after a projectile resolved (`advanceWorld` false = free action, e.g. a 0-cost item). */
+  private finishEnemiesTurn(arenaDir: Dir, res: EnemyHitResolution, advanceWorld: boolean): TapResult {
+    const { hit, hitDamage, hitTargetIdx, shieldConsumed, fled, rewards } = res
+    let shifted = res.shifted
     let interrupted = false
     let castInterrupted = false
     let attacked = false
@@ -1079,7 +1216,7 @@ export class EncounterState {
     let shieldRaised: { id: string }[] = []
     let healed: { id: string; target: string; amount: number }[] = []
     const expired: { id: string; label?: string }[] = []
-    if (!this.won) {
+    if (!this.won && advanceWorld) {
       // Not everyone required is dead yet (and the board isn't cleared alive): the world keeps
       // ticking for every enemy still standing, same rule as the boss's per-turn advance.
       const res = this.advanceEnemiesTurn(hitTargetIdx)
@@ -1112,12 +1249,23 @@ export class EncounterState {
   private tapBoss(id: number): TapResult {
     const timerBefore = this.timerSnapshot()
     const arenaDir = this.arenaDir(id)
+    const entry: Entry = { kind: 'tap', id, hit: false, timerBefore }
+    return this.landBossHitAndAdvance(arenaDir, 1, entry, true)
+  }
+
+  /** Boss mode: a projectile of `du` hit-units lands on `arenaDir`, then (optionally) the world advances. */
+  private landBossHitAndAdvance(arenaDir: Dir, du: number, entry: Entry & { kind: 'tap' | 'item' }, advanceWorld: boolean): TapResult {
     const phaseBefore = this.phaseIndex
     const hit = arenaDir === this.bossSide
     const hpBefore = this.hp
-    if (hit) this.hitCount++
+    // A multi-unit hit (Bow) stops at the phase boundary: the excess is not carried into a phase
+    // that may stand on another side. A plain arrow (du 1) behaves exactly as before.
+    const units = hit ? Math.min(du, this.phaseHpLeft) : 0
+    if (hit) this.hitCount += units
     const hitDamage = hit ? hpBefore - this.hp : 0
-    this.log.push({ kind: 'tap', id, hit, timerBefore })
+    entry.hit = hit
+    if (entry.kind === 'item') entry.units = units
+    this.log.push(entry)
     const phaseAfter = this.phaseIndex
     const granted = phaseAfter !== phaseBefore ? this.grantedUpToPhase(phaseAfter) - this.grantedUpToPhase(phaseBefore) : 0
 
@@ -1130,14 +1278,14 @@ export class EncounterState {
     } else if (phaseAfter !== phaseBefore) {
       // Moved to a new phase without dying: that phase's attack cycle starts fresh, uncharged by this tap.
       this.resetPhaseTimer(phaseAfter)
-    } else {
+    } else if (advanceWorld) {
       const res = this.advanceTurn(hit)
       interrupted = res.interrupted
       castInterrupted = res.castInterrupted
       attacked = res.attacked
       enemyDamage = res.damage
     }
-    if (!this.won) this.worldTurn++
+    if (!this.won && advanceWorld) this.worldTurn++
     return {
       ok: true, arenaDir, hit, hitDamage, phaseBefore, phaseAfter, granted,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage,
@@ -1172,7 +1320,9 @@ export class EncounterState {
   }
 
   apply(a: EncounterAction): boolean {
-    return a.kind === 'tap' ? this.tap(a.id).ok : this.rotate(a.turn)
+    if (a.kind === 'tap') return this.tap(a.id).ok
+    if (a.kind === 'rotate') return this.rotate(a.turn)
+    return this.useItem(a.id, a.target).ok
   }
 
   /** Reverts the last tap or rotate. Returns false if there is nothing to undo. Blocked taps are not
@@ -1187,6 +1337,12 @@ export class EncounterState {
       // equivalent (per-enemy hp) is restored wholesale by restoreTimer above.
       if (!this.def.enemies && e.hit) this.hitCount--
       // ACT-I-003: refund a kill reward that went into the shared pool.
+      if (e.poolReward && this.rotatePool) this.rotatePool.charges -= e.poolReward
+    } else if (e.kind === 'item') {
+      // ITEM-001: refund the charge; a Bow kill reward that went to the pool is refunded too.
+      if (this.inventory) this.inventory.slots[e.slot].charges++
+      // Boss mode: hitCount is derived state, undo exactly the units this item landed.
+      if (!this.def.enemies && e.hit) this.hitCount -= e.units ?? 0
       if (e.poolReward && this.rotatePool) this.rotatePool.charges -= e.poolReward
     } else {
       this.rot = (this.rot - e.turn + 4) & 3
@@ -1215,10 +1371,14 @@ export class EncounterState {
       const ac = this.enemyAbilityCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
       const sh = this.enemyShield.map((b) => (b ? 1 : 0)).join(',')
       const sd = this.enemySide.join(',')
-      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${sd}|${pin}|${this.playerHpValue}|${this.worldTurn}|${this.bonusRotate}`
+      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${sd}|${pin}|${this.playerHpValue}|${this.worldTurn}|${this.bonusRotate}|${this.ward}|${this.itemKey()}`
     }
     const c = Number.isFinite(this.countdown) ? this.countdown : 'inf'
-    return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}`
+    return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}|${this.ward}|${this.itemKey()}`
+  }
+
+  private itemKey(): string {
+    return this.inventory ? this.inventory.slots.map((it) => `${it.id}:${it.charges}`).join(',') : ''
   }
 }
 
@@ -1434,4 +1594,4 @@ export function encounterToJson(file: EncounterFile): unknown {
 }
 
 export const formatAction = (a: EncounterAction): string =>
-  a.kind === 'tap' ? `tap #${a.id}` : `rotate ${a.turn === 1 ? 'cw' : 'ccw'}`
+  a.kind === 'tap' ? `tap #${a.id}` : a.kind === 'rotate' ? `rotate ${a.turn === 1 ? 'cw' : 'ccw'}` : `item ${a.id}${a.target !== undefined ? ` -> ${DIR_NAMES[a.target]}` : ''}`

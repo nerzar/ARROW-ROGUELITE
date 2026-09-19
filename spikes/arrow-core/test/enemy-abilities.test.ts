@@ -288,7 +288,7 @@ describe('rock-spike.json: the debug spike encounter', () => {
       if (a.kind === 'tap') {
         const r = s.tap(a.id)
         if (r.ok && r.pinnedThisTurn && r.pinnedThisTurn.length) sawPin = true
-      } else {
+      } else if (a.kind === 'rotate') {
         s.rotate(a.turn)
       }
     }
