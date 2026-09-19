@@ -99,6 +99,12 @@ export const SPIDER_BRUTE_MANIFEST = enemyManifest('assets/enemies/spider-brute/
 export const SMALL_SPIDER_MANIFEST = enemyManifest('assets/enemies/small-spider/', ENEMY_RUNTIME_SMALL_SPIDER)
 export const TOXIC_DEMONIC_SPIDER_MANIFEST = enemyManifest('assets/enemies/toxic-demonic-spider/', ENEMY_RUNTIME_TOXIC_DEMONIC_SPIDER)
 export const SKELETON_CHILD_MANIFEST = enemyManifest('assets/enemies/skeleton-child/', ENEMY_RUNTIME_SKELETON_CHILD)
+// ACT-I-003: three goblin species from magicarrowassets/creatures (grunt = shield bearer,
+// matron = support/heal, drunkard = staggers when hit). Pose files copied by the same
+// idle/attackReady/attack/hit/defeat convention; pivots/scales in creature-poses.json.
+export const GOBLIN_GRUNT_MANIFEST = enemyManifest('assets/enemies/goblin-grunt/', ORDINARY_ENEMY_RUNTIME_DEFAULT)
+export const GOBLIN_MATRON_MANIFEST = enemyManifest('assets/enemies/goblin-matron/', ORDINARY_ENEMY_RUNTIME_DEFAULT)
+export const GOBLIN_DRUNKARD_MANIFEST = enemyManifest('assets/enemies/goblin-drunkard/', ORDINARY_ENEMY_RUNTIME_DEFAULT)
 
 /** ASSET-002: species -> ordinary-enemy pose manifest, for the campaign editor's per-enemy
  * `species` field (asset-catalog.js's CREATURE_CATALOG ids). Unknown/unset species falls back to
@@ -124,6 +130,9 @@ export const ENEMY_MANIFESTS = {
   'skeleton-child': SKELETON_CHILD_MANIFEST,
   'goblin-shaman': SHAMAN_MANIFEST,
   'goblin-taunter': BOSS_MANIFEST,
+  'goblin-grunt': GOBLIN_GRUNT_MANIFEST,
+  'goblin-matron': GOBLIN_MATRON_MANIFEST,
+  'goblin-drunkard': GOBLIN_DRUNKARD_MANIFEST,
 }
 export function enemyManifestFor(species) {
   return ENEMY_MANIFESTS[species] ?? WOLF_MANIFEST

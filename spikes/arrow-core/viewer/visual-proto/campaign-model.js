@@ -2,7 +2,8 @@
 // Manages square-only authored levels, center-first enemy placement,
 // and dual persistence (real project file via dev-server API + localStorage fallback).
 
-import { generateLevel, PRESETS } from '../../dist/src/index.js'
+import { generateLevel } from '../../dist/src/index.js'
+import { boardParamsFor } from './board-profiles.js'
 import { getArenaCalibration } from './arena-calibration.js'
 import { findArena, findCreature } from './asset-catalog.js'
 
@@ -116,10 +117,10 @@ export function createDefaultCampaign() {
  * Generates a playable board puzzle for a square level definition.
  */
 export function generateBoardForLevel(levelDef) {
-  const size = Math.max(4, Math.min(12, levelDef.board.size ?? 5))
   const seed = Number(levelDef.board.seed ?? 1)
-  const minArrows = Math.max(4, Math.round(size * size * 0.12))
-  const gen = generateLevel({ ...PRESETS.medium, width: size, height: size, minArrows }, seed)
+  // LD-007 (provisional): `board.profile` / `board.gen` pick the generator knobs; absent profile
+  // = the previous PRESETS.medium + square-size behaviour, so existing stages are unchanged.
+  const gen = generateLevel(boardParamsFor(levelDef.board), seed)
   return gen
 }
 

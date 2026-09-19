@@ -2,6 +2,8 @@
 // Provides stable IDs, user-facing labels, default side/stats, and paths.
 // Designed to cleanly merge with ASSET-001 when additional assets are prepared.
 
+import { ARENA_LIBRARY } from './arena-library.js'
+
 export const ARENA_CATALOG = [
   {
     id: 'prologue-5x5-good',
@@ -55,6 +57,8 @@ export const ARENA_CATALOG = [
     suggestedSize: 9,
     calibrationId: 'demonforge-10x8',
   },
+  // LD-007: the rest of magicarrowassets/arenas/ (36 arenas), see arena-library.js.
+  ...ARENA_LIBRARY,
 ]
 
 export const CREATURE_CATALOG = [
@@ -107,6 +111,19 @@ export const CREATURE_CATALOG = [
     defaultSide: 0,
     defaultTimer: { interval: 4, damage: 1 },
     sourceFolder: 'small-goblin',
+  },
+  // ACT-I-003: three new goblin species from magicarrowassets/creatures (poses in creature-poses.json).
+  {
+    id: 'goblin-grunt', label: 'Goblin Grunt · shield bearer (Enemy)', kind: 'enemy', species: 'goblin-grunt',
+    defaultHp: 3, defaultSide: 0, defaultTimer: { interval: 5, damage: 2 }, sourceFolder: 'goblin-grunt',
+  },
+  {
+    id: 'goblin-matron', label: 'Goblin Matron · support/heal (Enemy)', kind: 'enemy', species: 'goblin-matron',
+    defaultHp: 3, defaultSide: 0, defaultTimer: { interval: 6, damage: 1 }, sourceFolder: 'goblin-matron',
+  },
+  {
+    id: 'goblin-drunkard', label: 'Goblin Drunkard · staggers when hit (Enemy)', kind: 'enemy', species: 'goblin-drunkard',
+    defaultHp: 3, defaultSide: 0, defaultTimer: { interval: 4, damage: 2 }, sourceFolder: 'goblin-drunkard',
   },
   {
     id: 'spider-brute',

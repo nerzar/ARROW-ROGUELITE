@@ -142,7 +142,7 @@ export type AbilityTargetPolicy = 'free-arrow'
  * ability/scripting system. `kind` absent means legacy `'stone_throw'` so pre-framework
  * encounter JSON and tests keep working unchanged.
  */
-export type AbilityKind = 'stone_throw' | 'shield'
+export type AbilityKind = 'stone_throw' | 'shield' | 'shift' | 'heal'
 
 /** EXP-013 Stone Throw: pin the selected arrow for `pinDuration` world turns. */
 export interface StoneThrowAbility {
@@ -172,7 +172,46 @@ export interface ShieldAbility {
   label?: string
 }
 
-export type EnemyAbility = StoneThrowAbility | ShieldAbility
+/**
+ * LD-007 Side Shift (provisional playtest prototype, not accepted content): on its own countdown
+ * the enemy walks to the next arena side in `sides` (cyclic; it starts from wherever its own
+ * `side` sits in that list, or from `sides[0]`). Nothing else changes — HP, attack timer and the
+ * board are untouched; only *which arrow direction reaches it* moves. The designer intent is to
+ * make direction a resource over time: the ammo you need for this enemy is different two turns
+ * from now, so "wait for him to walk into my E arrows" becomes a real line. A shift is skipped
+ * (countdown still resets) if the destination side is already held by another live enemy —
+ * one target per side stays true.
+ */
+export interface ShiftAbility {
+  id: string
+  kind: 'shift'
+  /** Ticks on every legal world turn (alongside `attackTimer`, not instead of it). */
+  interval: number
+  /** Arena sides visited in order, wrapping around. */
+  sides: Dir[]
+  /** ACT-I-003: what makes the enemy move. `'timer'` (default) = its own countdown; `'hit'` = every
+   * landed, non-killing projectile hit knocks it to the next side instead (the countdown is then
+   * unused). A hit-triggered shifter forces the player to alternate arrow directions to land
+   * consecutive hits — "the drunkard staggers away every time you tag him". */
+  trigger?: 'timer' | 'hit'
+  label?: string
+}
+
+/**
+ * ACT-I-003 Heal (support archetype): on its own countdown the enemy restores `amount` (default 1)
+ * HP to the most wounded OTHER live enemy (lowest current HP, then lowest index), never above that
+ * enemy's starting HP and never itself. Fizzles (countdown still resets) when nobody else is
+ * wounded. Makes kill order a real decision: the healer is harmless but should die first.
+ */
+export interface HealAbility {
+  id: string
+  kind: 'heal'
+  interval: number
+  amount?: number
+  label?: string
+}
+
+export type EnemyAbility = StoneThrowAbility | ShieldAbility | ShiftAbility | HealAbility
 
 /** Resolution kind of an ability; absent `kind` is the legacy Stone Throw shape. */
 export const abilityKind = (a: EnemyAbility): AbilityKind => a.kind ?? 'stone_throw'
@@ -180,6 +219,12 @@ export const abilityKind = (a: EnemyAbility): AbilityKind => a.kind ?? 'stone_th
 /** One-line ability description for reports/viewer/debug HUD (`THROW IN N` / `SHIELD IN N`). */
 export function describeAbility(a: EnemyAbility): string {
   if (abilityKind(a) === 'shield') return `SHIELD IN ${a.interval} (one-shot, absorbs next hit)`
+  if (abilityKind(a) === 'shift') {
+    const sh = a as ShiftAbility
+    const cycle = sh.sides.map((d) => DIR_NAMES[d]).join('->')
+    return sh.trigger === 'hit' ? `MOVES WHEN HIT (${cycle})` : `MOVE IN ${a.interval} (${cycle})`
+  }
+  if (abilityKind(a) === 'heal') return `HEAL IN ${a.interval} (+${(a as HealAbility).amount ?? 1} to most wounded ally)`
   const s = a as StoneThrowAbility
   return `THROW IN ${s.interval} (${s.targetPolicy}, pin ${s.pinDuration} turns)`
 }
@@ -213,7 +258,20 @@ export interface EnemyDef {
   ability?: EnemyAbility
   /** STORY-001: optional scripted flee (see above). Absent = this enemy fights to the death. */
   flee?: EnemyFlee
+  /** ACT-I-003: granted to the player the moment this enemy dies. `heal` is capped at the
+   * encounter's `playerMaxHp`; `rotate` goes to the shared run pool when the encounter uses one,
+   * else to an encounter-local bonus. Undo refunds both. */
+  reward?: EnemyReward
+  /** ACT-I-003: temporary target — after this many world turns the enemy leaves the arena
+   * (same consequences as a STORY-001 flee: can't be hit, doesn't attack, abilities stop).
+   * Must be `mandatory: false` (checked), otherwise the encounter could only end by board clear. */
+  expiresAfter?: number
   label?: string
+}
+
+export interface EnemyReward {
+  heal?: number
+  rotate?: number
 }
 
 /** Presentation/arena metadata (BUILD-024). Decouples visual theme/calibration from gameplay rules. */
@@ -250,6 +308,9 @@ export interface EncounterDef {
    * by `RunState.advance()`). The prologue boss sets this to 2; post-prologue encounters leave it
    * unset and spend from the pool instead. Not a per-tap/per-phase grant. */
   winRotateReward?: number
+  /** ACT-I-003: HP restored (capped at the run's max) when this encounter is completed, claimed
+   * once by `RunState.advance()` like `winRotateReward`. A "rest" beat between fights. */
+  winHeal?: number
   notes?: string
 }
 
@@ -305,6 +366,14 @@ export type TapResult =
       pinnedThisTurn?: { id: number; turnsLeft: number }[]
       /** COMBAT-001, `enemies` mode only: enemy ids that raised their one-shot shield this turn. */
       shieldRaised?: { id: string }[]
+      /** LD-007, `enemies` mode only: enemies that walked to another arena side this turn. */
+      shifted?: { id: string; from: Dir; to: Dir }[]
+      /** ACT-I-003, `enemies` mode only: heals performed by support enemies this turn. */
+      healed?: { id: string; target: string; amount: number }[]
+      /** ACT-I-003, `enemies` mode only: kill rewards granted by this tap. */
+      rewards?: { id: string; heal: number; rotate: number }[]
+      /** ACT-I-003, `enemies` mode only: temporary targets whose window closed this turn. */
+      expired?: { id: string; label?: string }[]
       /** COMBAT-001, `enemies` mode only: enemy ids whose shield absorbed this turn's hit (no HP damage). */
       shieldConsumed?: { id: string }[]
       /** STORY-001, `enemies` mode only: enemies that fled the arena this turn (scripted
@@ -336,9 +405,14 @@ interface TimerSnapshot {
   enemyAbilityCountdown?: number[]
   /** COMBAT-001, enemies mode only: one entry per `def.enemies[i]` — that enemy's shield is up. */
   enemyShield?: boolean[]
+  /** LD-007 shift, enemies mode only: one entry per `def.enemies[i]` — current arena side. */
+  enemySide?: Dir[]
+  /** ACT-I-003 */
+  worldTurn: number
+  bonusRotate: number
 }
 
-type Entry = ({ kind: 'tap'; id: number; hit: boolean } | { kind: 'rotate'; turn: Turn }) & { timerBefore: TimerSnapshot }
+type Entry = ({ kind: 'tap'; id: number; hit: boolean; poolReward?: number } | { kind: 'rotate'; turn: Turn }) & { timerBefore: TimerSnapshot }
 
 export class EncounterState {
   readonly def: EncounterDef
@@ -371,7 +445,15 @@ export class EncounterState {
   private enemyAbilityCountdown: number[] = []
   /** COMBAT-001, enemies mode only: `def.enemies[i]`'s one-shot shield is currently up. */
   private enemyShield: boolean[] = []
+  /** LD-007 shift, enemies mode only: `def.enemies[i]`'s CURRENT arena side (starts at `def.side`). */
+  private enemySide: Dir[] = []
+  /** ACT-I-003: legal world turns elapsed (taps, plus Rotates when `rotate.advancesTurn`). */
+  private worldTurn = 0
+  /** ACT-I-003: Rotate charges earned from kill rewards in a non-pool encounter. */
+  private bonusRotate = 0
   private playerHpValue: number
+  /** ACT-I-003: cap for `reward.heal`. Defaults to the starting HP when the caller has no run. */
+  readonly playerMaxHp: number
   /** The HP this encounter started with (constructor param), needed to replay it exactly in clone(). */
   readonly playerHpStart: number
   /**
@@ -382,12 +464,13 @@ export class EncounterState {
   private readonly rotatePool: RotatePool | null
   private readonly log: Entry[] = []
 
-  constructor(topo: BoardTopology, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null) {
+  constructor(topo: BoardTopology, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null, playerMaxHp = playerHp) {
     checkEncounter(def)
     this.def = def
     this.board = new BoardState(topo)
     this.playerHpValue = playerHp
     this.playerHpStart = playerHp
+    this.playerMaxHp = Math.max(playerHp, playerMaxHp)
     this.rotatePool = def.rotate.useRunPool ? rotatePool : null
     this.phaseEnd = []
     this.grantedUpTo = []
@@ -400,6 +483,7 @@ export class EncounterState {
       this.enemyCastInterrupted = def.enemies.map(() => false)
       this.enemyAbilityCountdown = def.enemies.map((e) => e.ability?.interval ?? Infinity)
       this.enemyShield = def.enemies.map(() => false)
+      this.enemySide = def.enemies.map((e) => e.side)
     } else {
       let hp = 0
       let granted = 0
@@ -414,15 +498,15 @@ export class EncounterState {
     }
   }
 
-  static fromLevel(level: Level, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null): EncounterState {
-    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool)
+  static fromLevel(level: Level, def: EncounterDef, playerHp = DEFAULT_PLAYER_HP, rotatePool: RotatePool | null = null, playerMaxHp = playerHp): EncounterState {
+    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool, playerMaxHp)
   }
 
   clone(): EncounterState {
     // Seed with the entry-time value (current + already-spent): replaying the logged Rotates
     // decrements back down to exactly the current value instead of double-spending.
     const pool = this.rotatePool ? { charges: this.rotatePool.charges + this.rotates } : null
-    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart, pool)
+    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart, pool, this.playerMaxHp)
     for (const e of this.log) {
       if (e.kind === 'tap') c.tap(e.id)
       else c.rotate(e.turn)
@@ -505,7 +589,7 @@ export class EncounterState {
    */
   get rotateCharges(): number {
     if (this.rotatePool) return this.rotatePool.charges
-    if (this.def.enemies) return (this.def.rotateCharges ?? 0) - this.rotates
+    if (this.def.enemies) return (this.def.rotateCharges ?? 0) + this.bonusRotate - this.rotates
     return this.grantedUpToPhase(this.phaseIndex) - this.rotates
   }
   get actions(): EncounterAction[] {
@@ -525,6 +609,10 @@ export class EncounterState {
      * Fled is not dead: it takes no more hits, attacks, or abilities, but a mandatory fled
      * enemy still blocks the all-mandatory-dead win — only a full board clear ends it. */
     fled: boolean
+    /** ACT-I-003: this temporary target's `expiresAfter` ran out — it left the arena (like fled). */
+    expired: boolean
+    /** ACT-I-003: world turns before this temporary target leaves; undefined if it never does. */
+    turnsLeft?: number
     countdown: number
     mandatory: boolean
     label?: string
@@ -540,11 +628,13 @@ export class EncounterState {
       const at = this.currentEnemyAttackTimer(i)
       return {
         id: e.id,
-        side: e.side,
+        side: this.enemySide[i],
         hp: Math.max(0, this.enemyHp[i]),
         hpMax: e.hp,
         dead: this.enemyHp[i] <= 0,
         fled: this.isFled(i),
+        expired: this.isExpired(i),
+        turnsLeft: e.expiresAfter !== undefined ? Math.max(0, e.expiresAfter - this.worldTurn) : undefined,
         countdown: this.enemyCountdown[i],
         mandatory: e.mandatory ?? true,
         label: e.label,
@@ -587,13 +677,22 @@ export class EncounterState {
     if (!flee) return false
     return this.def.enemies![i].hp - this.enemyHp[i] >= flee.afterHits
   }
+  /** ACT-I-003: temporary target whose window closed. Derived from `worldTurn`, so undo/clone need no extra state. */
+  private isExpired(i: number): boolean {
+    const e = this.def.enemies![i].expiresAfter
+    return e !== undefined && this.worldTurn >= e
+  }
+  /** Left the arena one way or another (fled or expired): untargetable, silent, ability-less. */
+  private isGone(i: number): boolean {
+    return this.isFled(i) || this.isExpired(i)
+  }
 
   /** Enemies mode: the first alive enemy standing on `side`, or -1 (at most one is expected per side
    * at this spike's scale — see docs/LEVEL-DESIGNER.md; targeting UI for several is out of scope).
    * STORY-001: fled enemies already left the arena and can no longer be hit. */
   private targetIndexAt(side: Dir): number {
     if (!this.def.enemies) return -1
-    return this.def.enemies.findIndex((e, i) => e.side === side && this.enemyHp[i] > 0 && !this.isFled(i))
+    return this.def.enemies.findIndex((_e, i) => this.enemySide[i] === side && this.enemyHp[i] > 0 && !this.isGone(i))
   }
 
   wouldHit(id: number): boolean {
@@ -639,7 +738,10 @@ export class EncounterState {
         enemyCastInterrupted: [...this.enemyCastInterrupted],
         enemyAbilityCountdown: [...this.enemyAbilityCountdown],
         enemyShield: [...this.enemyShield],
+        enemySide: [...this.enemySide],
         pinTurnsLeft,
+        worldTurn: this.worldTurn,
+        bonusRotate: this.bonusRotate,
       }
     }
     return {
@@ -648,11 +750,15 @@ export class EncounterState {
       hitsThisCycle: this.hitsThisCycle,
       castInterrupted: this.castInterrupted,
       pinTurnsLeft,
+      worldTurn: this.worldTurn,
+      bonusRotate: this.bonusRotate,
     }
   }
   private restoreTimer(t: TimerSnapshot): void {
     this.playerHpValue = t.playerHp
     this.pinTurnsLeft = t.pinTurnsLeft
+    this.worldTurn = t.worldTurn
+    this.bonusRotate = t.bonusRotate
     if (this.def.enemies) {
       this.enemyHp = t.enemyHp!
       this.enemyCountdown = t.enemyCountdown!
@@ -660,6 +766,7 @@ export class EncounterState {
       this.enemyCastInterrupted = t.enemyCastInterrupted!
       this.enemyAbilityCountdown = t.enemyAbilityCountdown!
       this.enemyShield = t.enemyShield!
+      this.enemySide = t.enemySide!
     } else {
       this.countdown = t.countdown!
       this.hitsThisCycle = t.hitsThisCycle!
@@ -707,6 +814,8 @@ export class EncounterState {
     pinExpired: number[]
     pinnedThisTurn: { id: number; turnsLeft: number }[]
     shieldRaised: { id: string }[]
+    shifted: { id: string; from: Dir; to: Dir }[]
+    healed: { id: string; target: string; amount: number }[]
   } {
     const pinExpired: number[] = []
     for (let id = 0; id < this.pinTurnsLeft.length; id++) {
@@ -716,11 +825,14 @@ export class EncounterState {
     }
     const pinnedThisTurn: { id: number; turnsLeft: number }[] = []
     const shieldRaised: { id: string }[] = []
+    const shifted: { id: string; from: Dir; to: Dir }[] = []
+    const healed: { id: string; target: string; amount: number }[] = []
     const defs = this.def.enemies!
     for (let i = 0; i < defs.length; i++) {
-      if (this.enemyHp[i] <= 0 || this.isFled(i)) continue
+      if (this.enemyHp[i] <= 0 || this.isGone(i)) continue
       const ability = defs[i].ability
       if (!ability) continue
+      if (abilityKind(ability) === 'shift' && (ability as ShiftAbility).trigger === 'hit') continue // hit-driven, see tapEnemies
       this.enemyAbilityCountdown[i]--
       if (this.enemyAbilityCountdown[i] > 0) continue
       this.enemyAbilityCountdown[i] = ability.interval
@@ -733,6 +845,25 @@ export class EncounterState {
         }
         continue
       }
+      if (abilityKind(ability) === 'shift') {
+        const moved = this.shiftEnemy(i, ability as ShiftAbility)
+        if (moved) shifted.push(moved)
+        continue
+      }
+      if (abilityKind(ability) === 'heal') {
+        // ACT-I-003: most wounded other live enemy; fizzle when nobody else is hurt.
+        let best = -1
+        for (let j = 0; j < defs.length; j++) {
+          if (j === i || this.enemyHp[j] <= 0 || this.isGone(j) || this.enemyHp[j] >= defs[j].hp) continue
+          if (best < 0 || this.enemyHp[j] < this.enemyHp[best]) best = j
+        }
+        if (best >= 0) {
+          const amount = Math.min((ability as HealAbility).amount ?? 1, defs[best].hp - this.enemyHp[best])
+          this.enemyHp[best] += amount
+          healed.push({ id: defs[i].id, target: defs[best].id, amount })
+        }
+        continue
+      }
       const target = this.selectAbilityTarget(ability as StoneThrowAbility)
       if (target >= 0) {
         this.pinTurnsLeft[target] = (ability as StoneThrowAbility).pinDuration
@@ -741,7 +872,20 @@ export class EncounterState {
       // target < 0: fizzle -- no safe arrow to pin this cycle. The countdown still reset above, so
       // the ability simply tries again next cycle rather than retrying every turn.
     }
-    return { pinExpired, pinnedThisTurn, shieldRaised }
+    return { pinExpired, pinnedThisTurn, shieldRaised, shifted, healed }
+  }
+
+  /** LD-007/ACT-I-003: walk enemy `i` to the next side in its cycle unless another live enemy holds it. */
+  private shiftEnemy(i: number, ability: ShiftAbility): { id: string; from: Dir; to: Dir } | null {
+    const defs = this.def.enemies!
+    const sides = ability.sides
+    const cur = this.enemySide[i]
+    const at = sides.indexOf(cur)
+    const to = sides[(at < 0 ? 0 : at + 1) % sides.length]
+    const occupied = defs.some((_d, j) => j !== i && this.enemyHp[j] > 0 && !this.isGone(j) && this.enemySide[j] === to)
+    if (to === cur || occupied) return null
+    this.enemySide[i] = to
+    return { id: defs[i].id, from: cur, to }
   }
 
   /**
@@ -827,7 +971,7 @@ export class EncounterState {
     let damage = 0
     const attacks: { id: string; damage: number }[] = []
     for (let i = 0; i < this.enemyHp.length; i++) {
-      if (this.enemyHp[i] <= 0 || this.isFled(i)) continue
+      if (this.enemyHp[i] <= 0 || this.isGone(i)) continue
       const at = this.currentEnemyAttackTimer(i)
       if (!at) continue
       if (at.kind === 'cast' && at.interruptible && i === hitTargetIdx) {
@@ -894,11 +1038,36 @@ export class EncounterState {
     const hpBefore = hit && !shielded ? this.enemyHp[targetIdx] : 0
     if (hit && !shielded) this.enemyHp[targetIdx] = Math.max(0, this.enemyHp[targetIdx] - 1)
     const hitDamage = hit && !shielded ? hpBefore - this.enemyHp[targetIdx] : 0
-    this.log.push({ kind: 'tap', id, hit, timerBefore })
+    const entry: Entry = { kind: 'tap', id, hit, timerBefore }
+    this.log.push(entry)
     // STORY-001: a hit target could never have been fled before this tap (targetIndexAt skips
     // fled), so a fled check right after the decrement is exactly "fled this turn".
     const hitEnemy = hit ? this.def.enemies![targetIdx] : undefined
     const fled = hit && this.isFled(targetIdx) ? [{ id: hitEnemy!.id, label: hitEnemy!.label }] : []
+    // ACT-I-003: kill reward, granted before the world ticks (a heal can't be "eaten" by this
+    // turn's enemy attack ordering — the kill resolved first).
+    const rewards: { id: string; heal: number; rotate: number }[] = []
+    if (hit && !shielded && this.enemyHp[targetIdx] <= 0 && hitEnemy!.reward) {
+      const heal = Math.max(0, Math.min(hitEnemy!.reward.heal ?? 0, this.playerMaxHp - this.playerHpValue))
+      const rotate = hitEnemy!.reward.rotate ?? 0
+      this.playerHpValue += heal
+      if (rotate > 0) {
+        if (this.rotatePool) {
+          this.rotatePool.charges += rotate
+          entry.poolReward = rotate
+        } else this.bonusRotate += rotate
+      }
+      rewards.push({ id: hitEnemy!.id, heal, rotate })
+    }
+    // ACT-I-003: hit-triggered shift — a landed, non-killing hit knocks the target to its next side.
+    let shifted: { id: string; from: Dir; to: Dir }[] = []
+    if (hit && !shielded && this.enemyHp[targetIdx] > 0 && !this.isFled(targetIdx)) {
+      const ab = hitEnemy!.ability
+      if (ab && abilityKind(ab) === 'shift' && (ab as ShiftAbility).trigger === 'hit') {
+        const moved = this.shiftEnemy(targetIdx, ab as ShiftAbility)
+        if (moved) shifted.push(moved)
+      }
+    }
 
     let interrupted = false
     let castInterrupted = false
@@ -908,6 +1077,8 @@ export class EncounterState {
     let pinExpired: number[] = []
     let pinnedThisTurn: { id: number; turnsLeft: number }[] = []
     let shieldRaised: { id: string }[] = []
+    let healed: { id: string; target: string; amount: number }[] = []
+    const expired: { id: string; label?: string }[] = []
     if (!this.won) {
       // Not everyone required is dead yet (and the board isn't cleared alive): the world keeps
       // ticking for every enemy still standing, same rule as the boss's per-turn advance.
@@ -921,11 +1092,19 @@ export class EncounterState {
       pinExpired = pinRes.pinExpired
       pinnedThisTurn = pinRes.pinnedThisTurn
       shieldRaised = pinRes.shieldRaised
+      shifted = shifted.concat(pinRes.shifted)
+      healed = pinRes.healed
+      // ACT-I-003: the world turn is over — temporary targets whose window just closed leave now.
+      const before = this.def.enemies!.map((_e, i) => this.isExpired(i))
+      this.worldTurn++
+      this.def.enemies!.forEach((e, i) => {
+        if (!before[i] && this.isExpired(i) && this.enemyHp[i] > 0 && !this.isFled(i)) expired.push({ id: e.id, label: e.label })
+      })
     }
     return {
       ok: true, arenaDir, hit, hitDamage, phaseBefore: 0, phaseAfter: 0, granted: 0,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
-      pinExpired, pinnedThisTurn, shieldRaised, shieldConsumed, fled,
+      pinExpired, pinnedThisTurn, shieldRaised, shifted, healed, rewards, expired, shieldConsumed, fled,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
   }
@@ -958,6 +1137,7 @@ export class EncounterState {
       attacked = res.attacked
       enemyDamage = res.damage
     }
+    if (!this.won) this.worldTurn++
     return {
       ok: true, arenaDir, hit, hitDamage, phaseBefore, phaseAfter, granted,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage,
@@ -986,6 +1166,7 @@ export class EncounterState {
       } else {
         this.advanceTurn(false)
       }
+      this.worldTurn++
     }
     return true
   }
@@ -1005,6 +1186,8 @@ export class EncounterState {
       // Boss mode only: hitCount is derived state, not part of the timer snapshot. Enemies mode's
       // equivalent (per-enemy hp) is restored wholesale by restoreTimer above.
       if (!this.def.enemies && e.hit) this.hitCount--
+      // ACT-I-003: refund a kill reward that went into the shared pool.
+      if (e.poolReward && this.rotatePool) this.rotatePool.charges -= e.poolReward
     } else {
       this.rot = (this.rot - e.turn + 4) & 3
       this.rotates--
@@ -1031,7 +1214,8 @@ export class EncounterState {
       const ci = this.enemyCastInterrupted.map((b) => (b ? 1 : 0)).join(',')
       const ac = this.enemyAbilityCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
       const sh = this.enemyShield.map((b) => (b ? 1 : 0)).join(',')
-      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${pin}|${this.playerHpValue}`
+      const sd = this.enemySide.join(',')
+      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${sd}|${pin}|${this.playerHpValue}|${this.worldTurn}|${this.bonusRotate}`
     }
     const c = Number.isFinite(this.countdown) ? this.countdown : 'inf'
     return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}`
@@ -1061,7 +1245,7 @@ function checkAttackTimer(at: AttackTimer, label: string): void {
 }
 
 const ABILITY_TARGET_POLICIES: readonly AbilityTargetPolicy[] = ['free-arrow']
-const ABILITY_KINDS: readonly AbilityKind[] = ['stone_throw', 'shield']
+const ABILITY_KINDS: readonly AbilityKind[] = ['stone_throw', 'shield', 'shift', 'heal']
 
 function checkAbility(a: EnemyAbility, label: string): void {
   if (typeof a.id !== 'string' || a.id.length === 0) throw new Error(`${label}: ability.id must be a non-empty string`)
@@ -1074,6 +1258,19 @@ function checkAbility(a: EnemyAbility, label: string): void {
     const s = a as unknown as Record<string, unknown>
     if (s['targetPolicy'] !== undefined) throw new Error(`${label}: shield ability must not set targetPolicy`)
     if (s['pinDuration'] !== undefined) throw new Error(`${label}: shield ability must not set pinDuration`)
+    return
+  }
+  if (abilityKind(a) === 'shift') {
+    const sh = a as ShiftAbility
+    if (!Array.isArray(sh.sides) || sh.sides.length < 2 || sh.sides.some((d) => ![0, 1, 2, 3].includes(d))) {
+      throw new Error(`${label}: shift ability needs sides = at least two of 0..3`)
+    }
+    if (sh.trigger !== undefined && sh.trigger !== 'timer' && sh.trigger !== 'hit') throw new Error(`${label}: shift.trigger must be 'timer' or 'hit'`)
+    return
+  }
+  if (abilityKind(a) === 'heal') {
+    const h = a as HealAbility
+    if (h.amount !== undefined && (!Number.isInteger(h.amount) || h.amount < 1)) throw new Error(`${label}: heal.amount must be a positive integer`)
     return
   }
   const st = a as StoneThrowAbility
@@ -1104,6 +1301,14 @@ export function checkEncounter(def: EncounterDef): void {
       if (!Number.isInteger(e.hp) || e.hp < 1) throw new Error(`enemy ${i}: hp must be a positive integer`)
       if (e.attackTimer) checkAttackTimer(e.attackTimer, `enemy ${i}`)
       if (e.ability) checkAbility(e.ability, `enemy ${i}`)
+      if (e.reward !== undefined) {
+        if (e.reward.heal !== undefined && (!Number.isInteger(e.reward.heal) || e.reward.heal < 0)) throw new Error(`enemy ${i}: reward.heal must be a non-negative integer`)
+        if (e.reward.rotate !== undefined && (!Number.isInteger(e.reward.rotate) || e.reward.rotate < 0)) throw new Error(`enemy ${i}: reward.rotate must be a non-negative integer`)
+      }
+      if (e.expiresAfter !== undefined) {
+        if (!Number.isInteger(e.expiresAfter) || e.expiresAfter < 1) throw new Error(`enemy ${i}: expiresAfter must be a positive integer`)
+        if (e.mandatory !== false) throw new Error(`enemy ${i}: expiresAfter requires mandatory: false (a vanished mandatory target could only end by board clear)`)
+      }
       if (e.flee !== undefined) {
         // STORY-001: the flee must be reachable before death could take the enemy — otherwise
         // the scripted event could never fire and the "unkillable" contract would be a lie.
@@ -1134,6 +1339,9 @@ export function checkEncounter(def: EncounterDef): void {
   }
   if (def.winRotateReward !== undefined && (!Number.isInteger(def.winRotateReward) || def.winRotateReward < 0)) {
     throw new Error('winRotateReward must be a non-negative integer')
+  }
+  if (def.winHeal !== undefined && (!Number.isInteger(def.winHeal) || def.winHeal < 0)) {
+    throw new Error('winHeal must be a non-negative integer')
   }
   if (def.blockedTapDamage !== undefined && (!Number.isInteger(def.blockedTapDamage) || def.blockedTapDamage < 0)) {
     throw new Error('blockedTapDamage must be a non-negative integer')

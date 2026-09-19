@@ -4,7 +4,7 @@
 // 16:9 desktop shell: board-renderer.js draws the board/targets, this file owns scene loading,
 // input, HUD DOM, and the win/loss overlay. No combat rule is duplicated here.
 import {
-  findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
+  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
@@ -92,21 +92,7 @@ let targetsBefore = []
 // VIS-005: presentation-only boss pose state. Null in enemies-mode scenes (no boss to pose).
 // Gameplay stays source of truth -- this is driven by engine events, never the reverse.
 let bossVisual = null
-// Targets currently awaiting projectile arrival: Map (enemyId | 'boss') -> arrivalTimestamp.
-// Enemies stay in their pre-hit visual pose and do not switch to defeat until the arrow hits!
-const pendingImpactEnemies = new Map()
-const bossSnap = () => {
-  if (!run || !def) return null
-  const snap = readBossSnapshot(run.encounter, def)
-  if (snap && pendingImpactEnemies.has('boss')) {
-    if (performance.now() < pendingImpactEnemies.get('boss')) {
-      snap.won = false // hold alive visual until the projectile hits the boss
-    } else {
-      pendingImpactEnemies.delete('boss')
-    }
-  }
-  return snap
-}
+const bossSnap = () => (run && def ? readBossSnapshot(run.encounter, def) : null)
 // VIS-006: presentation-only per-ACTOR ordinary-enemy pose state (Map enemyId -> visual).
 // Null in boss-mode scenes. Each actor ticks on its own snapshot, so a hit on one wolf never
 // switches the other.
@@ -157,12 +143,6 @@ function tickAndSyncWolves(now) {
     if (!v) {
       wolfVisuals.set(e.id, appearEnemyVisual(now))
       continue
-    }
-    if (pendingImpactEnemies.has(e.id)) {
-      if (now < pendingImpactEnemies.get(e.id)) {
-        continue // hold pre-hit visual state until projectile reaches target
-      }
-      pendingImpactEnemies.delete(e.id)
     }
     if (e.dead) {
       wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
@@ -337,7 +317,6 @@ function loadActiveStep() {
 
   renderer.resize(level, activeCalibration)
   renderer.resetFx()
-  pendingImpactEnemies.clear()
   hint = null
   // VIS-008: which species pack this scene's boss uses (null in enemies-mode scenes).
   bossSpecies = def.boss ? bossSpeciesFor(def.boss.id) : bossSpecies
@@ -424,6 +403,7 @@ function tap(id) {
   renderer.setFlash({ blocked: -1, blocker: -1 })
   renderer.onTapResult(level, id, r, before)
   const after = renderer.collectTargets(s, def)
+  renderer.markDeaths(before, after)
   // STORY-001: advance previously-fled enemies one beat first (taunt -> back -> away),
   // then stamp new flees — a fresh flee always plays the full sequence from the taunt.
   const fledStep = renderer.markFledAdvance(after)
@@ -431,16 +411,6 @@ function tap(id) {
   const fledBack = fledStep.back
   renderer.markFled(before, after)
   targetsBefore = after
-
-  let hitTargetKey = null
-  if (r.hit) {
-    const hitTarget = before.find((t) => t.side === r.arenaDir)
-    if (hitTarget) {
-      hitTargetKey = hitTarget.isBoss ? 'boss' : hitTarget.id
-      pendingImpactEnemies.set(hitTargetKey, performance.now() + FLIGHT_MS)
-    }
-  }
-
   // BUILD-035: the monster's hit reaction starts when the projectile ARRIVES, not when the
   // player taps. Pose events, death fade (markDeaths) and the win overlay all wait out the
   // flight; the renderer already holds the pre-tap HP presentation until then (pendingHp)
@@ -452,7 +422,6 @@ function tap(id) {
   const wolfMap = wolfVisuals
   const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
   const fireImpact = () => {
-    if (hitTargetKey) pendingImpactEnemies.delete(hitTargetKey)
     if (!run || run.encounter !== enc || def !== defAtTap) return
     renderer.markDeaths(before, after)
     // VIS-006: gameplay -> per-actor presentation. Priority per actor: defeated > attack
@@ -503,6 +472,12 @@ function tap(id) {
   if (r.pinExpired && r.pinExpired.length) text += ` · UNPINNED: #${r.pinExpired.join(', #')}`
   if (r.shieldRaised && r.shieldRaised.length) text += ` · SHIELD UP: ${r.shieldRaised.map((x) => x.id).join(', ')}`
   if (r.shieldConsumed && r.shieldConsumed.length) text += ` · SHIELD BLOCKED: ${r.shieldConsumed.map((x) => x.id).join(', ')}`
+  // LD-007 provisional: Side Shift ability.
+  if (r.shifted && r.shifted.length) text += ` · MOVED: ${r.shifted.map((x) => `${x.id} ${DIR_NAMES[x.from]}→${DIR_NAMES[x.to]}`).join(', ')}`
+  // ACT-I-003: support heals, kill rewards, expired temporary targets.
+  if (r.healed && r.healed.length) text += ` · HEALED: ${r.healed.map((x) => `${x.target} +${x.amount} (${x.id})`).join(', ')}`
+  if (r.rewards && r.rewards.length) text += ` · LOOT: ${r.rewards.map((x) => [x.heal ? `+${x.heal} HP` : '', x.rotate ? `+${x.rotate} Rotate` : ''].filter(Boolean).join(' ') || '—').join(', ')}`
+  if (r.expired && r.expired.length) text += ` · GONE: ${r.expired.map((x) => x.label ?? x.id).join(', ')}`
   if (r.won) text = `Цель выполнена. ${text}`
   else if (r.playerDead) text = `Поражение: HP закончилось. ${text}`
   // STORY-001: scripted flee in three beats. This tap's flee only taunts (one turn);
@@ -602,7 +577,7 @@ function pushLog(line) {
 // Transitions
 
 function scheduleWin() {
-  overlayTimer = setTimeout(() => showOverlay('won'), 1000)
+  overlayTimer = setTimeout(() => showOverlay('won'), 700)
 }
 function scheduleGameOver() {
   overlayTimer = setTimeout(() => showOverlay('dead'), 700)

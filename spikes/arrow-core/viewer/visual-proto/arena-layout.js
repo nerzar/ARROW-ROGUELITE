@@ -183,7 +183,6 @@ export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, max
     }
   }
   const r = Math.max(9, cell * 0.2)
-  let lineX = slot.x + ox
   // FIX-033: last-resort viewport clamp. Tall characters on small stages push the stack
   // above the head straight off the canvas (measured: N plates at y<0 on 480px stages and
   // even at 1080p). A plate shifted down over the sprite reads worse than a clear plate but
@@ -191,7 +190,7 @@ export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, max
   // only trims true viewport overflow. Runs after the E/W board clamp, so visibility wins.
   // Omitted viewport reproduces exactly the geometry this function always computed.
   if (viewport && Number.isFinite(viewport.w) && Number.isFinite(viewport.h)) {
-    const m = 6
+    const m = 2
     const ox0 = Number.isFinite(viewport.x) ? viewport.x : 0
     const oy0 = Number.isFinite(viewport.y) ? viewport.y : 0
     const top = Math.min(bar.y, plate.y) + oy0
@@ -203,15 +202,12 @@ export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, max
       bar.y += dy
       plate.y += dy
     }
-    const leftMargin = Math.min(plate.x, bar.x) + ox0
-    const rightMargin = Math.max(plate.x + plate.w + r * 0.4, bar.x + bar.w) + ox0
     let dx = 0
-    if (leftMargin < m) dx = m - leftMargin
-    else if (rightMargin > viewport.w - m) dx = viewport.w - m - rightMargin
+    if (plate.x + ox0 < m) dx = m - (plate.x + ox0)
+    else if (plate.x + plate.w + ox0 > viewport.w - m) dx = viewport.w - m - (plate.x + plate.w + ox0)
     if (dx !== 0) {
       plate.x += dx
       bar.x += dx
-      lineX += dx
     }
   }
   const badge = {
@@ -226,6 +222,7 @@ export function hudBoxes({ slot, char, side, fontPx, lineH, lineCount, barH, max
     : plate.y + plate.h - fontPx * 0.4 - i * lineH)
   // Text x in draw order: the renderer centers lines on the slot; the offset shifts them
   // with the plate. Exposed so bar/plate/text/badge all share the one anchor.
+  const lineX = slot.x + ox
   return { bar, plate, badge, lineY, lineX }
 }
 

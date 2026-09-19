@@ -6,20 +6,8 @@ import { extname, join, normalize, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const port = Number(process.env.PORT ?? process.argv[2] ?? 3000)
-const types = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.map': 'application/json',
-  '.json': 'application/json',
-  '.css': 'text/css',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-}
+const port = Number(process.env.PORT ?? process.argv[2] ?? 5177)
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.map': 'application/json', '.json': 'application/json', '.css': 'text/css' }
 
 // TOOL-001: read-only source for the Creature Pose Editor -- a sibling project directory, not
 // under `root`, so it needs its own two endpoints below rather than the generic static handler.
@@ -219,7 +207,7 @@ createServer(async (req, res) => {
     return
   }
 
-  if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/viewer' || url.pathname === '/viewer/') {
+  if (url.pathname === '/' || url.pathname === '/viewer' || url.pathname === '/viewer/') {
     res.writeHead(302, { location: '/viewer/visual-proto/' }).end()
     return
   }
@@ -236,7 +224,7 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404).end('not found')
   }
-}).listen(port, '0.0.0.0', () => {
+}).listen(port, '127.0.0.1', () => {
   console.log(`▶ Playable Prologue:  http://localhost:${port}/viewer/visual-proto/
   Campaign Editor:    http://localhost:${port}/viewer/visual-proto/calibration-editor.html
   core debug viewer:  http://localhost:${port}/viewer/index.html#preset=medium&seed=1

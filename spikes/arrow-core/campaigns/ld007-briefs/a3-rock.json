@@ -1,0 +1,44 @@
+{
+ "id": "ld7_a3_rock",
+ "title": "Акт I · 3 · Камнемёт",
+ "enemies": [
+  {
+   "id": "rock_n",
+   "species": "small-goblin",
+   "label": "Goblin Rock Thrower",
+   "side": 0,
+   "hp": 3,
+   "attackTimer": {
+    "interval": 6,
+    "damage": 1
+   },
+   "ability": {
+    "id": "stone_throw",
+    "interval": 3,
+    "targetPolicy": "free-arrow",
+    "pinDuration": 2,
+    "label": "stone throw"
+   }
+  },
+  {
+   "id": "escort_e",
+   "species": "small-goblin",
+   "label": "Goblin Escort",
+   "side": 1,
+   "hp": 2,
+   "attackTimer": {
+    "interval": 3,
+    "damage": 2
+   }
+  }
+ ],
+ "rotate": {
+  "allow": [
+   1,
+   -1
+  ],
+  "advancesTurn": false,
+  "useRunPool": true
+ },
+ "blockedTapDamage": 1
+}
