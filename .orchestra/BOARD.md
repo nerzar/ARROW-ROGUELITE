@@ -20,6 +20,7 @@ BOARD хранит не только одну текущую задачу, а **
 - UI-001: clean game view, убран overlap в левом верхнем углу, честный scene dropdown.
 - FIX-033: HUD-плашки больше не вылезают за viewport, оформленный player HUD.
 - VFX-002: damage number popup (light hit), синхронный с прилётом стрелы, реальный урон.
+- VFX-003: light-hit feel целиком (flash + sparks + squash/recoil + camera impulse поверх dmg/trail).
 - LD-006: shortlist из 7 кандидатов Act I encounter'ов (design-only, см. `.orchestra/research/LD-006-act1-encounter-shortlist.md`) — выбор конкретного кандидата ещё не сделан.
 - REF-001: 12 браузерных VFX-референсов + 20 приёмов (см. `.orchestra/research/REF-001-browser-combat-ui-vfx-references.md`).
 
@@ -30,7 +31,6 @@ BOARD хранит не только одну текущую задачу, а **
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
 | RUN-002 — Generic enemy ability framework | IN PROGRESS | `build/RUN-002-enemy-ability-framework` | Фаза 1 roguelite-слоя: обобщить `stone_throw` до framework, доказать второй способностью (Shield). |
-| VFX-003 — Light-hit feel (flash+sparks+squash+camera) | READY (нужна task-card) | — | Пресет `light hit` в лабе — это связка 7 эффектов (trail+flash+sparks+tint+squash+dmg+camera), не один. VFX-002 сделал только dmg; это то, что пользователь имел в виду под "light hit можно для начала" целиком. Добираем недостающие: flash, sparks, squash/recoil, camera impulse (trail уже есть с BUILD-035). |
 
 Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
 
@@ -42,7 +42,7 @@ BOARD хранит не только одну текущую задачу, а **
 |---|---|---|
 | ACT-I-002 — Act I Vertical Slice | PLANNED | Развить уже существующие первые Act I encounters в короткий кусок настоящего акта, который интересно проходить, а не просто технически тестировать. |
 | RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, небольшой понятный набор апгрейдов, желание сделать ещё один забег. |
-| VFX integration (остальные пресеты после light-hit) | PLANNED | После VFX-003 (light-hit целиком) — heavy hit / magic hit / boss hit / kill / boss kill / blocked tap / reward, тем же паттерном (`fxFor(key).новое_поле`), по одному за раз. |
+| VFX integration (остальные пресеты после light-hit) | PLANNED | VFX-003 принят (light-hit целиком) — дальше heavy hit / magic hit / boss hit / kill / boss kill / blocked tap / reward, тем же паттерном (`fxFor(key).новое_поле`), по одному за раз. |
 | AUDIO-001 — Combat Audio | PLANNED LATER | После принятого визуального combat feel: hit/cast/death/reward SFX, без преждевременного большого sound-system. |
 | VK production pass | PLANNED LATER | SDK, saves, lifecycle/fullscreen, audio rules, rewarded ads, analytics, слабые устройства — после приятного vertical slice. |
 
