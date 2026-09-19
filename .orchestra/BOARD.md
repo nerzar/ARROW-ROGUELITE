@@ -40,7 +40,7 @@ BOARD хранит не только одну текущую задачу, а **
 | ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
 | ART-011 — Reward Choice Screen Exploration | READY | `art/ART-011-reward-choice-screen` | 2–4 варианта reward screen в общем fantasy-языке; карточки, rarity, hover/select, confirm. Anchor-screen, финал только после user review. |
 | ART-012 — Player HUD Exploration | READY | `art/ART-012-player-hud` | 2–4 варианта HUD: HP, Rotate, active items/charges/statuses. Anchor-screen, не перекрывать board/arena. |
-| PRESENT-001 — Презентация способностей врагов | READY (кандидат для Gemini) | `build/PRESENT-001-ability-presentation` | Анимация перехода между сторонами, stagger пьяницы, heal-искра матроны, лут, щит. Presentation only. |
+| PRESENT-001 — Презентация способностей врагов | IN PROGRESS (Muse) | `build/PRESENT-001-ability-presentation` | Анимация перехода между сторонами, stagger пьяницы, heal-искра матроны, лут, щит. Presentation only. Не дублировать другому агенту. |
 | ASSET-009 — Иконки предметов v1 | READY (арт пользователя) | `art/ASSET-009-item-icons-v1` | 6 активных + 3 реликвии, 512 px, фиксированные пути под ITEM-001/002. |
 | ASSET-010 — Спрайты лут-цели | READY (арт пользователя) | `art/ASSET-010-loot-target-sprites` | species `loot-chest`, 5 поз под текущий пайплайн; заменяет гоблина-носильщика в «Обозе». |
 | ASSET-011 — Портрет героя | READY (арт пользователя) | `art/ASSET-011-hero-portrait` | portrait / portrait-hurt / full для HUD и reward-экранов. |
