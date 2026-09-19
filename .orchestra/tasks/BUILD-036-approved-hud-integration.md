@@ -1,6 +1,6 @@
 # TASK: BUILD-036 — Approved HUD Integration
 
-STATUS: IN PROGRESS
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 BASE_BRANCH: art/ART-012B-approved-hud-adaptation
@@ -37,9 +37,9 @@ BRANCH: build/BUILD-036-approved-hud-integration
 
 ## RESULT / FILES / SCENES CHECKED / VERIFY / FOUND / SHA
 
-- RESULT: pending
-- FILES: pending
-- SCENES CHECKED: pending
-- VERIFY: pending
-- FOUND: pending
-- SHA: pending
+- RESULT: четыре approved PNG подключены byte-for-byte как skins реального playable; name, HP fill/numbers, timer/ability state и Rotate charges читаются из gameplay state.
+- FILES: runtime HUD assets; `assets.js`; `index.html`; `style.css`; `app.js`; `board-renderer.js`.
+- SCENES CHECKED: `cp-e5` Goblin Shaman; `authored-0` Goblin King/Taunter; `authored-22` Goblin King boss; `authored-11` Act I multi-enemy; `authored-18` shield/ability states.
+- VERIFY: `node --check`; `npm run build`; `npm test` — 37 files / 417 tests; browser gameplay checks with changing HP, Rotate 1→0, ATK/CAST/SHD/HEAL; source/runtime PNG SHA-256 pairs match.
+- FOUND: в компактной admin-композиции существующий scene selector может перекрывать HUD верхнего слота; species offsets, placement и selector оставлены без изменения по scope.
+- SHA: `79bb46e281f813edcf09bd9faae73827891bd307`
