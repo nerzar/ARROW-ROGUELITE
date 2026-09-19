@@ -17,6 +17,11 @@ BOARD хранит не только одну текущую задачу, а **
 - filled-arrow renderer + 15 materials + gallery;
 - shared Rotate flow;
 - CAL-005: species pivot/scale, HUD offset/scale, shadow offset, editor ↔ runtime parity.
+- UI-001: clean game view, убран overlap в левом верхнем углу, честный scene dropdown.
+- FIX-033: HUD-плашки больше не вылезают за viewport, оформленный player HUD.
+- VFX-002: damage number popup (light hit), синхронный с прилётом стрелы, реальный урон.
+- LD-006: shortlist из 7 кандидатов Act I encounter'ов (design-only, см. `.orchestra/tasks/LD-006-shortlist.md`) — выбор конкретного кандидата ещё не сделан.
+- REF-001: 12 браузерных VFX-референсов + 20 приёмов (см. `.orchestra/research/REF-001-browser-combat-ui-vfx-references.md`).
 
 Стрелочный renderer/material трек закончен. Старые BUILD-032/033 и VIS/FIX arrow-эксперименты — история/источники отдельных идей.
 
@@ -24,9 +29,8 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
-| VFX-002 — Damage Number Integration | READY | `build/VFX-002-damage-number-integration` | Первый из 10 эффектов VFX-001-лабы, выбранный пользователем для интеграции в реальную игру: damage number (light hit). Написан так, чтобы эффекты 5-10 добавлялись тем же паттерном (`fxFor(key)`), без отдельного fx-scheduler заранее. |
-| UI-001 — Game Shell Cleanup | READY | `fix/UI-001-game-shell-cleanup` | Скрываемый admin/debug UI, убрать кашу в левом верхнем углу, scene dropdown всегда показывает фактически активную runtime scene. Это обычный game-shell fix, не mobile-задача. |
-| REF-001 — Browser Combat UI / VFX References | READY | `research/REF-001-browser-combat-ui-vfx-references` | Посмотреть браузерные игры ради HUD animations, hit/damage feedback, cast/attack telegraphs, boss/death/reward presentation и собрать конкретные приёмы для вдохновения. |
+| RUN-002 — Generic enemy ability framework | IN PROGRESS | `build/RUN-002-enemy-ability-framework` | Фаза 1 roguelite-слоя: обобщить `stone_throw` до framework, доказать второй способностью (Shield). |
+| VFX-003 — Light-hit feel (flash+sparks+squash+camera) | READY (нужна task-card) | — | Пресет `light hit` в лабе — это связка 7 эффектов (trail+flash+sparks+tint+squash+dmg+camera), не один. VFX-002 сделал только dmg; это то, что пользователь имел в виду под "light hit можно для начала" целиком. Добираем недостающие: flash, sparks, squash/recoil, camera impulse (trail уже есть с BUILD-035). |
 
 Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
 
@@ -38,7 +42,7 @@ BOARD хранит не только одну текущую задачу, а **
 |---|---|---|
 | ACT-I-002 — Act I Vertical Slice | PLANNED | Развить уже существующие первые Act I encounters в короткий кусок настоящего акта, который интересно проходить, а не просто технически тестировать. |
 | RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, небольшой понятный набор апгрейдов, желание сделать ещё один забег. |
-| VFX integration (эффекты 5-10) | WAITING FOR VFX-002 | Пользователь посмотрел лабу VFX-001 и решил забрать все 10 эффектов по одному, начиная с damage number (VFX-002). Следующие карточки — по одному эффекту за раз, тем же паттерном, после того как VFX-002 принят на плейтесте. |
+| VFX integration (остальные пресеты после light-hit) | PLANNED | После VFX-003 (light-hit целиком) — heavy hit / magic hit / boss hit / kill / boss kill / blocked tap / reward, тем же паттерном (`fxFor(key).новое_поле`), по одному за раз. |
 | AUDIO-001 — Combat Audio | PLANNED LATER | После принятого визуального combat feel: hit/cast/death/reward SFX, без преждевременного большого sound-system. |
 | VK production pass | PLANNED LATER | SDK, saves, lifecycle/fullscreen, audio rules, rewarded ads, analytics, слабые устройства — после приятного vertical slice. |
 
