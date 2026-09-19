@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Arrow Roguelite - Approved HUD Adaptation (1280x720)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Marcellus&family=Inter:wght@500;600;700;800;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+  body {
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    position: relative;
+    background: #06080c;
+    font-family: 'Inter', sans-serif;
+    margin: 0 auto;
+  }
+
+  /* Game Arena Background (100% clean canonical base) */
+  .game-viewport {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1280px;
+    height: 720px;
+    background-image: url('assets/hud/clean_arena_bg.png');
+    background-size: 1280px 720px;
+    background-repeat: no-repeat;
+    z-index: 0;
+  }
+
+  /* Top Navigation Bar for Reviewer */
+  .top-nav {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    background: rgba(10, 14, 22, 0.82);
+    border: 1px solid rgba(229, 190, 107, 0.4);
+    padding: 6px 16px;
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+  .top-nav a, .top-nav button {
+    color: #ffdf7a;
+    text-decoration: none;
+    background: #181f2c;
+    border: 1px solid #3c4961;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .top-nav a:hover, .top-nav button:hover {
+    background: #2b3952;
+    border-color: #ffdf7a;
+    color: #ffffff;
+  }
+
+  /* ========================================================
+     PLAYER HUD (BOTTOM-LEFT)
+     ======================================================== */
+  .player-hud {
+    position: absolute;
+    left: 22px;
+    bottom: 14px;
+    width: 305px;
+    height: 108px;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.9));
+    z-index: 20;
+  }
+  /* HP Track & Dynamic Ruby Fill */
+  .player-bar-track {
+    position: absolute;
+    left: 44.5%;
+    top: 41%;
+    width: 39.5%;
+    height: 17.5%;
+    background: #080d14;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.95);
+    z-index: 1;
+  }
+  .player-bar-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(180deg, #ff5e5e 0%, #ee2727 45%, #9e0f0f 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: width 0.35s ease-out;
+  }
+  /* Hollow Sliced Frame Overlay (clean master cutout) */
+  .player-frame-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+  /* Dynamic HP Text */
+  .player-hp-label {
+    position: absolute;
+    left: 44.5%;
+    top: 40%;
+    width: 39.5%;
+    height: 18%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    font-size: 11px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 2px #000, 0 0 4px #000, 1px 1px 1px #000, -1px -1px 1px #000;
+    z-index: 4;
+  }
+  /* Mana / Charge Crystals */
+  .crystal-slot {
+    position: absolute;
+    width: 25px;
+    height: 25px;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    filter: drop-shadow(0 0 6px #00b4d8);
+    transition: opacity 0.25s, transform 0.25s;
+  }
+  .crystal-slot img {
+    width: 100%;
+    height: 100%;
+  }
+  .crystal-1 { left: 50.2%; top: 72.7%; }
+  .crystal-2 { left: 59.5%; top: 73.6%; }
+
+  /* ========================================================
+     ENEMY HUD PLATES (TOP WOLF & RIGHT WOLF)
+     ======================================================== */
+  .enemy-hud {
+    position: absolute;
+    width: 220px;
+    height: 63px;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.9));
+    z-index: 15;
+  }
+  .enemy-top {
+    left: 489px;
+    top: 197px;
+  }
+  .enemy-right {
+    left: 992px;
+    top: 264px;
+  }
+  /* Nameplate Texts */
+  .enemy-name {
+    position: absolute;
+    top: 18%;
+    left: 28%;
+    width: 44%;
+    text-align: center;
+    font-family: Georgia, serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.03em;
+    text-shadow: 0 1px 2px #000, 0 0 4px #000, 1px 1px 1px #000, -1px -1px 1px #000;
+    z-index: 4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .enemy-timer {
+    position: absolute;
+    top: 14%;
+    right: 17%;
+    height: 32%;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(50, 16, 12, 0.9);
+    border: 1px solid #d75a32;
+    border-radius: 3px;
+    padding: 0 4px;
+    box-shadow: 0 0 6px rgba(215, 90, 50, 0.4);
+    z-index: 4;
+  }
+  .enemy-timer-icon {
+    width: 8px;
+    height: 8px;
+    border: 1.5px solid #ffbe8c;
+    border-radius: 50%;
+    position: relative;
+  }
+  .enemy-timer-icon::after {
+    content: '';
+    position: absolute;
+    top: 1px; left: 3px;
+    width: 2px; height: 3px;
+    border-left: 1px solid #ffbe8c;
+    border-bottom: 1px solid #ffbe8c;
+  }
+  .enemy-timer-digit {
+    font-family: Georgia, serif;
+    font-size: 9px;
+    font-weight: 900;
+    color: #ffbe8c;
+  }
+  /* Enemy HP Track & Ruby Fill */
+  .enemy-hp-track {
+    position: absolute;
+    left: 6%;
+    top: 66%;
+    width: 88%;
+    height: 22%;
+    background: #080a0f;
+    clip-path: polygon(0 50%, 14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.95);
+    z-index: 1;
+  }
+  .enemy-hp-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(180deg, #ff6060 0%, #db2323 45%, #8f0d0d 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: width 0.35s ease-out;
+  }
+  .enemy-frame-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .enemy-hp-label {
+    position: absolute;
+    left: 6%;
+    top: 65%;
+    width: 88%;
+    height: 24%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    font-size: 11px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 2px #000, 0 0 5px #000, 1px 1px 1px #000, -1px -1px 1px #000;
+    z-index: 4;
+  }
+
+  /* ========================================================
+     ACTIONS DOCK (BOTTOM-RIGHT)
+     ======================================================== */
+  .rotate-btn-wrapper {
+    position: absolute;
+    right: 243px;
+    bottom: 32px;
+    width: 92px;
+    height: 92px;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.9));
+    z-index: 20;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .rotate-btn-wrapper:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 8px 18px rgba(255, 200, 80, 0.4));
+  }
+  .rotate-btn-wrapper:active {
+    transform: scale(0.96);
+  }
+  .rotate-btn-img {
+    width: 100%;
+    height: 100%;
+  }
+  .rotate-label {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: Georgia, serif;
+    font-size: 13px;
+    font-weight: 900;
+    color: #ffe182;
+    text-shadow: 0 1px 2px #000, 0 0 4px #000, 1px 1px 1px #000, -1px -1px 1px #000;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+
+  .item-slot {
+    position: absolute;
+    bottom: 42px;
+    width: 66px;
+    height: 66px;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.85));
+    z-index: 20;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .item-slot:hover {
+    transform: scale(1.06);
+    filter: drop-shadow(0 6px 14px rgba(100, 180, 255, 0.4));
+  }
+  .item-slot:active {
+    transform: scale(0.96);
+  }
+  .item-slot img {
+    width: 100%;
+    height: 100%;
+  }
+  .item-bow { right: 159px; }
+  .item-frost { right: 79px; }
+
+</style>
+</head>
+<body>
+
+  <!-- Game Canvas Scene -->
+  <div class="game-viewport"></div>
+
+  <!-- Reviewer Navigation Bar -->
+  <div class="top-nav">
+    <a href="hud-sliced-frame-demo.html" target="_blank">🔬 Sliced Frame Interactive Pipeline</a>
+    <button onclick="toggleDamageDemo()">⚡ Живой тест урона (Live Combat Demo)</button>
+    <a href="visual-proto/">🎮 Playable Prototype</a>
+  </div>
+
+  <!-- PLAYER HUD -->
+  <div class="player-hud">
+    <div class="player-bar-track">
+      <div class="player-bar-fill" id="player-hp-fill" style="width: 100%;"></div>
+    </div>
+    <div class="player-hp-label" id="player-hp-label">10 / 10</div>
+    <div class="crystal-slot crystal-1" id="crystal-1">
+      <img src="assets/hud/crystal-active.png" alt="Azure Crystal"/>
+    </div>
+    <div class="crystal-slot crystal-2" id="crystal-2">
+      <img src="assets/hud/crystal-active.png" alt="Azure Crystal"/>
+    </div>
+    <img class="player-frame-img" src="assets/hud/player-plate-hollow.png" alt="Player HUD Frame"/>
+  </div>
+
+  <!-- ENEMY 1 (TOP WOLF) -->
+  <div class="enemy-hud enemy-top">
+    <div class="enemy-name">Dire Wolf</div>
+    <div class="enemy-timer">
+      <div class="enemy-timer-icon"></div>
+      <span class="enemy-timer-digit">3</span>
+    </div>
+    <div class="enemy-hp-track">
+      <div class="enemy-hp-fill" id="enemy-top-fill" style="width: 100%;"></div>
+    </div>
+    <div class="enemy-hp-label" id="enemy-top-label">3 / 3</div>
+    <img class="enemy-frame-img" src="assets/hud/enemy-plate-standard-hollow.png" alt="Enemy Plate Frame"/>
+  </div>
+
+  <!-- ENEMY 2 (RIGHT WOLF) -->
+  <div class="enemy-hud enemy-right">
+    <div class="enemy-name">Dire Wolf</div>
+    <div class="enemy-timer">
+      <div class="enemy-timer-icon"></div>
+      <span class="enemy-timer-digit">4</span>
+    </div>
+    <div class="enemy-hp-track">
+      <div class="enemy-hp-fill" id="enemy-right-fill" style="width: 100%;"></div>
+    </div>
+    <div class="enemy-hp-label" id="enemy-right-label">2 / 2</div>
+    <img class="enemy-frame-img" src="assets/hud/enemy-plate-standard-hollow.png" alt="Enemy Plate Frame"/>
+  </div>
+
+  <!-- ACTIONS DOCK -->
+  <div class="rotate-btn-wrapper" onclick="triggerRotateSpin()">
+    <img class="rotate-btn-img" id="rotate-medallion" src="assets/hud/rotate-button.png" alt="Rotate Medallion"/>
+    <div class="rotate-label">Rotate</div>
+  </div>
+
+  <div class="item-slot item-bow" title="Bow (Charge: 1)">
+    <img src="assets/hud/item-slot-bow.png" alt="Bow Item"/>
+  </div>
+
+  <div class="item-slot item-frost" title="Frost Darts (Charge: 2)">
+    <img src="assets/hud/item-slot-frostdarts.png" alt="Frost Darts Item"/>
+  </div>
+
+  <!-- Interactive Demo Logic -->
+  <script>
+    let isDamaged = false;
+    let rotateDeg = 0;
+
+    function toggleDamageDemo() {
+      isDamaged = !isDamaged;
+      const playerFill = document.getElementById('player-hp-fill');
+      const playerLabel = document.getElementById('player-hp-label');
+      const crystal2 = document.getElementById('crystal-2');
+      const topFill = document.getElementById('enemy-top-fill');
+      const topLabel = document.getElementById('enemy-top-label');
+
+      if (isDamaged) {
+        playerFill.style.width = '60%';
+        playerLabel.textContent = '6 / 10';
+        crystal2.style.opacity = '0';
+        crystal2.style.transform = 'translate(-50%, -50%) scale(0.5)';
+        topFill.style.width = '33.3%';
+        topLabel.textContent = '1 / 3';
+      } else {
+        playerFill.style.width = '100%';
+        playerLabel.textContent = '10 / 10';
+        crystal2.style.opacity = '1';
+        crystal2.style.transform = 'translate(-50%, -50%) scale(1)';
+        topFill.style.width = '100%';
+        topLabel.textContent = '3 / 3';
+      }
+    }
+
+    function triggerRotateSpin() {
+      rotateDeg += 90;
+      const medallion = document.getElementById('rotate-medallion');
+      medallion.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      medallion.style.transform = `rotate(${rotateDeg}deg)`;
+    }
+  </script>
+</body>
+</html>

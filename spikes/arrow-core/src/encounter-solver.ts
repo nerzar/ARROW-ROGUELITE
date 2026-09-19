@@ -356,7 +356,9 @@ export function validateEncounter(
         (e, i) =>
           `${i + 1}: ${e.id}, side ${DIR_NAMES[e.side]}, ${e.hp} hp${e.mandatory === false ? ' (optional)' : ''}` +
           (e.attackTimer ? `, ${describeAttackTimer(e.attackTimer)}` : '') +
-          (e.ability ? `, ${describeAbility(e.ability)}` : ''),
+          (e.ability ? `, ${describeAbility(e.ability)}` : '') +
+          (e.arrival?.onTurn !== undefined ? `, arrives on turn ${e.arrival.onTurn}` : '') +
+          (e.arrival?.afterKill !== undefined ? `, arrives after kill ${e.arrival.afterKill}` : ''),
       )
   return {
     totalHp: start.totalHp,
@@ -380,9 +382,12 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
     const n = String(i + 1).padStart(3)
     if (a.kind === 'rotate') {
       const hpBefore = s.playerHp
+      const pendingBefore = s.enemies.filter((e) => e.pending).map((e) => e.id)
       const ok = s.rotate(a.turn)
       let text = `${n}. ${formatAction(a)}${ok ? '' : '  !! illegal'}  -> rotation ${s.rotation * 90}°, charges ${s.rotateCharges}`
       if (ok && s.playerHp !== hpBefore) text += `  ENEMY ATTACK -${hpBefore - s.playerHp} hp (player ${s.playerHp})`
+      const arrived = s.enemies.filter((e) => !e.pending && pendingBefore.includes(e.id))
+      if (arrived.length) text += `  ARRIVED: ${arrived.map((e) => e.id).join(', ')}`
       lines.push(text)
       return
     }
@@ -435,6 +440,7 @@ export function traceActions(level: Level, def: EncounterDef, actions: readonly 
     if (r.healed && r.healed.length) text += `  HEALED: ${r.healed.map((h) => `${h.target} +${h.amount}`).join(', ')}`
     if (r.rewards && r.rewards.length) text += `  LOOT: ${r.rewards.map((w) => `${w.id} +${w.heal}hp +${w.rotate}R`).join(', ')}`
     if (r.expired && r.expired.length) text += `  GONE: ${r.expired.map((x) => x.id).join(', ')}`
+    if (r.arrived?.length) text += `  ARRIVED: ${r.arrived.map((x) => x.id).join(', ')}`
     if (r.phaseAfter !== r.phaseBefore) {
       text += r.won ? '  => WIN' : `  => phase ${r.phaseAfter + 1}, boss on ${DIR_NAMES[s.bossSide as number]}`
       if (r.granted) text += `, Rotate +${r.granted}`

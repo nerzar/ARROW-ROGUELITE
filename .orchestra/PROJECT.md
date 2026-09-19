@@ -18,7 +18,7 @@ CURRENT_PLAYABLE_BASE: main
 
 ## Текущий этап
 
-Проект находится в стадии **стабильного playable Prologue + поиск combat feel / визуального языка**.
+Проект находится в стадии **сборки первого полноценного vertical slice: Prologue + Act I + rewards/items + route map + merchant + presentation polish**.
 
 Базовая механика уже доказана:
 - Prologue проходится целиком;
@@ -143,6 +143,39 @@ AGREED FOR NOW mobile direction:
 - landscape-first;
 - без отдельного Unity/React Native rewrite;
 - отдельный standalone Android/iOS wrapper рассматривать только позже, если появится реальная необходимость.
+
+## Vertical Slice v1 — обязательный run flow
+
+AGREED FOR NOW.
+
+Vertical slice считается собранным не тогда, когда отдельные бои хороши, а когда работает единый цикл:
+
+`Prologue -> reward -> Goblin Country map -> battle / merchant choice -> rewards/items -> дальнейший маршрут -> Goblin King`
+
+Обязательные части:
+- ITEM-001/002: предметы, reward draft, inventory, run-gold;
+- WAVE-001: волновые encounters;
+- MAP-001: карта Страны гоблинов с выбором маршрута;
+- SHOP-001: торговец, где run-gold превращается в силу текущего забега;
+- LD-008: rebalance Act I уже поверх предметов/волн;
+- approved HUD/reward/presentation слой;
+- затем единый ручной playtest и economy/balance pass.
+
+До полного run-flow цены, частота наград, heal/Rotate economy и power-gating считаются provisional.
+
+## Дополнительные принятые направления
+
+AGREED FOR NOW:
+
+- friendly-fire/self-damage от столкновения стрел должно иметь отдельный понятный VFX/feedback;
+- Stone Pin на уровне Матроны обязан реально блокировать стрелу — это bugfix, не новое правило;
+- route map позже расширяется events / points of interest, а не остаётся только battle/shop/boss;
+- reward visual должен опираться на пользовательский approved reference `C:\Users\nerza\Projects\magicarrowassets\gameplay-reference\reward-approved.png`; свободный ART-011 exploration не считать финальным стилем;
+- popups (victory/reward/boss/unlock) входят в ближайший presentation layer;
+- XP/Level Up — отдельный run-progression слой: возможны бонусы к Rotate/charges/HP/utility; до финального balance нужно явно решить, входит ли он в первый vertical slice;
+- позже нужны расходники/умения, усиливающие сами puzzle-стрелы;
+- portal/spawner — новый encounter target: создаёт монстров, пока игрок не уничтожит портал;
+- classes/skill tree/удары/spawn-control — осознанно MUCH LATER, не блокируют первый vertical slice.
 
 ## Более дальний маршрут — обсуждали, но пока не активные задачи
 

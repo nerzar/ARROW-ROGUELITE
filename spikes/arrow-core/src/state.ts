@@ -124,10 +124,10 @@ export class BoardState {
   }
 
   /** Player-facing move: never throws. */
-  tryRemove(id: number): RemoveResult {
+  tryRemove(id: number, newlyFree?: number[]): RemoveResult {
     if (id < 0 || id >= this.topo.arrowCount || this.alive[id] === 0) return { ok: false, reason: 'gone', blocker: -1 }
     if (this.rayBlock[id] !== 0) return { ok: false, reason: 'blocked', blocker: this.firstBlocker(id) }
-    this.remove(id)
+    this.remove(id, newlyFree)
     return { ok: true }
   }
 

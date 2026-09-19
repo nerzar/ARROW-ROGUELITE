@@ -38,6 +38,21 @@ const FLEE_EXIT_MS = 850
 const FLEE_BACK_DRIFT_PX = 20
 const FLEE_BACK_SLIDE_MS = 1200
 
+// PRESENT-001: ability presentation beats (all wall-clock, presentation-only).
+// Shift: stagger (step back + stars) then an arced run old podium -> new podium.
+const SHIFT_STAGGER_MS = 220
+const SHIFT_RUN_MS = 450
+const SHIFT_TOTAL_MS = SHIFT_STAGGER_MS + SHIFT_RUN_MS
+// Heal: a green-gold spark flies caster -> target, then a green +N popup.
+const HEAL_SPARK_MS = 450
+const HEAL_TEXT_MS = 800
+// Loot kill reward popup at the victim's slot.
+const LOOT_TEXT_MS = 1100
+// Shield raise pop-in.
+const SHIELD_UP_MS = 280
+// Shield-break crack fade (matches the SHIELD BLOCKED text window).
+const SHIELD_CRACK_MS = 650
+
 // Presentation constants for mob defeat:
 // After lethal arrow impact, the corpse lies visibly on the ground for a beat,
 // then smoothly dissolves away.
@@ -157,7 +172,9 @@ export function createBoardRenderer(canvas, stageEl) {
   function fxFor(key) {
     let fx = targetFx.get(key)
     if (!fx) {
-      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9, fleeT: -1e9, fleeBackT: -1e9, fleeExitT: -1e9, dmgText: null, hitCount: 0 }
+      fx = { hitT: -1e9, deathT: -1e9, attackT: -1e9, interruptT: -1e9, fleeT: -1e9, fleeBackT: -1e9, fleeExitT: -1e9, dmgText: null, hitCount: 0,
+        // PRESENT-001: ability presentation one-shots (all presentation-only, same fx-object pattern).
+        shiftT: null, shieldUpT: -1e9, healSpark: null, healText: null, lootText: null }
       targetFx.set(key, fx)
     }
     return fx
@@ -304,7 +321,7 @@ export function createBoardRenderer(canvas, stageEl) {
     // frame). A miss (or no anchor yet) flies straight and fades, exactly like before.
     let target = null
     if (r.hit) {
-      const hitTarget = targetsBefore.find((t) => t.side === r.arenaDir)
+      const hitTarget = targetsBefore.find((t) => t.side === r.arenaDir && !t.pending && !t.dead && !t.fled)
       if (hitTarget) {
         target = targetAnchors.get(targetKey(hitTarget)) ?? null
         // BUILD-035: HP/dead visuals wait for the arrival (see frame()'s pendingHp patch).
@@ -332,6 +349,30 @@ export function createBoardRenderer(canvas, stageEl) {
         // by any current content and isn't a cast, so it gets no burst text.
         if (r.castInterrupted) fx.interruptT = now + FLIGHT_MS
       }
+    }
+    // PRESENT-001: ability presentation stamps. All presentation-only: the engine already
+    // applied everything synchronously; below only decides *how it looks and when*.
+    // Shift (scout timer / drunkard on-hit / wolf prowl): the sprite runs old podium -> new
+    // podium. A hit-triggered shift starts at projectile arrival (the victim first takes the
+    // hit, then staggers and runs); a timer shift starts immediately (there is no impact).
+    if (r.shifted) for (const sh of r.shifted) {
+      const hitVictim = r.hit ? targetsBefore.find((t) => t.side === r.arenaDir) : null
+      const mover = targetsBefore.find((t) => t.id === sh.id)
+      const hitTriggered = !!hitVictim && hitVictim.id === sh.id && (mover?.abilities ?? []).some((ab) => ab.kind === 'shift' && ab.trigger === 'hit')
+      fxFor(sh.id).shiftT = { at: now + (hitTriggered ? FLIGHT_MS : 0), from: sh.from, to: sh.to }
+    }
+    // Shield raise: bronze disc pops in. Consume (shieldT) is stamped with the hit above.
+    if (r.shieldRaised) for (const sh of r.shieldRaised) fxFor(sh.id).shieldUpT = now
+    // Heal: spark flies caster -> target, then a green +N popup on the target.
+    if (r.healed) for (const h of r.healed) {
+      const fx = fxFor(h.target)
+      const fromAnchor = targetAnchors.get(h.id) ?? null
+      fx.healSpark = { at: now, from: fromAnchor ? { x: fromAnchor.x, y: fromAnchor.y } : null }
+      fx.healText = { value: `+${h.amount}`, at: now + HEAL_SPARK_MS }
+    }
+    // Loot kill reward: burst + popup at the victim's slot, arrival-synced like the death.
+    if (r.rewards) for (const w of r.rewards) {
+      if ((w.heal ?? 0) > 0 || (w.rotate ?? 0) > 0) fxFor(w.id).lootText = { heal: w.heal ?? 0, rotate: w.rotate ?? 0, at: now + FLIGHT_MS }
     }
     // BUILD-035: 'lob' raises the steered leg into an arc (same duration/endpoints/sync);
     // every other style flies the same trajectory and differs only in figure painting.
@@ -376,6 +417,13 @@ export function createBoardRenderer(canvas, stageEl) {
     for (const before of targetsBefore) {
       const after = targetsAfter.find((t) => targetKey(t) === targetKey(before))
       if (!before.dead && (after ? after.dead : true)) fxFor(targetKey(before)).deathT = now
+    }
+  }
+
+  function markArrivals(before, after, delay = 0) {
+    const now = performance.now()
+    for (const t of after) {
+      if (!t.pending && before.find((b) => b.id === t.id)?.pending) fxFor(targetKey(t)).arrivalT = now + delay
     }
   }
 
@@ -431,13 +479,16 @@ export function createBoardRenderer(canvas, stageEl) {
       // species resolves to undefined here and falls back to Dire Wolf's pack at the call site.
       return s.enemies.map((e) => ({
         id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead,
+        pending: e.pending, arrivesIn: e.arrivesIn, arrivesAfter: e.arrivesAfter,
         fled: e.fled || e.expired, // ACT-I-003: an expired temporary target leaves like a fled one
+        expired: !!e.expired, // PRESENT-001: expired leaves immediately (no taunt beat), see drawTarget
         turnsLeft: e.turnsLeft,
         countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
         abilities: e.abilities,
         shielded: e.shielded,
-        abilityKind: def.enemies.find((raw) => raw.id === e.id)?.ability?.kind ?? (def.enemies.find((raw) => raw.id === e.id)?.ability ? 'stone_throw' : undefined),
-        abilityTrigger: def.enemies.find((raw) => raw.id === e.id)?.ability?.trigger,
+        // ITEM-001b: `abilities` carries every ability; these two mirror the first one for legacy code.
+        abilityKind: e.abilities?.[0]?.kind,
+        abilityTrigger: e.abilities?.[0]?.trigger,
         reward: def.enemies.find((raw) => raw.id === e.id)?.reward,
         species: def.enemies.find((raw) => raw.id === e.id)?.species,
         isBoss: false,
@@ -483,6 +534,13 @@ export function createBoardRenderer(canvas, stageEl) {
       if (now - fx.fleeExitT < FLEE_EXIT_MS) animating = true
       // VFX-002: damage-number popup is also a function of `now` until it fades out.
       if (fx.dmgText && now - fx.dmgText.at < DMG_MS) animating = true
+      // PRESENT-001: ability beats keep the loop alive for their own windows.
+      if (fx.shiftT && now - fx.shiftT.at < SHIFT_TOTAL_MS + 60) animating = true
+      if (now - fx.shieldUpT < SHIELD_UP_MS + 60) animating = true
+      if (fx.healSpark && now - fx.healSpark.at < HEAL_SPARK_MS + HEAL_TEXT_MS) animating = true
+      if (fx.healText && now - fx.healText.at < HEAL_TEXT_MS) animating = true
+      if (fx.lootText && now - fx.lootText.at < LOOT_TEXT_MS) animating = true
+      if (now - (fx.shieldT ?? -1e9) < SHIELD_CRACK_MS) animating = true
     }
     for (const fx of arrowFx.values()) {
       if (now - fx.pinT < 500 || now - fx.unpinT < 550 || now - fx.deniedT < 320) animating = true
@@ -551,6 +609,10 @@ export function createBoardRenderer(canvas, stageEl) {
     ctx.save()
     ctx.translate(frameCam.x, frameCam.y)
     for (const t of targets) {
+      const liveOnSide = targets.find((other) => other.side === t.side && !other.pending && !other.dead && !other.fled)
+      if (t.pending && (t.fled || liveOnSide || targets.find((other) => other.side === t.side && other.pending && !other.fled)?.id !== t.id)) continue
+      // A replacement takes the podium after the killing projectile lands.
+      if ((t.dead || t.fled) && liveOnSide && now >= (fxFor(targetKey(liveOnSide)).arrivalT ?? -Infinity)) continue
       // BUILD-035: pre-impact HP presentation -- show pre-tap hp/dead until the projectile
       // arrives (pendingHp), then fall through to live state. Expired entries are dropped.
       const pend = pendingHp.get(targetKey(t))
@@ -604,6 +666,50 @@ export function createBoardRenderer(canvas, stageEl) {
       // CAL-005: species HUD size scales the plate's own font/bar metrics (measured and drawn
       // at the scaled size); the offset above stays a pure position shift. Default 1 = no-op.
       const hudScale = speciesHudScale(speciesId)
+      if (t.pending) {
+        const pack = view.wolf?.packsBySpecies?.[t.species] ?? view.wolf?.pack
+        const img = pack ? resolveWolfImage(pack, 'idle') : null
+        const pivot = g.spritePivotOverride?.[t.side] ?? ZERO_PIVOT
+        ctx.save()
+        ctx.translate(slot.x, slot.y)
+        ctx.globalAlpha = 0.8
+        ctx.filter = 'brightness(0.35) saturate(0) drop-shadow(0px 0px 2px #b9dcff)'
+        if (img) drawWolfArt(img, 'idle', 0, t, charW, charH, { dx: pivot.dx + speciesPivot.dx, dy: pivot.dy + speciesPivot.dy }, artScale)
+        ctx.restore()
+        const conditions = []
+        if (t.arrivesIn !== undefined) conditions.push(t.arrivesIn > 0 ? `через ${t.arrivesIn}` : 'ждёт свободный слот')
+        if (t.arrivesAfter) conditions.push(`после ${def.enemies.find((e) => e.id === t.arrivesAfter)?.label ?? t.arrivesAfter}`)
+        const lines = [`СЛЕДУЮЩИЙ: ${t.label ?? t.id}`, conditions.join(' · ')]
+        const fontPx = Math.max(11, Math.min(16, charCell * 0.24))
+        ctx.save()
+        ctx.font = `600 ${fontPx}px system-ui, sans-serif`
+        const width = Math.min(g.stageW - 12, Math.max(...lines.map((line) => ctx.measureText(line).width)) + 18)
+        const height = fontPx * 2.7
+        const x = Math.max(6, Math.min(g.stageW - width - 6, slot.x + hudOffPx.x - width / 2))
+        const y = Math.max(6, Math.min(g.stageH - height - 6, slot.y - charH / 2 + hudOffPx.y - height - 8))
+        ctx.fillStyle = col.labelBacking
+        roundRect(x, y, width, height, 7)
+        ctx.fill()
+        ctx.fillStyle = '#d1d9e7'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        lines.forEach((line, i) => ctx.fillText(line, x + width / 2, y + fontPx * (0.75 + i * 1.2), width - 12))
+        ctx.restore()
+        return
+      }
+      const arrivalAge = now - (fx.arrivalT ?? -Infinity)
+      if (arrivalAge < 0) return
+      if (arrivalAge < 450) {
+        const p = arrivalAge / 450
+        ctx.save()
+        ctx.strokeStyle = '#b9dcff'
+        ctx.globalAlpha = 1 - p
+        ctx.lineWidth = 3 * (1 - p)
+        ctx.beginPath()
+        ctx.ellipse(slot.x, slot.y + charH / 2, charW * (0.35 + p * 0.4), charCell * (0.12 + p * 0.12), 0, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.restore()
+      }
       const idle = (t.isBoss || t.dead) ? 0 : Math.sin(now / 900 + t.side * 1.7) * 1.6
       const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
       const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * charCell : 0
@@ -678,6 +784,54 @@ export function createBoardRenderer(canvas, stageEl) {
         }
         // else: the hit is still traveling — normal draw (the hit flash covers the impact)
       }
+      // PRESENT-001: an expired loot target leaves at once -- no taunt beat (it is not
+      // mocking the player, it is running away). markFledAdvance still walks it through the
+      // back -> away beats on the following taps; only the first beat's pose/text changes.
+      if (fleeing && t.expired && fleeStage === 'taunt') {
+        fleePose = 'back'
+        fleeSince = effT
+        fleeStage = 'back'
+      }
+
+      // PRESENT-001: side shift run (scout timer / drunkard on-hit / wolf prowl). The engine
+      // already moved the enemy; this plays the visible run old podium -> current slot:
+      // stagger (a step back + circling stars) then an arced run. The HUD plate below rides
+      // the same offset -- it is drawn in translated local space.
+      let shiftOx = 0
+      let shiftOy = 0
+      let shiftStagger = false
+      t.shiftFace = 0
+      const shiftT = !t.isBoss && !t.dead && !t.fled ? fx.shiftT : null
+      if (shiftT && shiftT.from !== shiftT.to) {
+        const since = now - shiftT.at
+        if (since < SHIFT_TOTAL_MS) {
+          const fromSlot = podiumSlot(shiftT.from, false, g.stageW, g.stageH, charCell, g.groundOverride)
+          const dx = slot.x - fromSlot.x
+          const dy = slot.y - fromSlot.y
+          if (since < 0) {
+            // Hit-triggered shift: the arrow is still in flight toward the OLD podium (the hit
+            // hasn't landed yet, per FLIGHT_MS in onTapResult) -- hold fully there. `t.side` is
+            // already the post-shift engine value, so the un-held `slot` would otherwise show
+            // the sprite already gone before its own impact flash plays.
+            shiftOx = fromSlot.x - slot.x
+            shiftOy = fromSlot.y - slot.y
+          } else if (since < SHIFT_STAGGER_MS) {
+            shiftStagger = true
+            const k = Math.sin((since / SHIFT_STAGGER_MS) * Math.PI)
+            // Stagger plays AT the old podium (the hit just landed there) -- step back using the
+            // OLD side's outward direction; the sprite hasn't reached the new side yet.
+            shiftOx = (fromSlot.x - slot.x) + DX[shiftT.from] * 10 * k
+            shiftOy = (fromSlot.y - slot.y) + DY[shiftT.from] * 10 * k
+          } else {
+            const p = (since - SHIFT_STAGGER_MS) / SHIFT_RUN_MS
+            const e = p * p * (3 - 2 * p)
+            const lift = Math.sin(Math.min(1, p) * Math.PI) * charH * 0.35
+            shiftOx = (fromSlot.x - slot.x) * (1 - e)
+            shiftOy = (fromSlot.y - slot.y) * (1 - e) - lift
+            if (Math.abs(dx) >= Math.abs(dy) && dx !== 0) t.shiftFace = Math.sign(dx)
+          }
+        }
+      }
 
       const towardBoard = { x: -DX[t.side], y: -DY[t.side] }
       const ox = towardBoard.x * lunge + (t.side === 0 || t.side === 2 ? shake : 0)
@@ -693,8 +847,9 @@ export function createBoardRenderer(canvas, stageEl) {
 
       ctx.save()
       // STORY-001: the flee exit fades + slides outward on top of the regular transform.
+      // PRESENT-001: the shift run rides the same transform (HUD plate follows the sprite).
       ctx.globalAlpha = (1 - deathP) * fleeAlpha
-      ctx.translate(slot.x + ox + fleeOx, slot.y + oy + fleeOy)
+      ctx.translate(slot.x + ox + fleeOx + shiftOx, slot.y + oy + fleeOy + shiftOy)
 
       // Telegraph: a pulsing ground ellipse on the podium surface (urgency color), not a box
       // ring -- the character itself is never framed. CAST and ATTACK stay visually distinct.
@@ -721,17 +876,59 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.restore()
       }
 
-      // COMBAT-001 playtest: active one-shot shield gets a simple readable aura. This is
-      // intentionally presentation-only and cheap; final shield art/VFX comes later if the mechanic survives playtest.
-      if (t.shielded && !t.dead && !t.fled) {
-        const pulse = 0.82 + Math.sin(now / 120) * 0.08
+      // PRESENT-001: guard shield as a bronze disc, not a plain aura. Pops in on raise
+      // (shieldUpT), persists while `shielded`, cracks and fades on block (shieldT).
+      // Presentation-only and cheap; final shield art comes later if the mechanic survives.
+      const sinceShieldUp = now - fx.shieldUpT
+      const sinceShieldBreak = now - (fx.shieldT ?? -1e9)
+      const shieldBreaking = sinceShieldBreak >= 0 && sinceShieldBreak < SHIELD_CRACK_MS
+      if ((t.shielded && !t.dead && !t.fled) || shieldBreaking) {
+        const R = Math.max(charW, charH) * 0.62
+        let pop = 1
+        if (sinceShieldUp >= 0 && sinceShieldUp < SHIELD_UP_MS) pop = easeOutBack(sinceShieldUp / SHIELD_UP_MS)
+        const breakP = shieldBreaking ? sinceShieldBreak / SHIELD_CRACK_MS : 0
         ctx.save()
-        ctx.globalAlpha = 0.72
-        ctx.strokeStyle = col.cast
-        ctx.lineWidth = Math.max(3, charCell * 0.08)
+        ctx.globalAlpha = 0.5 * (1 - breakP)
+        ctx.scale(pop, pop)
+        let bronze = 'rgba(176,120,48,0.55)'
+        if (typeof ctx.createRadialGradient === 'function') {
+          try {
+            const bg = ctx.createRadialGradient(0, 0, R * 0.1, 0, 0, R)
+            bg.addColorStop(0, 'rgba(255,226,160,0.55)')
+            bg.addColorStop(0.55, 'rgba(176,120,48,0.55)')
+            bg.addColorStop(1, 'rgba(90,55,15,0.12)')
+            bronze = bg
+          } catch { /* headless stub context: flat fallback above */ }
+        }
+        ctx.fillStyle = bronze
         ctx.beginPath()
-        ctx.ellipse(0, 0, charW * 0.56 * pulse, charH * 0.52 * pulse, 0, 0, Math.PI * 2)
+        ctx.ellipse(0, 0, R, R * 0.94, 0, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.globalAlpha = 0.85 * (1 - breakP)
+        ctx.strokeStyle = '#e8c37a'
+        ctx.lineWidth = Math.max(2.5, charCell * 0.06)
+        ctx.beginPath()
+        ctx.ellipse(0, 0, R, R * 0.94, 0, 0, Math.PI * 2)
         ctx.stroke()
+        if (shieldBreaking) {
+          // Crack: three dark spokes from the impact point, fading with the disc.
+          ctx.strokeStyle = '#2b1a08'
+          ctx.lineWidth = Math.max(1.5, charCell * 0.04)
+          for (const a of [0.4, 2.2, 4.1]) {
+            ctx.beginPath()
+            ctx.moveTo(Math.cos(a) * R * 0.1, Math.sin(a) * R * 0.1)
+            ctx.lineTo(Math.cos(a) * R * 0.95, Math.sin(a) * R * 0.9)
+            ctx.stroke()
+          }
+        } else {
+          // Slow sheen arc while the shield holds.
+          const rot = now / 700
+          ctx.strokeStyle = 'rgba(255,240,200,0.8)'
+          ctx.lineWidth = Math.max(2, charCell * 0.05)
+          ctx.beginPath()
+          ctx.ellipse(0, 0, R * 0.9, R * 0.85, 0, rot, rot + 0.9)
+          ctx.stroke()
+        }
         ctx.restore()
       }
 
@@ -877,6 +1074,55 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.globalAlpha = 1
       }
 
+      // PRESENT-001: stagger stars -- gold sparkles circling the head during the pre-run
+      // stagger beat, so a hit-triggered run (drunkard) reads as "stunned, then bolts".
+      if (shiftStagger) {
+        const sk = Math.sin(clamp01((now - shiftT.at) / SHIFT_STAGGER_MS) * Math.PI)
+        ctx.save()
+        ctx.globalAlpha = 0.95 * sk
+        ctx.fillStyle = '#ffd76a'
+        const hy = -charH / 2 - charCell * 0.30
+        for (let i = 0; i < 3; i++) {
+          const a = now / 240 + (i * Math.PI * 2) / 3
+          star4(Math.cos(a) * charW * 0.30, hy + Math.sin(a) * charCell * 0.12, Math.max(3, charCell * 0.09) * (0.7 + 0.3 * sk))
+          ctx.fill()
+        }
+        ctx.restore()
+      }
+
+      // PRESENT-001: heal spark -- a green-gold comet flying caster -> this target along
+      // a lifted arc, then the green +N popup (healText below). Anchors are canvas-space;
+      // this block draws in translated local space, so both ends are re-based to the origin.
+      if (fx.healSpark) {
+        const hsp = (now - fx.healSpark.at) / HEAL_SPARK_MS
+        if (hsp >= 0 && hsp < 1 && fx.healSpark.from) {
+          const ox0 = slot.x + ox + shiftOx
+          const oy0 = slot.y + oy + shiftOy
+          const x0 = fx.healSpark.from.x - ox0
+          const y0 = fx.healSpark.from.y - oy0
+          const cx = x0 / 2
+          const cy = Math.min(y0, 0) - charH * 0.55
+          const q = (tt) => ({ x: (1 - tt) * (1 - tt) * x0 + 2 * (1 - tt) * tt * cx, y: (1 - tt) * (1 - tt) * y0 + 2 * (1 - tt) * tt * cy })
+          ctx.save()
+          ctx.globalCompositeOperation = 'lighter'
+          ctx.lineCap = 'round'
+          for (let k = 7; k >= 0; k--) {
+            const tt = hsp - k * 0.035
+            if (tt <= 0 || tt >= 1) continue
+            const p = q(tt)
+            const head = k === 0
+            ctx.globalAlpha = (head ? 0.95 : 0.5 * (1 - k / 8)) * Math.sin(Math.min(1, hsp * 3) * Math.PI / 2)
+            ctx.fillStyle = head ? '#eafff0' : (k % 2 ? '#ffd76a' : '#7de8a2')
+            const rr = (head ? 5 : 3.2) * (1 - k / 12) * Math.max(0.7, charCell / 40)
+            ctx.beginPath()
+            ctx.arc(p.x, p.y, Math.max(1.5, rr), 0, Math.PI * 2)
+            ctx.fill()
+          }
+          ctx.restore()
+          ctx.globalAlpha = 1
+        }
+      }
+
       // VIS-007: HUD is a separate plate near the character -- HP / ATTACK-CAST / THROW
       // lines + HP bar + countdown badge, positioned by the arena layout OUTSIDE the sprite:
       // above the head everywhere except the S slot (below the feet), always away from the
@@ -890,8 +1136,12 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.textBaseline = 'middle'
       const lines = []
       if (t.fled) {
+        // PRESENT-001: an expired loot target is leaving, not taunting.
+        const fleeText = t.expired
+          ? (fleeStage === 'away' ? 'ушёл!' : 'уходит!')
+          : (fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!')
         lines.push({
-          text: fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!',
+          text: fleeText,
           bold: true,
           color: col.muted,
         })
@@ -903,6 +1153,11 @@ export function createBoardRenderer(canvas, stageEl) {
         })
       } else {
         lines.push({ text: '', bold: false, color: col.muted })
+      }
+      // PRESENT-001: loot-target leave warning -- the reward must read BEFORE it walks away.
+      const lootLeaving = !!t.reward && !t.dead && !t.fled && Number.isFinite(t.turnsLeft) && t.turnsLeft <= 1
+      if (lootLeaving) {
+        lines.push({ text: `УХОДИТ: ${t.turnsLeft}`, bold: true, color: '#ffd76a' })
       }
       const isCast = t.attackKind === 'cast'
       if (!t.dead && !t.fled && Number.isFinite(t.countdown)) {
@@ -916,8 +1171,8 @@ export function createBoardRenderer(canvas, stageEl) {
       if (!t.dead && !t.fled) {
         for (const ab of t.abilities ?? []) {
           if (ab.kind === 'shield') lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD ${ab.countdown}`, bold: true, color: col.cast })
-          else if (ab.kind === 'shift') lines.push({ text: ab.trigger === 'hit' ? 'STAGGERS' : `MOVE ${ab.countdown}`, bold: true, color: col.cast })
-          else if (ab.kind === 'heal') lines.push({ text: `HEAL ${ab.countdown}`, bold: true, color: col.cast })
+          else if (ab.kind === 'heal') lines.push({ text: `HEAL ${ab.countdown}`, bold: true, color: col.good })
+          else if (ab.kind === 'shift') lines.push({ text: ab.trigger === 'hit' ? 'STAGGERS' : `SHIFT ${ab.countdown}`, bold: true, color: col.aim })
           else if (Number.isFinite(ab.countdown)) lines.push({ text: `THROW ${ab.countdown}`, bold: true, color: col.rock })
         }
         if (t.turnsLeft !== undefined) lines.push({ text: `LEAVES ${t.turnsLeft}`, bold: true, color: t.turnsLeft <= 1 ? col.danger : col.text })
@@ -947,6 +1202,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // shaken"). Everything above (telegraph, shadow, art, flash, sparks) is world and shakes.
       ctx.save()
       ctx.translate(-frameCam.x, -frameCam.y)
+      let renderedHudRect = { ...hud.plate }
       if (!t.dead) {
         const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
         const isLow = frac <= 0.25
@@ -967,6 +1223,140 @@ export function createBoardRenderer(canvas, stageEl) {
         if (cardY + slot.y < pad) cardY = pad - slot.y
         if (cardY + cardH + slot.y > g.stageH - pad) cardY = g.stageH - pad - cardH - slot.y
 
+        const approvedSkin = t.isBoss ? assets.bossHudFrame : assets.enemyHudFrame
+        if (approvedSkin) {
+          // BUILD-036: draw the approved source PNG whole, without crop/slicing/reconstruction.
+          // Species HUD scale and offset still feed this exact card position and size.
+          const approvedW = Math.round((t.isBoss ? 520 : 235) * hudScale)
+          const approvedH = approvedW / 3
+          cardX = Math.round(hud.plate.x + (hud.plate.w - approvedW) / 2)
+          cardY = Math.round(isDown ? hud.bar.y : hud.bar.y + hud.bar.h - approvedH)
+          if (cardX + slot.x < pad) cardX = pad - slot.x
+          if (cardX + approvedW + slot.x > g.stageW - pad) cardX = g.stageW - pad - approvedW - slot.x
+          if (cardY + slot.y < pad) cardY = pad - slot.y
+          if (cardY + approvedH + slot.y > g.stageH - pad) cardY = g.stageH - pad - approvedH - slot.y
+          renderedHudRect = { x: cardX, y: cardY, w: approvedW, h: approvedH }
+
+          ctx.save()
+          ctx.imageSmoothingEnabled = true
+          ctx.drawImage(approvedSkin, cardX, cardY, approvedW, approvedH)
+
+          const track = t.isBoss
+            ? { x: 0.092, y: 0.568, w: 0.816, h: 0.185 }
+            : { x: 0.109, y: 0.568, w: 0.808, h: 0.171 }
+          const tx = cardX + approvedW * track.x
+          const ty = cardY + approvedH * track.y
+          const tw = approvedW * track.w
+          const th = approvedH * track.h
+          const chamfer = Math.min(th * 0.45, tw * 0.035)
+          const barPath = (width) => {
+            const right = tx + Math.max(0, width)
+            ctx.beginPath()
+            ctx.moveTo(tx + chamfer, ty)
+            ctx.lineTo(Math.max(tx + chamfer, right - chamfer), ty)
+            ctx.lineTo(right, ty + th / 2)
+            ctx.lineTo(Math.max(tx + chamfer, right - chamfer), ty + th)
+            ctx.lineTo(tx + chamfer, ty + th)
+            ctx.lineTo(tx, ty + th / 2)
+            ctx.closePath()
+          }
+
+          // The regular approved art contains a reference red fill. An opaque live track covers
+          // that sample before the real HP fraction is painted over it.
+          barPath(tw)
+          ctx.fillStyle = 'rgba(16, 5, 9, 0.96)'
+          ctx.fill()
+          if (frac > 0) {
+            const fillW = Math.max(th * 0.9, tw * frac)
+            barPath(fillW)
+            const hpGrad = ctx.createLinearGradient(tx, ty, tx + fillW, ty)
+            hpGrad.addColorStop(0, isLow ? '#ff5a62' : '#f52b42')
+            hpGrad.addColorStop(0.55, isLow ? '#d60820' : '#c90826')
+            hpGrad.addColorStop(1, '#72000f')
+            ctx.fillStyle = hpGrad
+            ctx.fill()
+            ctx.strokeStyle = 'rgba(255, 190, 111, 0.62)'
+            ctx.lineWidth = Math.max(0.7, approvedW * 0.003)
+            ctx.stroke()
+          }
+
+          const displayName = t.isBoss
+            ? (bossSpeciesFor(t.id) === 'goblin-taunter' ? 'Goblin King' : 'Goblin Shaman')
+            : (t.label ?? t.id)
+          const statusCount = (Number.isFinite(t.countdown) ? 1 : 0) +
+            (t.abilities ?? []).filter((ab) => Number.isFinite(ab.countdown) || (ab.kind === 'shift' && ab.trigger === 'hit')).length
+          const nameCenter = t.isBoss ? 0.5 : statusCount > 1 ? 0.43 : statusCount === 1 ? 0.47 : 0.5
+          const nameWidth = t.isBoss ? 0.45 : statusCount > 1 ? 0.27 : statusCount === 1 ? 0.34 : 0.42
+          const nameY = cardY + approvedH * (t.isBoss ? 0.315 : 0.327)
+          const nameSize = Math.max(8, Math.round(approvedW * (t.isBoss ? 0.052 : 0.061)))
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.font = `800 ${nameSize}px system-ui, -apple-system, sans-serif`
+          ctx.lineJoin = 'round'
+          ctx.lineWidth = Math.max(2, nameSize * 0.2)
+          ctx.strokeStyle = 'rgba(0,0,0,0.88)'
+          ctx.strokeText(displayName, cardX + approvedW * nameCenter, nameY, approvedW * nameWidth)
+          ctx.fillStyle = '#fff4dc'
+          ctx.fillText(displayName, cardX + approvedW * nameCenter, nameY, approvedW * nameWidth)
+
+          const hpSize = Math.max(8, Math.round(approvedW * (t.isBoss ? 0.045 : 0.056)))
+          ctx.font = `900 ${hpSize}px system-ui, -apple-system, sans-serif`
+          ctx.lineWidth = Math.max(2, hpSize * 0.22)
+          const hpText = `${t.hp}/${t.hpMax}`
+          ctx.strokeStyle = 'rgba(20,0,3,0.92)'
+          ctx.strokeText(hpText, tx + tw / 2, ty + th / 2, tw - 10)
+          ctx.fillStyle = '#fff8ed'
+          ctx.fillText(hpText, tx + tw / 2, ty + th / 2, tw - 10)
+
+          const chips = []
+          if (Number.isFinite(t.countdown)) chips.push({
+            text: `${isCast ? 'CAST' : 'ATK'}${t.countdown}`,
+            color: isUrgent ? '#ef4444' : isCast ? '#8b5cf6' : '#78350f',
+          })
+          // ITEM-001b: one chip per ability (the Matron heals AND her kids throw stones).
+          for (const ab of t.abilities ?? []) {
+            if (ab.kind === 'shift' && ab.trigger === 'hit') { chips.push({ text: 'STAG', color: '#075985' }); continue }
+            if (!Number.isFinite(ab.countdown)) continue
+            const abilityText = ab.kind === 'shield'
+              ? (t.shielded ? 'SHD↑' : `SHD${ab.countdown}`)
+              : ab.kind === 'heal'
+                ? `HEAL${ab.countdown}`
+                : ab.kind === 'shift'
+                  ? `SHIFT${ab.countdown}`
+                  : `THR${ab.countdown}`
+            const abilityColor = ab.kind === 'shield'
+              ? '#6d28d9'
+              : ab.kind === 'heal'
+                ? '#166534'
+                : ab.kind === 'shift'
+                  ? '#075985'
+                  : '#92400e'
+            chips.push({ text: abilityText, color: abilityColor })
+          }
+          const chipSize = Math.max(7, Math.round(approvedW * (t.isBoss ? 0.032 : 0.043)))
+          let chipRight = cardX + approvedW * 0.875
+          ctx.font = `800 ${chipSize}px system-ui, -apple-system, sans-serif`
+          for (let i = chips.length - 1; i >= 0; i--) {
+            const chip = chips[i]
+            const chipW = ctx.measureText(chip.text).width + chipSize * 0.9
+            const chipH = chipSize * 1.55
+            const chipX = chipRight - chipW
+            const chipY = nameY - chipH / 2
+            ctx.fillStyle = chip.color
+            roundRect(chipX, chipY, chipW, chipH, chipH * 0.22)
+            ctx.fill()
+            ctx.strokeStyle = 'rgba(255,224,164,0.78)'
+            ctx.lineWidth = 0.8
+            ctx.stroke()
+            ctx.fillStyle = '#fff8e7'
+            ctx.textAlign = 'center'
+            ctx.fillText(chip.text, chipX + chipW / 2, nameY)
+            chipRight = chipX - chipSize * 0.35
+          }
+          ctx.restore()
+        } else {
+          renderedHudRect = { x: cardX, y: cardY, w: cardW, h: cardH }
+
         // Card Backdrop & Depth Shadow
         ctx.save()
         ctx.shadowColor = isUrgent ? 'rgba(239, 68, 68, 0.45)' : 'rgba(0, 0, 0, 0.65)'
@@ -977,16 +1367,18 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.fill()
         ctx.restore()
 
-        // Card Border: vibrant glow for imminent threat, shield, boss, or low HP
+        // Card Border: vibrant glow for imminent threat, loot leaving, shield, boss, or low HP
         ctx.save()
-        ctx.lineWidth = isUrgent ? 1.5 : 1
+        ctx.lineWidth = isUrgent || lootLeaving ? 1.5 : 1
         ctx.strokeStyle = isUrgent
           ? 'rgba(239, 68, 68, 0.85)'
-          : t.shielded
-            ? 'rgba(192, 132, 252, 0.8)'
-            : isLow
-              ? 'rgba(239, 68, 68, 0.7)'
-              : (t.isBoss ? 'rgba(255, 215, 106, 0.5)' : col.panelBorder)
+          : lootLeaving
+            ? `rgba(255, 215, 106, ${0.65 + 0.3 * Math.sin(now / 150)})`
+            : t.shielded
+              ? 'rgba(192, 132, 252, 0.8)'
+              : isLow
+                ? 'rgba(239, 68, 68, 0.7)'
+                : (t.isBoss ? 'rgba(255, 215, 106, 0.5)' : col.panelBorder)
         roundRect(cardX, cardY, cardW, cardH, 7)
         ctx.stroke()
         ctx.restore()
@@ -1065,11 +1457,29 @@ export function createBoardRenderer(canvas, stageEl) {
           ctx.textBaseline = 'middle'
           ctx.font = `700 ${fontPx}px system-ui, -apple-system, sans-serif`
           ctx.fillStyle = col.muted
-          ctx.fillText(fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!', cardX + cardW / 2, rowMidY)
+          ctx.fillText(t.expired
+            ? (fleeStage === 'away' ? 'ушёл!' : 'уходит!')
+            : (fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!'), cardX + cardW / 2, rowMidY)
           ctx.restore()
         } else {
           // Left: high-threat attack countdown badge
           let curX = cardX + 9
+
+          // PRESENT-001 fix: the loot-leaving warning was pushed into the (otherwise
+          // unused-for-drawing) `lines` sizing array but never actually painted onto the
+          // Unified Combat Frame card -- only the pulsing gold border hinted at it. Loot
+          // targets carry no countdown/ability, so there's always room here.
+          if (lootLeaving) {
+            const warnText = `УХОДИТ: ${t.turnsLeft}`
+            ctx.save()
+            ctx.textAlign = 'left'
+            ctx.textBaseline = 'middle'
+            ctx.font = '800 11px system-ui, -apple-system, sans-serif'
+            ctx.fillStyle = '#ffd76a'
+            ctx.fillText(warnText, curX, rowMidY)
+            ctx.restore()
+            curX += ctx.measureText(warnText).width + 8
+          }
 
           if (Number.isFinite(t.countdown)) {
             const icon = isCast ? '✦' : '⚔'
@@ -1147,18 +1557,26 @@ export function createBoardRenderer(canvas, stageEl) {
             curX += chipW + 4
           }
 
-          // Ability chip if active
-          if (t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
-            const abIcon = t.abilityKind === 'shield' ? '🛡' : '🪨'
-            const abVal = t.abilityKind === 'shield' && t.shielded ? 'UP' : String(t.abilityCountdown)
+          // Ability chip if active. PRESENT-001: every ability kind gets its own icon --
+          // a scout/healer used to wear the rock chip, which read as a lie.
+          for (const ab of t.abilities ?? []) {
+            if (!Number.isFinite(ab.countdown)) continue
+            const abIcon = ab.kind === 'shield' ? '🛡' : ab.kind === 'shift' ? '⇄' : ab.kind === 'heal' ? '✚' : '🪨'
+            const abVal = ab.kind === 'shield' && t.shielded ? 'UP' : String(ab.countdown)
             const abText = `${abIcon} ${abVal}`
             ctx.font = '700 10px system-ui, -apple-system, sans-serif'
             const abW = Math.round(ctx.measureText(abText).width + 8)
             ctx.save()
-            ctx.fillStyle = t.abilityKind === 'shield' ? 'rgba(147,51,234,0.45)' : 'rgba(180,83,9,0.45)'
+            ctx.fillStyle = ab.kind === 'shield' ? 'rgba(147,51,234,0.45)'
+              : ab.kind === 'shift' ? 'rgba(45,140,160,0.45)'
+                : ab.kind === 'heal' ? 'rgba(20,120,70,0.5)'
+                  : 'rgba(180,83,9,0.45)'
             roundRect(curX, chipY, abW, chipH, 4)
             ctx.fill()
-            ctx.strokeStyle = t.abilityKind === 'shield' ? 'rgba(192,132,252,0.8)' : 'rgba(245,158,11,0.7)'
+            ctx.strokeStyle = ab.kind === 'shield' ? 'rgba(192,132,252,0.8)'
+              : ab.kind === 'shift' ? 'rgba(120,220,240,0.8)'
+                : ab.kind === 'heal' ? 'rgba(110,230,160,0.8)'
+                  : 'rgba(245,158,11,0.7)'
             ctx.lineWidth = 1
             roundRect(curX, chipY, abW, chipH, 4)
             ctx.stroke()
@@ -1191,21 +1609,31 @@ export function createBoardRenderer(canvas, stageEl) {
           ctx.fillText(hpLabel, cardX + cardW - 9 - hpValW, rowMidY)
           ctx.restore()
         }
+        }
       }
 
-      // CAST INTERRUPTED burst, rising just above the head -- local coords again, so it always
-      // reads next to its own target. Only fires for a real EXP-011 cast interrupt (see
-      // onTapResult), never the legacy interruptOnHit reset.
+      // CAST INTERRUPTED / SHIELD BLOCKED bursts rise just above the HUD plate -- local
+      // coords again, so they always read next to their own target. Anchored to the plate
+      // (hud.plate.y), NOT to -charH/2: the art is contain-fitted into the footprint and can
+      // be much shorter than charH (species artScale), so footprint-top can sit off-screen
+      // while the plate tracks the visible head. Only fires for a real EXP-011 cast interrupt
+      // (see onTapResult), never the legacy interruptOnHit reset.
+      const burstY = hud.plate.y - 12
       const sinceInterrupt = now - fx.interruptT
       const sinceShield = now - (fx.shieldT ?? -1e9)
       if (sinceShield >= 0 && sinceShield < 650) {
         const p = sinceShield / 650
         ctx.save()
-        ctx.globalAlpha = 1 - p
-        ctx.fillStyle = col.cast
-        ctx.font = `800 ${Math.max(11, Math.floor(charCell * 0.26))}px system-ui`
+        // Full alpha for most of the beat (like the damage number), fade at the tail.
+        ctx.globalAlpha = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4
+        ctx.font = `800 ${Math.max(12, Math.floor(charCell * 0.26))}px system-ui`
         ctx.textAlign = 'center'
-        ctx.fillText('SHIELD BLOCKED', 0, -charH / 2 - 8 - p * 10)
+        ctx.lineJoin = 'round'
+        ctx.lineWidth = 3
+        ctx.strokeStyle = 'rgba(30,15,40,0.9)'
+        ctx.strokeText('SHIELD BLOCKED', 0, burstY - p * 10)
+        ctx.fillStyle = col.cast
+        ctx.fillText('SHIELD BLOCKED', 0, burstY - p * 10)
         ctx.restore()
       }
 
@@ -1216,7 +1644,7 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.fillStyle = col.good
         ctx.font = `700 ${Math.max(10, Math.floor(charCell * 0.24))}px system-ui`
         ctx.textAlign = 'center'
-        ctx.fillText('CAST INTERRUPTED', 0, -charH / 2 - 10 - p * 12)
+        ctx.fillText('CAST INTERRUPTED', 0, burstY - p * 12)
         ctx.restore()
       }
 
@@ -1224,27 +1652,50 @@ export function createBoardRenderer(canvas, stageEl) {
       // upper-right of the head (like the lab's hit-point offset) so it never sits exactly under
       // the HUD plate above. `dmgText.at` is the same `now + FLIGHT_MS` timestamp as `fx.hitT`,
       // so the number appears exactly when the projectile arrives, not when the player tapped.
-      if (fx.dmgText) {
-        const dmgP = (now - fx.dmgText.at) / DMG_MS
-        if (dmgP >= 0 && dmgP < 1) {
-          const pop = dmgP < 0.22 ? easeOutBack(dmgP / 0.22) : 1
-          const rise = easeOutCubic(dmgP) * charCell * 1.1
-          const fade = dmgP < 0.62 ? 1 : 1 - smoothstep(clamp01((dmgP - 0.62) / 0.38))
-          const size = Math.max(10, charCell * 0.34 * 0.9) * (0.7 + 0.3 * pop)
-          ctx.save()
-          ctx.globalAlpha = clamp01(fade)
-          ctx.translate(charW * 0.28, -charH / 2 - rise)
-          ctx.scale(pop, pop)
-          ctx.font = `800 ${size}px system-ui, sans-serif`
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.lineJoin = 'round'
-          ctx.lineWidth = Math.max(2, size * 0.14)
-          ctx.strokeStyle = DMG_STYLE_LIGHT.stroke
-          ctx.strokeText(String(fx.dmgText.value), 0, 0)
-          ctx.fillStyle = DMG_STYLE_LIGHT.fill
-          ctx.fillText(String(fx.dmgText.value), 0, 0)
-          ctx.restore()
+      // PRESENT-001: the same rise helper serves heal (+N, green) and loot (+N HP / +M R) popups.
+      function drawRisingText(text, at, dur, style, line) {
+        const p = (now - at) / dur
+        if (p < 0 || p >= 1) return
+        const pop = p < 0.22 ? easeOutBack(p / 0.22) : 1
+        const rise = easeOutCubic(p) * charCell * 1.1
+        const fade = p < 0.62 ? 1 : 1 - smoothstep(clamp01((p - 0.62) / 0.38))
+        const size = Math.max(10, charCell * 0.34 * 0.9) * (0.7 + 0.3 * pop)
+        ctx.save()
+        ctx.globalAlpha = clamp01(fade)
+        ctx.translate(charW * 0.28, -charH / 2 - rise + line * charCell * 0.5)
+        ctx.scale(pop, pop)
+        ctx.font = `800 ${size}px system-ui, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.lineJoin = 'round'
+        ctx.lineWidth = Math.max(2, size * 0.14)
+        ctx.strokeStyle = style.stroke
+        ctx.strokeText(text, 0, 0)
+        ctx.fillStyle = style.fill
+        ctx.fillText(text, 0, 0)
+        ctx.restore()
+      }
+      if (fx.dmgText) drawRisingText(String(fx.dmgText.value), fx.dmgText.at, DMG_MS, DMG_STYLE_LIGHT, 0)
+      if (fx.healText) drawRisingText(fx.healText.value, fx.healText.at, HEAL_TEXT_MS, { fill: '#bbf7d0', stroke: '#14532d' }, 0)
+      if (fx.lootText) {
+        const lp = (now - fx.lootText.at) / LOOT_TEXT_MS
+        if (lp >= 0 && lp < 1) {
+          // Reward burst at the victim's slot (flat glow -- no gradients, stub-safe).
+          if (lp < 0.35) {
+            const br = Math.max(charW, charH) * 0.7 * (0.5 + lp * 2)
+            ctx.save()
+            ctx.globalCompositeOperation = 'lighter'
+            ctx.globalAlpha = 0.55 * (1 - lp / 0.35)
+            ctx.fillStyle = 'rgba(190,242,100,0.5)'
+            ctx.beginPath()
+            ctx.arc(0, 0, br, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.restore()
+            ctx.globalAlpha = 1
+          }
+          let line = 0
+          if (fx.lootText.heal > 0) drawRisingText(`+${fx.lootText.heal} HP`, fx.lootText.at, LOOT_TEXT_MS, { fill: '#bbf7d0', stroke: '#14532d' }, line++)
+          if (fx.lootText.rotate > 0) drawRisingText(`+${fx.lootText.rotate} R`, fx.lootText.at, LOOT_TEXT_MS, { fill: '#ffe9a8', stroke: '#6b4a06' }, line++)
         }
       }
       ctx.restore() // VFX-003 HUD compensation (camera impulse)
@@ -1260,7 +1711,7 @@ export function createBoardRenderer(canvas, stageEl) {
         key, side: t.side, isBoss: t.isBoss,
         char: charR,
         face: faceRect(charR),
-        plate: { x: ax + hud.plate.x, y: ay + hud.plate.y, w: hud.plate.w, h: hud.plate.h },
+        plate: { x: ax + renderedHudRect.x, y: ay + renderedHudRect.y, w: renderedHudRect.w, h: renderedHudRect.h },
         badge: { x: ax + hud.badge.x, y: ay + hud.badge.y },
         // CAL-005: ground-shadow center in canvas coords -- for automated checks that the
         // shadow follows only its own species offset, never the art pivot.
@@ -1534,7 +1985,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // offset -- see arena-calibration.js's `spritePivot` doc comment.
       const gx = (off.dx + pivot.dx) * bw
       const gy = bh / 2 + (off.dy + pivot.dy) * bh
-      const mirror = spriteMirror(false, t.side) // side profiles face the board
+      const mirror = t.shiftFace ? t.shiftFace : spriteMirror(false, t.side) // PRESENT-001: mid-run the actor faces travel, not its side
       const tr = wolfPoseTransform(pose, since, t)
       ctx.save()
       ctx.translate(gx, gy)
@@ -1599,7 +2050,7 @@ export function createBoardRenderer(canvas, stageEl) {
       ctx.textBaseline = 'middle'
       for (let d = 0; d < 4; d++) {
         // STORY-001: a fled enemy already left the arena — its side stops reading as a target.
-        const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead && !e.fled) : d === s.bossSide
+        const isLive = def.enemies ? s.enemies.some((e) => e.side === d && !e.dead && !e.fled && !e.expired && !e.pending) : d === s.bossSide
         if (isLive) continue // the target panel itself already shows this side clearly
         // FIX-021/CAL-002: same arena-relative podium anchor an actor on this side would use (not a
         // board-relative radius) -- an empty side still reads its readout from a stable, real
@@ -1684,7 +2135,7 @@ export function createBoardRenderer(canvas, stageEl) {
       // draws from, kept visually consistent here (rock-brown, dashed) so the two viewers agree.
       const pinned = s.isPinned(a.id)
       // STORY-001: fled enemies are gone — remaining arrows no longer aim at their side.
-      const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead && !e.fled) : arena === s.bossSide
+      const aims = def.enemies ? s.enemies.some((e) => e.side === arena && !e.dead && !e.fled && !e.expired && !e.pending) : arena === s.bossSide
       const pts = a.cells.map((c) => cellCenter(c, shownAngle))
       // FIX-023: perspective-sensitive scale, sampled at the arrowhead's own cell (the most
       // visually prominent point of the arrow) rather than geo.cell's whole-board average --
@@ -2008,6 +2459,18 @@ export function createBoardRenderer(canvas, stageEl) {
     ctx.closePath()
   }
 
+  // PRESENT-001: small 4-point sparkle (stagger stars, heal glints). Path-only, no
+  // gradients -- safe for the headless stub context.
+  function star4(x, y, r) {
+    ctx.beginPath()
+    ctx.moveTo(x, y - r)
+    ctx.quadraticCurveTo(x, y, x + r, y)
+    ctx.quadraticCurveTo(x, y, x, y + r)
+    ctx.quadraticCurveTo(x, y, x - r, y)
+    ctx.quadraticCurveTo(x, y, x, y - r)
+    ctx.closePath()
+  }
+
   function palette(dark) {
     return {
       board: dark ? '#26262a' : '#ffffff',
@@ -2047,7 +2510,7 @@ export function createBoardRenderer(canvas, stageEl) {
   }
 
   return {
-    resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markFled, markFledAdvance, resetFx, frame,
+    resize, hitTest, setHover, setFlash, onTapResult, onPinDenied, onRotateStart, onRotateEnemyAttack, markDeaths, markArrivals, markFled, markFledAdvance, resetFx, frame,
     get geo() { return geo },
     /** BUILD-035: live shots + last-frame hit-anchors (debug/QA only -- no gameplay effect). */
     debugShots() { return shots.map((sh) => ({ ...sh })) },
@@ -2081,6 +2544,13 @@ export function createBoardRenderer(canvas, stageEl) {
     collectTargets,
     /** VIS-007: per-frame arena layout (canvas coords) for automated checks. */
     debugLayout() { return layoutInfo },
+    /** PRESENT-001: per-target ability fx stamps (debug/QA only -- no gameplay effect). */
+    debugFx(key) {
+      const fx = targetFx.get(key)
+      if (!fx) return null
+      const { hitT, attackT, deathT, interruptT, fleeT, fleeBackT, fleeExitT, dmgText, hitCount, shiftT, shieldUpT, shieldT, healSpark, healText, lootText } = fx
+      return { hitT, attackT, deathT, interruptT, fleeT, fleeBackT, fleeExitT, dmgText, hitCount, shiftT, shieldUpT, shieldT, healSpark, healText, lootText }
+    },
     /** FIX-021: board-plane debug API (corners/logical size/fit + point projection). */
     boardPlane() {
       if (!geo) return null

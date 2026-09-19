@@ -27,6 +27,13 @@ BOARD хранит не только одну текущую задачу, а **
 - ASSET-004: подключены уже нарисованные/откалиброванные attack/attackReady/hit/defeat позы у 7 обычных врагов (были на диске, но не в `assets.js`).
 - LD-007 (принято пользователем 2026-09-19): Act I на плотных досках (`board.profile` short/mixed/long), 0-Rotate линии, ability `shift`, библиотека из 36 арен, designer-инструменты `tools/ld007-audit.mjs` / `ld007-scan.mjs`. Отчёт: `.orchestra/research/LD-007-act1-gameplay-pass.md`.
 - ACT-I-003 (принято): Act I «Край гоблинов» — 18 stage'ов, species goblin-grunt/matron/drunkard, механики `heal`, `shift trigger:hit`, `reward`, `expiresAfter`, `winHeal`.
+- WAVE-001: волны врагов с телеграфом (`arrival.afterKill`/`onTurn`), debug-fixture, campaign не тронута.
+- ITEM-001: run-инвентарь, действие `item` (Bow/Shield/Flask), reward draft 1-из-3 (золото/heal/rotate/предмет), солвер видит предметы. UI — плейсхолдер, ждёт ART-011/012/014.
+- ART-010/ART-010B: exploration визуального языка UI (docs/референсы) — принято к сведению, финальное направление ещё не выбрано пользователем.
+- ITEM-002: Frost Dart / Pocket Gyro / War Horn + 3 реликвии (Waste Conversion/Keystone Release/Safety Fuse).
+- PRESENT-001: презентация способностей врагов (shift/stagger/heal-искра/лут/щит/pin), presentation-only.
+- ART-012B/BUILD-036: одобренный HUD (player/enemy card, rotate-кнопка) в проде.
+- FIX-034: intro-текст энкаунтера больше не обещает THROW/PINNED для heal/shift-мобов (Матрона).
 
 Стрелочный renderer/material трек закончен. Старые BUILD-032/033 и VIS/FIX arrow-эксперименты — история/источники отдельных идей.
 
@@ -35,16 +42,13 @@ BOARD хранит не только одну текущую задачу, а **
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
 | ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
-| ART-010 — UI Style Base / Visual Bible v1 | READY | `art/ART-010-ui-style-base` | Зафиксировать единый visual language для HUD/rewards/popups/items: материалы, рамки, кнопки, цвет, glow, typography, motion. |
-| ART-011 — Reward Choice Screen Exploration | READY | `art/ART-011-reward-choice-screen` | 2–4 варианта reward screen в общем fantasy-языке; карточки, rarity, hover/select, confirm. Anchor-screen, финал только после user review. |
-| ART-012 — Player HUD Exploration | READY | `art/ART-012-player-hud` | 2–4 варианта HUD: HP, Rotate, active items/charges/statuses. Anchor-screen, не перекрывать board/arena. |
-| ITEM-001 — Run inventory + reward draft 1-of-3 + Bow/Shield/Flask | READY | `build/ITEM-001-inventory-reward-draft` | Первая петля наград: инвентарь в RunState, действие `item`, draft после боя, солвер видит предметы. Плейсхолдер-UI. |
-| WAVE-001 — Волны врагов с телеграфом | READY | `build/WAVE-001-enemy-waves` | `EnemyDef.arrival {afterKill|onTurn}`: враг приходит позже, плашка «следующий: … через N». Debug-fixture, campaign не трогать. |
-| PRESENT-001 — Презентация способностей врагов | READY (кандидат для Gemini) | `build/PRESENT-001-ability-presentation` | Анимация перехода между сторонами, stagger пьяницы, heal-искра матроны, лут, щит. Presentation only. |
+| FIX-036 — HUD-кард выезжает за рамки | READY | `fix/FIX-036-hud-card-overflow` | Одобренный HUD (BUILD-036) — карточка player/enemy выходит за пределы экрана в каком-то сценарии (пользователь сообщил, точный repro не зафиксирован). |
+| ART-011 — Reward Choice Screen Exploration | DONE / USER REVIEW | `art/ART-011-reward-choice-screen` | 4 варианта reward screen готовы; выбрать направление перед production-интеграцией. |
 | ASSET-009 — Иконки предметов v1 | READY (арт пользователя) | `art/ASSET-009-item-icons-v1` | 6 активных + 3 реликвии, 512 px, фиксированные пути под ITEM-001/002. |
 | ASSET-010 — Спрайты лут-цели | READY (арт пользователя) | `art/ASSET-010-loot-target-sprites` | species `loot-chest`, 5 поз под текущий пайплайн; заменяет гоблина-носильщика в «Обозе». |
 | ASSET-011 — Портрет героя | READY (арт пользователя) | `art/ASSET-011-hero-portrait` | portrait / portrait-hurt / full для HUD и reward-экранов. |
-| ASSET-012 — HUD-элементы: плашка волны, Rotate, пипсы, слот | READY после ART-012 | `art/ASSET-012-hud-elements` | Маленькие production-элементы под WAVE-001/ITEM-001. |
+| ASSET-012 — HUD-элементы: плашка волны, Rotate, пипсы, слот | READY (ART-012/BUILD-036 приняты) | `art/ASSET-012-hud-elements` | Маленькие production-элементы под WAVE-001/ITEM-001, поверх уже принятого approved HUD. |
+| ART-011B — Approved Reward Reference Pass | READY | `art/ART-011B-approved-reward-reference` | Взять пользовательский `reward-approved.png`, положить его в канонические refs и сделать один cleaned-up reward mockup вместо свободного exploration. |
 
 Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
 
@@ -54,9 +58,16 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task/направление | Статус | Что именно хотим |
 |---|---|---|
-| ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + 3 реликвии | PLANNED (после ITEM-001) | Набор до 6 активных + 3 пассивных; аудит уровней «с набором» (`--kit`). |
-| LD-008 — Act I под предметы и волны | PLANNED (после ITEM-001, WAVE-001) | Новый критерий честности (`baseline / booster-helpful / power-gated` по GAME-CONCEPT §13), ≥4 волновых боя, 9x9 в конце акта. Заменяет RUN-002. |
-| ART-013 — Victory / Reward / Boss Popup Set | PLANNED | Единое семейство Victory / reward gained / boss intro-warning / unlock popups после выбора anchor-стиля. |
+| MAP-001 — Goblin Country Route Map v1 | MECHANIC OK / VISUAL REJECTED | Route graph/save-load механика годная (см. ниже), но текущий node-map UI от Gemini — неутверждённый визуал, только placeholder/dev-only. Не мержить без отдельного одобрения визуала. |
+| SHOP-001 — Goblin Merchant v1 | PLANNED / VERTICAL SLICE | Торговец как shop-node: тратим уже существующее run-gold на item/heal/Rotate; stock и цены data-driven, баланс позже. |
+| ART-019 — Goblin Country Map + Merchant Visual Direction | PLANNED | Иллюстрированная карта Страны гоблинов, где игрок выбирает точки/маршрут прямо на карте — не абстрактная node-схема. Нужна ДО принятия MAP-001 визуально. |
+| MAP-002 — Events / Points of Interest | PLANNED AFTER MAP-001 | Небоевые узлы на карте: event / POI / rest / optional challenge; 3–5 коротких data-driven событий для первой версии. |
+| VFX-004 — Friendly-fire feedback | PLANNED | При столкновении стрелы со стрелой и уроне игроку — отдельный читаемый impact + player damage feedback, без изменения rules. |
+| PORTAL-001 — Monster Spawner Portal | PLANNED | Новый target: портал со spawn countdown, выпускает монстров пока жив; после уничтожения новые spawn'ы прекращаются. |
+| RUN-003 — XP / Level Up v1 | PLANNED / DECISION BEFORE FINAL BALANCE | XP за encounters -> level-up -> маленький выбор бонуса (Rotate/charges/HP/utility). Решить, входит ли в первый slice, до финального balance pass. |
+| ITEM-003 — Arrow-boost consumables / abilities | PLANNED LATER | 2–3 тестовых эффекта, усиливающих сами puzzle-projectiles: damage/element/pierce/ricochet/control. |
+| LD-008 — Act I под предметы и волны | PLANNED (ITEM-001/WAVE-001 приняты, можно заводить) | Новый критерий честности (`baseline / booster-helpful / power-gated` по GAME-CONCEPT §13), ≥4 волновых боя, 9x9 в конце акта. Заменяет RUN-002. |
+| ART-013 — Victory / Reward / Boss Popup Set | PLANNED / NEAR-TERM | Единое семейство Victory / reward gained / boss intro-warning / unlock popups; пользователь отдельно подтвердил popups как ближайший нужный слой. |
 | ART-014 — Item / Weapon Presentation | PLANNED | Карточка предмета/оружия, rarity, свойства, визуал лута — в стиле Reward Screen. |
 | ART-015 — Mini-Inventory / Loadout UI | PLANNED | Компактные equipped/available slots и замена предметов без RPG-склада. |
 | ART-016 — Reward Targets on Board | PLANNED LATER | Сундук/кристалл/тотем/временная бонус-цель, хорошо читаемая на арене. |
@@ -77,11 +88,27 @@ BOARD хранит не только одну текущую задачу, а **
 
 Для Act I пока сохраняем уже выбранный рабочий подход: интересные seed'ы отбираются руками, их direction/turn timeline смотрится отдельно, а encounters скриптуются поверх. Не лезть раньше времени в generic direction quotas / «бесконечную генерацию» только ради универсальности.
 
-AGREED FOR NOW (пользователь, 2026-09-19): дальше усложняем сами головоломки и число мобов (волны, доски 8x8–10x10, профиль `short`). «100 % без урона голым набором» перестаёт быть критерием обычного боя, как только у героя появятся оружие и предметы (ITEM-001/002); честность считается с базовым набором. Reward-система: сначала draft «1 из 3» без золота и магазина.
+AGREED FOR NOW (пользователь, 2026-09-19): дальше усложняем сами головоломки и число мобов (волны, доски 8x8–10x10, профиль `short`). «100 % без урона голым набором» перестаёт быть критерием обычного боя, как только у героя появятся оружие и предметы (ITEM-001/002); честность считается с базовым набором. Для vertical slice обязательны не только rewards/items, но и **карта Страны гоблинов с выбором маршрута + торговец**, использующий уже существующее run-gold. Полный economy/balance pass делаем только после того, как reward → map → battle/shop → следующий бой работает как единый забег.
 
 Визуальное производство не откладывать «на самый конец»: gameplay/content и нужные для playtest арты/VFX могут двигаться параллельно, но визуальные решения всё равно принимает пользователь глазами.
 
 Конкретные encounter counts, баланс и порядок внутри актов не фиксировать молча — это решается отдельными task/playtest.
+
+## Ближайшая точка сведения / проверки
+
+Не балансировать всё по кускам, пока параллельные ветки ещё не сведены.
+
+Порядок vertical slice:
+1. досвести/просмотреть текущие presentation + HUD/reward визуальные ветки;
+2. ITEM-002 — полный набор предметов v1;
+3. MAP-001 + SHOP-001 — run navigation и merchant;
+4. решить gate по RUN-003: входит ли XP/Level Up в первый vertical slice; если да — внедрить ДО финального balance;
+5. MAP-002 / PORTAL-001 — подключать только если базовый route/shop loop уже стабилен и они реально улучшают slice;
+6. LD-008 — боевой rebalance Act I уже с предметами/волнами и с окончательно выбранным power curve;
+7. полный ручной прогон: Prologue → reward → карта → battle/event/shop → boss;
+8. только после этого — economy tuning (gold/prices/heal/Rotate/item frequency/XP, если он в slice) и финальный balance pass.
+
+От пользователя на шагах 1/5 нужны живые ACCEPT/FIX по визуалу и ощущению забега; цифры до этого считать provisional.
 
 ## Отложено пользователем
 
@@ -89,6 +116,7 @@ AGREED FOR NOW (пользователь, 2026-09-19): дальше усложн
 |---|---|---|
 | MOB-001 — Mobile/Game UI Polish | DEFERRED | Не запускать до явной команды пользователя. Mobile landscape уже вручную проверен как в целом рабочий. |
 | Market/VK research follow-ups | DEFERRED | Возвращаться только по явному приоритету пользователя. |
+| CLASS-001 — Classes and Skills | DEFERRED / MUCH LATER | Классы, удары, spawn/усиление стрел, control, skill tree — только после доказанного vertical slice и полного run playtest. |
 
 Когда MOB-001 будет разморожен, там остаются только mobile-specific вещи: safe-area, responsive HUD polish, touch-size и реальный телефон. Общие admin/scene/top-left проблемы вынесены в UI-001 и не зависят от mobile.
 

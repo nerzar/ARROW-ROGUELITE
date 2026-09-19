@@ -4,11 +4,13 @@
 // 16:9 desktop shell: board-renderer.js draws the board/targets, this file owns scene loading,
 // input, HUD DOM, and the win/loss overlay. No combat rule is duplicated here.
 import {
-  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, ITEMS, PRESETS, RunState, validateEncounter,
+  DEFAULT_ACT1_ROUTE_GRAPH,
+  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, ITEMS, PRESETS, RELICS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
 import { createBoardRenderer } from './board-renderer.js'
+import { abilityIntroHint } from './ability-hud.js'
 import { getStep, SEQUENCE_STEPS } from './prologue-steps.js'
 import { resolveActiveSceneKey } from './scene-sync.js'
 import { loadCampaign, convertLevelToStep } from './campaign-model.js'
@@ -22,23 +24,26 @@ import {
 } from './enemy-visual-state.js'
 import { FLIGHT_MS } from './projectile-flight.js'
 import { createItemBar, showRewardDraft } from './items-ui.js'
+import { createRouteMapModal } from './route-map-ui.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
   stage: $('stage'), bgLayer: $('bgLayer'), scenePick: $('scenePick'), sceneTitle: $('sceneTitle'),
   restartBtn: $('restartBtn'), hintBtn: $('hintBtn'), debugToggle: $('debugToggle'), debugPanel: $('debugPanel'),
   msgLine: $('msgLine'), canvas: $('arena'), status: $('status'), log: $('log'), report: $('report'),
-  playerCard: $('playerCard'), playerHpFill: $('playerHpFill'), playerHpText: $('playerHpText'),
+  playerCard: $('playerCard'), playerHudSkin: $('playerHudSkin'), playerHpFill: $('playerHpFill'), playerHpText: $('playerHpText'), playerCharges: $('playerCharges'),
+  rotateSkin: $('rotateSkin'),
   rotCw: $('rotCw'), rotCcw: $('rotCcw'), rotateCharges: $('rotateCharges'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
   arrowStylePick: $('arrowStylePick'), arrowMatPick: $('arrowMatPick'), flightStylePick: $('flightStylePick'),
-  adminToggle: $('adminToggle'),
+  adminToggle: $('adminToggle'), mapBtn: $('mapBtn'),
 }
 
 // BUILD-025/CAL-004: canon Prologue sequence -- now shared with calibration-editor.js via
 // ./prologue-steps.js (imported above) so both always agree on the same 5 steps.
 const STANDALONE_SCENES = [
+  { key: 'wave-001', title: 'Debug · WAVE-001 · Две волны', file: '../../encounters/wave-001.json' },
   { key: 'act1-e1', title: 'Act I #1 · Двуручный рубеж (seed 22)', file: '../../encounters/act1-e1.json' },
   { key: 'act1-e2', title: 'Act I #2 · Взаимный замок (seed 112)', file: '../../encounters/act1-e2.json' },
   { key: 'act1-e3', title: 'Act I #3 · Кастер и свита (seed 25)', file: '../../encounters/act1-e3.json' },
@@ -82,10 +87,12 @@ const wolfPosesLoaded = ENEMY_POSES.filter((p) => wolfPack[p]).length
 applyDomAssets(assets)
 
 const runConfig = await fetchJson('../../encounters/cp-run-config.json').catch(() => ({ playerMaxHp: 10 }))
-// ITEM-001 debug: `?items=bow,shield` starts every run with those items (playtest shortcut, no effect otherwise).
+// ITEM-001/002 debug: `?items=bow,shield&relics=safety_fuse` starts every run with those items/relics (playtest shortcut).
 {
   const q = new URLSearchParams(location.search).get('items')
   if (q) runConfig.startingItems = q.split(',').map((x) => x.trim()).filter((x) => x in ITEMS)
+  const qr = new URLSearchParams(location.search).get('relics')
+  if (qr) runConfig.startingRelics = qr.split(',').map((x) => x.trim()).filter((x) => x in RELICS)
 }
 // ITEM-001: item bar (placeholder look) under the player card; the reward draft lives in the overlay.
 const itemBar = createItemBar(document.querySelector('.hud-left'), {
@@ -95,6 +102,49 @@ const itemBar = createItemBar(document.querySelector('.hud-left'), {
     return t?.label ?? ''
   },
 })
+
+function saveRunProgress() {
+  if (run && run.hasRouteGraph) {
+    try {
+      localStorage.setItem('arrow_act1_run_save', JSON.stringify(run.toJSON()))
+    } catch {}
+  }
+}
+
+// MAP-001: Route map modal and shop screen controller
+const routeMapModal = createRouteMapModal({
+  onSelectNode: (nodeId) => {
+    if (!run || !run.hasRouteGraph) return
+    const ok = run.selectRouteNode(nodeId)
+    if (!ok) return
+    saveRunProgress()
+    if (run.inShop) {
+      routeMapModal.render(run)
+    } else {
+      routeMapModal.hide()
+      loadActiveStep()
+    }
+  },
+  onClose: () => {},
+  onLeaveShop: () => {
+    if (!run || !run.hasRouteGraph) return
+    run.leaveShop()
+    saveRunProgress()
+    routeMapModal.render(run)
+  },
+})
+
+if (ui.mapBtn) {
+  ui.mapBtn.onclick = () => {
+    if (!run || !run.hasRouteGraph) return
+    if (routeMapModal.isVisible()) {
+      if (!run.routeMapPending && !run.inShop) routeMapModal.hide()
+    } else {
+      routeMapModal.render(run)
+      routeMapModal.show()
+    }
+  }
+}
 
 let run = null
 let level = null
@@ -123,6 +173,11 @@ let sceneEntryKey = null
 /** UI-001: point the scene dropdown at the ACTUAL runtime scene (single source of truth).
  * Debug boards (no static option) get one reusable transient option labelled live. */
 function syncScenePick() {
+  if (sceneKind === 'route') {
+    ui.scenePick.value = 'route-act1'
+    ui.scenePick.querySelector('option[data-transient]')?.remove()
+    return
+  }
   const { key, transient } = resolveActiveSceneKey({
     kind: sceneKind,
     entryKey: sceneEntryKey,
@@ -152,6 +207,7 @@ function syncScenePick() {
 function tickAndSyncWolves(now) {
   if (!wolfVisuals || !run) return
   for (const e of run.encounter.enemies ?? []) {
+    if (e.pending) continue
     const snap = readEnemySnapshot(e)
     let v = wolfVisuals.get(e.id)
     if (!v) {
@@ -175,14 +231,44 @@ async function loadScene(key) {
   activeCalibration = null // flexible-arena regression path -- see loadBakedArenaDebug
   restoreDefaultBackground()
   // UI-001: remember how this run was entered so the dropdown can stay truthful on advance.
-  sceneKind = key.startsWith('authored-')
-    ? 'authored'
-    : SEQUENCE_STEPS.some((s) => s.key === key)
-      ? 'sequence'
-      : 'single'
+  sceneKind = key === 'route-act1'
+    ? 'route'
+    : key.startsWith('authored-')
+      ? 'authored'
+      : SEQUENCE_STEPS.some((s) => s.key === key)
+        ? 'sequence'
+        : 'single'
   sceneEntryKey = key
 
-  if (key.startsWith('authored-') && authoredSteps.length > 0) {
+  if (key === 'route-act1') {
+    const graph = loadedCampaignInfo?.campaign?.routeGraph ?? DEFAULT_ACT1_ROUTE_GRAPH
+    const steps = authoredSteps.length > 0 ? authoredSteps : await Promise.all(SEQUENCE_STEPS.map(getStep))
+    const initialCharges = 2
+    let restored = null
+    const rawSave = localStorage.getItem('arrow_act1_run_save')
+    if (rawSave && !new URLSearchParams(location.search).has('reset')) {
+      try {
+        const parsed = JSON.parse(rawSave)
+        restored = RunState.fromJSON({ ...runConfig, initialRotateCharges: initialCharges, routeGraph: graph }, steps, parsed)
+      } catch (e) {
+        console.warn('Failed to restore act 1 run save', e)
+      }
+    }
+    if (restored) {
+      run = restored
+    } else {
+      const qp = new URLSearchParams(location.search)
+      const startOnMap = qp.get('map') === '1' || qp.get('route') === '1'
+      const initNode = qp.get('node')
+      run = new RunState({
+        ...runConfig,
+        initialRotateCharges: initialCharges,
+        routeGraph: graph,
+        initialRouteNodeId: initNode ?? undefined,
+        startOnRouteMap: startOnMap,
+      }, steps)
+    }
+  } else if (key.startsWith('authored-') && authoredSteps.length > 0) {
     const authIdx = Number(key.replace('authored-', ''))
     run = new RunState({ ...runConfig, initialRotateCharges: 0 }, authoredSteps)
     if (authIdx > 0 && authIdx < authoredSteps.length) {
@@ -346,7 +432,8 @@ function loadActiveStep() {
   buildBossPoseButtons()
   buildWolfPoseButtons()
   targetsBefore = renderer.collectTargets(run.encounter, def)
-  const hasAbility = def.enemies?.some((e) => e.ability)
+  // ITEM-001b: an enemy may carry several abilities (`ability` + `abilities[]`); announce each kind once.
+  const abilityHint = abilityIntroHint((def.enemies ?? []).flatMap((e) => [...(e.ability ? [e.ability] : []), ...(e.abilities ?? [])]).map((a) => a.kind))
   // STORY-001: scripted-flee intro — the encounter opens with an unkillable guest. Generic:
   // any enemy carrying `flee` announces itself, so the next such event needs no new code.
   const fleeGuests = (def.enemies ?? []).filter((e) => e.flee)
@@ -354,11 +441,24 @@ function loadActiveStep() {
     ? ` 👑 ${fleeGuests.map((e) => e.label ?? e.id).join(', ')} нельзя убить: после ${fleeGuests[0].flee.afterHits} попаданий он дразнит, затем показывает зад и сбегает — бой продолжится, чисти board до конца.`
     : ''
   ui.msgLine.textContent = def.enemies
-    ? `Враги одновременно: ${run.encounter.enemies.map((e) => e.label ?? e.id).join(', ')}.` +
-      (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '') + fleeIntro
+    ? `На арене: ${run.encounter.enemies.filter((e) => !e.pending).map((e) => e.label ?? e.id).join(', ') || 'ожидание волны'}.` +
+      (def.enemies.some((e) => e.arrival) ? ' Следующие враги указаны над свободными подиумами.' : '') +
+      abilityHint + fleeIntro
     : `Цель: ${def.boss?.id ?? 'boss'}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
   ui.report.textContent = formatEncounterReport(rep)
+  if (ui.mapBtn) {
+    ui.mapBtn.style.display = run.hasRouteGraph ? 'inline-block' : 'none'
+  }
+  if (run.hasRouteGraph) {
+    if (run.currentNode) {
+      ui.sceneTitle.textContent = `${run.currentNode.title} [${run.currentNode.type.toUpperCase()}] · ${step.title ?? step.id}`
+    }
+    routeMapModal.render(run)
+    if (run.routeMapPending || run.inShop) {
+      routeMapModal.show()
+    }
+  }
   renderPanel()
   kick()
 }
@@ -374,12 +474,10 @@ function applyDomAssets(store) {
     $('boardFrame').style.backgroundPosition = 'center'
     $('boardFrame').style.backgroundRepeat = 'no-repeat'
   }
-  if (store.playerPortrait) {
-    ui.playerCard.style.backgroundImage = `url(${store.playerPortrait.src})`
-    ui.playerCard.style.backgroundSize = 'cover'
-    ui.playerCard.style.backgroundPosition = 'center top'
-    ui.playerCard.classList.add('has-portrait') // CSS applies the blend mode
-  }
+  // BUILD-036: the approved player/Rotate PNGs are shown whole and unmodified. Portrait and
+  // decorative diamonds belong to the player skin; live HP/charge state remains separate DOM.
+  if (store.playerHudFrame && ui.playerHudSkin) ui.playerHudSkin.src = store.playerHudFrame.src
+  if (store.rotateButton && ui.rotateSkin) ui.rotateSkin.src = store.rotateButton.src
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -417,6 +515,7 @@ function tap(id) {
   renderer.setFlash({ blocked: -1, blocker: -1 })
   renderer.onTapResult(level, id, r, before)
   const after = renderer.collectTargets(s, def)
+  renderer.markArrivals(before, after, r.hit ? FLIGHT_MS : 0)
   renderer.markDeaths(before, after)
   // STORY-001: advance previously-fled enemies one beat first (taunt -> back -> away),
   // then stamp new flees — a fresh flee always plays the full sequence from the taunt.
@@ -435,6 +534,10 @@ function tap(id) {
   const defAtTap = def
   const wolfMap = wolfVisuals
   const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
+  // PRESENT-001: a healer visibly casts (attack pose for the standard hold) when its heal
+  // resolves -- the spark + green popup are stamped in the renderer, the pose lives here
+  // with the other per-actor gameplay -> presentation events.
+  const healedBy = new Set((r.healed ?? []).map((h) => h.id))
   const fireImpact = () => {
     if (!run || run.encounter !== enc || def !== defAtTap) return
     renderer.markDeaths(before, after)
@@ -449,7 +552,8 @@ function tap(id) {
         if (!v) continue
         if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
         else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
-        else if (r.hit && e.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+        else if (r.hit && before.find((b) => b.id === e.id && !b.pending && !b.dead && !b.fled)?.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+        else if (healedBy.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
       }
       tickAndSyncWolves(now)
     }
@@ -470,6 +574,16 @@ function tap(id) {
   }
   if (r.hit) setTimeout(fireImpact, FLIGHT_MS)
   else fireImpact()
+  // PRESENT-001: loot reward toast on the player card, arrival-synced like the death
+  // visuals (a kill always comes with a hit, but stay correct if that ever changes).
+  if (r.rewards && r.rewards.length) {
+    const lootHeal = r.rewards.reduce((a, w) => a + (w.heal ?? 0), 0)
+    const lootRotate = r.rewards.reduce((a, w) => a + (w.rotate ?? 0), 0)
+    if (lootHeal > 0 || lootRotate > 0) {
+      if (r.hit) setTimeout(() => { if (run && run.encounter === enc && def === defAtTap) flashPlayerHeal(lootHeal, lootRotate) }, FLIGHT_MS)
+      else flashPlayerHeal(lootHeal, lootRotate)
+    }
+  }
 
   let text = `#${id} ${r.hit ? 'попадание' : 'мимо'} · HP целей ${s.hp}/${s.totalHp}`
   if (r.enemyAttacked) {
@@ -517,6 +631,7 @@ function tap(id) {
     `${formatAction({ kind: 'tap', id })}  ${r.hit ? 'HIT' : 'miss'}  hp ${s.hp}` +
       (r.enemyAttacked ? `  ENEMY (player ${r.playerHp})` : '') +
       (r.castInterrupted ? '  CAST INTERRUPTED' : '') +
+      (r.arrived?.length ? `  ARRIVED: ${r.arrived.map((e) => e.id).join(', ')}` : '') +
       (r.fled && r.fled.length ? `  FLED: ${r.fled.map((f) => f.id).join(', ')}` : '') +
       (fledBack.length ? `  FLED-BACK: ${fledBack.join(', ')}` : '') +
       (fledAway.length ? `  FLED-AWAY: ${fledAway.join(', ')}` : '') +
@@ -545,11 +660,14 @@ function rotate(turn) {
     flashPlayerHit()
     renderer.onRotateEnemyAttack()
   }
-  renderer.markDeaths(before, renderer.collectTargets(s, def))
+  const after = renderer.collectTargets(s, def)
+  renderer.markDeaths(before, after)
+  renderer.markArrivals(before, after)
+  const arrived = after.filter((e) => !e.pending && before.find((b) => b.id === e.id)?.pending)
   // VIS-006: a rotate can tick enemy timers (telegraphs may arm); re-sync baselines only.
   tickAndSyncWolves(performance.now())
   setMsg(text, false)
-  pushLog(`${formatAction({ kind: 'rotate', turn })}  → ${s.rotation * 90}°`)
+  pushLog(`${formatAction({ kind: 'rotate', turn })}  → ${s.rotation * 90}°` + (arrived.length ? `  ARRIVED: ${arrived.map((e) => e.id).join(', ')}` : ''))
   renderPanel()
   kick()
   if (s.playerDead) scheduleGameOver()
@@ -606,6 +724,8 @@ function useItem(id, target) {
   if (id === 'shield') text += ` · щит ${s.wardHp}`
   if (id === 'potion') text += ` · HP игрока ${s.playerHp}`
   if (r.spawnedArrow !== undefined) text += ` · стрела #${r.spawnedArrow} на доске`
+  if (id === 'war_horn') text += ` · War Horn активен (+1 к следующей стреле)`
+  if (id === 'frost_dart') text += ` · таймер цели +2`
   if (r.enemyAttacked) {
     text += ` · ВРАГ АТАКУЕТ (HP игрока ${r.playerHp})`
     flashPlayerHit()
@@ -639,6 +759,27 @@ function flashPlayerHit() {
   ui.stage.classList.add('hit-flash')
   setTimeout(() => ui.stage.classList.remove('hit-flash'), 260) // animation has no fill-mode: forwards, so it must be removed explicitly or it freezes at opacity 1
   ui.playerCard.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }], { duration: 220 })
+}
+
+// PRESENT-001: loot kill reward lands on the player -- a green pulse on the player card
+// plus a floating "+N HP / +M R" toast. DOM-only (WAAPI + inline styles, no CSS file
+// change); the matching burst + popup at the victim's slot lives in the renderer.
+function flashPlayerHeal(heal, rotate) {
+  const parts = []
+  if (heal > 0) parts.push(`+${heal} HP`)
+  if (rotate > 0) parts.push(`+${rotate} R`)
+  if (!parts.length || !ui.playerCard?.animate) return
+  ui.playerCard.animate(
+    [{ transform: 'scale(1)', boxShadow: '0 0 0 rgba(16,185,129,0)' }, { transform: 'scale(1.04)', boxShadow: '0 0 18px rgba(16,185,129,0.9)' }, { transform: 'scale(1)', boxShadow: '0 0 0 rgba(16,185,129,0)' }],
+    { duration: 600 },
+  )
+  const toast = document.createElement('div')
+  toast.textContent = parts.join('  ')
+  toast.style.cssText = 'position:absolute;left:8px;top:-6px;z-index:5;pointer-events:none;font:800 15px system-ui;color:#bbf7d0;text-shadow:0 1px 2px #14532d, 0 0 8px rgba(16,185,129,.8);'
+  if (getComputedStyle(ui.playerCard).position === 'static') ui.playerCard.style.position = 'relative'
+  ui.playerCard.append(toast)
+  toast.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-26px)', opacity: 0 }], { duration: 1200, easing: 'ease-out' }).onfinish = () => toast.remove()
+  setTimeout(() => toast.remove(), 1400)
 }
 
 function setMsg(text, bad) {
@@ -691,7 +832,17 @@ function showOverlay(kind) {
     if (ui.overlayRestartAll) ui.overlayRestartAll.style.display = 'none'
 
     if (isSeq && isLast) {
-      if (isAuthored) {
+      if (run.hasRouteGraph && (run.isLastStep || run.currentNode?.type === 'boss')) {
+        ui.overlayTitle.textContent = 'Акт I пройден!'
+        ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}. Король гоблинов повержен! Поход по Стране гоблинов успешно завершен!`
+        ui.overlayNext.textContent = 'Пройти Акт I заново'
+        ui.overlayNext.onclick = () => {
+          hideOverlay()
+          localStorage.removeItem('arrow_act1_run_save')
+          run.restartRun()
+          loadActiveStep()
+        }
+      } else if (isAuthored) {
         ui.overlayTitle.textContent = 'Кампания пройдена!'
         ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}. Все этапы авторской кампании успешно завершены!`
         ui.overlayNext.textContent = 'В редактор кампании →'
@@ -704,17 +855,33 @@ function showOverlay(kind) {
         if (reward > 0) {
           body += `Награда за босса: +${reward} ROTATE (общий пул: ${run.rotateCharges + reward}). `
         }
-        body += 'Все 5 этапов текущего пролога успешно завершены! Теперь обсуждаем дальнейшие изменения.'
+        body += 'Все 5 этапов текущего пролога успешно завершены! Вы готовы отправиться в Страну гоблинов.'
         ui.overlayBody.textContent = body
-        ui.overlayNext.textContent = 'Пройти пролог заново'
+        ui.overlayNext.textContent = 'В Страну гоблинов (Карта) →'
         ui.overlayNext.onclick = () => {
           hideOverlay()
-          run.restartRun()
-          loadActiveStep()
+          loadScene('route-act1')
+        }
+        if (ui.overlayRestartAll) {
+          ui.overlayRestartAll.style.display = 'inline-block'
+          ui.overlayRestartAll.textContent = 'Пройти пролог заново'
+          ui.overlayRestartAll.onclick = () => {
+            hideOverlay()
+            run.restartRun()
+            loadActiveStep()
+          }
         }
       }
-    } else if (isSeq) {
+    } else if (isSeq || run?.hasRouteGraph) {
       const showNext = () => {
+        if (run.hasRouteGraph) {
+          hideOverlay()
+          run.advance()
+          saveRunProgress()
+          routeMapModal.render(run)
+          routeMapModal.show()
+          return
+        }
         ui.overlayTitle.style.display = ''
         ui.overlayBody.style.display = ''
         ui.overlayNext.style.display = ''
@@ -790,6 +957,9 @@ function renderPanel() {
   ui.playerHpFill.style.width = `${Math.max(0, (hp / max) * 100)}%`
   ui.playerHpFill.classList.toggle('low', hp / max <= 0.3)
   ui.playerHpText.textContent = `${hp}/${max}`
+  const chargeSlots = [...(ui.playerCharges?.querySelectorAll('.charge-diamond') ?? [])]
+  chargeSlots.forEach((slot, index) => slot.classList.toggle('filled', index < s.rotateCharges))
+  if (ui.playerCharges) ui.playerCharges.setAttribute('aria-label', `${s.rotateCharges} Rotate charges`)
   ui.rotCw.disabled = !s.canRotate(1) || def.rotate.allow.length === 0
   ui.rotCcw.disabled = !s.canRotate(-1) || def.rotate.allow.length === 0
   ui.rotCw.style.visibility = def.rotate.allow.includes(1) ? 'visible' : 'hidden'
@@ -797,7 +967,8 @@ function renderPanel() {
   // RUN-001: the count is pool-backed for post-prologue encounters (EncounterState reports the
   // live shared pool via the same getter), encounter-local otherwise. At 0 the buttons stay
   // visible but disabled (disabled comes from canRotate below); the label always shows the count.
-  ui.rotateCharges.textContent = def.rotate.allow.length === 0 ? '' : `Rotate ×${s.rotateCharges}`
+  ui.rotateCharges.textContent = `×${s.rotateCharges}`
+  document.querySelector('.rotate-controls')?.classList.toggle('is-hidden', def.rotate.allow.length === 0)
   itemBar.render(run)
   const statusLines = [
     `${def.title ?? def.id}`,
@@ -943,6 +1114,16 @@ window.addEventListener('keydown', (ev) => {
   }
   else if (k === 'h') showHint()
   else if (k === 'd') ui.debugPanel.classList.toggle('hidden')
+  else if (k === 'm') {
+    if (run?.hasRouteGraph) {
+      if (routeMapModal.isVisible()) {
+        if (!run.routeMapPending && !run.inShop) routeMapModal.hide()
+      } else {
+        routeMapModal.render(run)
+        routeMapModal.show()
+      }
+    }
+  }
   else return
   ev.preventDefault()
 })
@@ -956,6 +1137,9 @@ if (loadedCampaignInfo?.campaign?.levels?.length > 0) {
     console.warn('Failed to parse authored campaign steps', e)
   }
 }
+
+// MAP-001: Dedicated entry for Act I Route Map
+ui.scenePick.append(new Option('🗺️ Карта: Страна гоблинов (Акт I)', 'route-act1'))
 
 for (const scene of SEQUENCE_STEPS) ui.scenePick.append(new Option(scene.title, scene.key))
 
@@ -1024,7 +1208,9 @@ initCleanMode(queryParams, hashParams) // UI-001: ?clean=1 starts in clean game 
 }
 
 let initialKey = queryParams.get('scene') ?? hashParams.get('scene')
-if (mode === 'authored' && authoredSteps.length > 0) {
+if (queryParams.get('map') === '1' || queryParams.get('route') === '1' || queryParams.get('act1') === '1' || mode === 'route') {
+  initialKey = 'route-act1'
+} else if (mode === 'authored' && authoredSteps.length > 0) {
   const stIdx = Number(stageParam ?? 0)
   initialKey = `authored-${stIdx}`
 }
@@ -1109,6 +1295,7 @@ window.visualDebug = {
     return wolfVisuals?.get(id) ?? null
   },
   layout: () => renderer.debugLayout(), // VIS-007: per-frame arena layout (canvas coords)
+  fx: (key) => renderer.debugFx(key), // PRESENT-001: per-target ability fx stamps (debug/QA)
   // BUILD-035: live projectile shots + hit-anchors (debug/QA only -- no gameplay effect).
   shots: () => renderer.debugShots(),
   anchors: () => renderer.debugAnchors(),

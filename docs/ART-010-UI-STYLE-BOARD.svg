@@ -1,0 +1,346 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1120" viewBox="0 0 1800 1120" role="img" aria-labelledby="title desc">
+  <title id="title">ART-010 UI Style Base — three directions</title>
+  <desc id="desc">Three premium fantasy UI directions derived from the current Arrow-Roguelite playable: Moonlit Bronze, Runeforge, and Enchanted Relic.</desc>
+  <defs>
+    <linearGradient id="pageBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171018"/>
+      <stop offset="0.55" stop-color="#201a2b"/>
+      <stop offset="1" stop-color="#0e0c13"/>
+    </linearGradient>
+    <radialGradient id="pageGlow" cx="50%" cy="5%" r="75%">
+      <stop offset="0" stop-color="#5a436f" stop-opacity=".28"/>
+      <stop offset=".55" stop-color="#2e2340" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bronze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3c76f"/>
+      <stop offset=".32" stop-color="#ad7134"/>
+      <stop offset=".65" stop-color="#71451f"/>
+      <stop offset="1" stop-color="#d69b48"/>
+    </linearGradient>
+    <linearGradient id="bronzeDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6e4728"/>
+      <stop offset=".5" stop-color="#2b1b15"/>
+      <stop offset="1" stop-color="#a36a2e"/>
+    </linearGradient>
+    <linearGradient id="stoneA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#312e39"/>
+      <stop offset=".55" stop-color="#17151d"/>
+      <stop offset="1" stop-color="#0c0b11"/>
+    </linearGradient>
+    <linearGradient id="stoneB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#29272c"/>
+      <stop offset=".5" stop-color="#111114"/>
+      <stop offset="1" stop-color="#3b2f26"/>
+    </linearGradient>
+    <linearGradient id="stoneC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2e332f"/>
+      <stop offset=".48" stop-color="#151a18"/>
+      <stop offset="1" stop-color="#1c1519"/>
+    </linearGradient>
+    <linearGradient id="hpGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b7f0ad"/>
+      <stop offset=".45" stop-color="#67c96b"/>
+      <stop offset="1" stop-color="#2f813e"/>
+    </linearGradient>
+    <linearGradient id="ember" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7a2316"/>
+      <stop offset=".6" stop-color="#d85d24"/>
+      <stop offset="1" stop-color="#ffbd55"/>
+    </linearGradient>
+    <linearGradient id="emerald" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1b6e5f"/>
+      <stop offset=".55" stop-color="#42b89a"/>
+      <stop offset="1" stop-color="#a8f0c8"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5d3c27"/>
+      <stop offset=".45" stop-color="#2b1b16"/>
+      <stop offset="1" stop-color="#7c5530"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+    <filter id="smallShadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000" flood-opacity=".5"/>
+    </filter>
+    <filter id="goldGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="violetGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="tealGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="stoneNoise" width="52" height="52" patternUnits="userSpaceOnUse">
+      <path d="M4 16 C16 8, 26 24, 45 11 M1 42 C18 33, 30 50, 49 35" fill="none" stroke="#fff" stroke-opacity=".035" stroke-width="1.5"/>
+      <circle cx="13" cy="31" r="1.2" fill="#fff" fill-opacity=".05"/>
+      <circle cx="37" cy="24" r=".9" fill="#000" fill-opacity=".18"/>
+    </pattern>
+    <pattern id="hammered" width="36" height="36" patternUnits="userSpaceOnUse">
+      <circle cx="8" cy="10" r="4" fill="#fff" fill-opacity=".025"/>
+      <circle cx="25" cy="8" r="5" fill="#000" fill-opacity=".09"/>
+      <circle cx="18" cy="26" r="6" fill="#fff" fill-opacity=".018"/>
+    </pattern>
+    <style>
+      .ui { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      .display { font-family: Georgia, "Times New Roman", serif; }
+      .muted { fill:#b9b3a4; }
+      .paper { fill:#efece4; }
+      .tiny { font-size:14px; letter-spacing:.06em; }
+      .small { font-size:16px; }
+      .body { font-size:18px; }
+      .label { font-size:15px; font-weight:700; letter-spacing:.13em; }
+      .section { font-size:18px; font-weight:700; letter-spacing:.08em; }
+      .dirTitle { font-size:31px; font-weight:700; letter-spacing:.02em; }
+      .number { font-size:15px; font-weight:800; letter-spacing:.18em; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1120" fill="url(#pageBg)"/>
+  <rect width="1800" height="1120" fill="url(#pageGlow)"/>
+  <rect x="28" y="28" width="1744" height="1064" rx="28" fill="none" stroke="#f0d58a" stroke-opacity=".16"/>
+
+  <g class="ui">
+    <text x="72" y="86" class="display paper" font-size="38" font-weight="700">ART-010 · UI STYLE BASE / VISUAL BIBLE v1</text>
+    <text x="72" y="122" class="muted body">Derived from the current playable — moonlit fantasy arena, stone/bronze/wood, warm gold, restrained magic glow, board-first readability.</text>
+
+    <g transform="translate(72 151)">
+      <rect width="1656" height="76" rx="14" fill="#0f0d13" stroke="#ffffff" stroke-opacity=".09"/>
+      <text x="24" y="31" class="label" fill="#d3c9b5">CURRENT GAME ANCHORS</text>
+      <g transform="translate(236 15)">
+        <circle cx="18" cy="23" r="14" fill="#201a2b" stroke="#8d789c" stroke-opacity=".45"/>
+        <text x="42" y="29" class="small" fill="#d8d2ca">moonlit dark base</text>
+      </g>
+      <g transform="translate(478 15)">
+        <circle cx="18" cy="23" r="14" fill="#ffd76a" filter="url(#goldGlow)"/>
+        <text x="42" y="29" class="small" fill="#d8d2ca">warm gold focus</text>
+      </g>
+      <g transform="translate(700 15)">
+        <circle cx="18" cy="23" r="14" fill="#7be08a"/>
+        <text x="42" y="29" class="small" fill="#d8d2ca">HP / positive green</text>
+      </g>
+      <g transform="translate(972 15)">
+        <circle cx="18" cy="23" r="14" fill="#c79bff" filter="url(#violetGlow)"/>
+        <text x="42" y="29" class="small" fill="#d8d2ca">arcane accent</text>
+      </g>
+      <g transform="translate(1238 15)">
+        <path d="M0 10 h34 l10 13 -10 13 H0 l-10-13z" fill="#2b252f" stroke="#c9974c"/>
+        <text x="60" y="29" class="small" fill="#d8d2ca">volume, not flat-mobile</text>
+      </g>
+    </g>
+
+    <!-- Direction 1 -->
+    <g transform="translate(72 258)" filter="url(#shadow)">
+      <rect width="526" height="790" rx="22" fill="#121016" stroke="#ffd76a" stroke-opacity=".48"/>
+      <rect x="1" y="1" width="524" height="788" rx="21" fill="url(#stoneNoise)" opacity=".7"/>
+      <path d="M0 22 Q0 0 22 0 H504 Q526 0 526 22 V116 H0Z" fill="#1c1721"/>
+      <rect x="0" y="114" width="526" height="2" fill="#ffd76a" opacity=".48"/>
+      <text x="28" y="38" class="number" fill="#ffd76a">01 · RECOMMENDED FOR NEXT MOCKUP</text>
+      <text x="28" y="78" class="display dirTitle paper">Moonlit Bronze</text>
+      <text x="28" y="104" class="small muted">closest to the live playable · premium magical adventure</text>
+
+      <!-- swatches -->
+      <text x="28" y="150" class="label" fill="#d7cdb9">MATERIAL / COLOR</text>
+      <g transform="translate(28 168)">
+        <rect width="90" height="42" rx="8" fill="url(#stoneA)" stroke="#65586d"/>
+        <rect x="98" width="90" height="42" rx="8" fill="url(#bronze)" stroke="#e7b75d"/>
+        <rect x="196" width="90" height="42" rx="8" fill="#211827" stroke="#846d91"/>
+        <rect x="294" width="90" height="42" rx="8" fill="#ffd76a"/>
+        <rect x="392" width="78" height="42" rx="8" fill="#c79bff"/>
+      </g>
+      <text x="28" y="229" class="tiny muted">blackened stone · worn bronze · smoked crystal · gold focus · violet magic</text>
+
+      <!-- panel -->
+      <text x="28" y="266" class="label" fill="#d7cdb9">PANEL / FRAME</text>
+      <g transform="translate(28 282)">
+        <path d="M12 0 H442 L458 16 V102 L442 118 H12 L0 106 V12Z" fill="url(#stoneA)" stroke="#8b6736" stroke-width="2"/>
+        <path d="M18 9 H435 L448 21 V95 L437 108 H18 L10 100 V18Z" fill="none" stroke="#f2c767" stroke-opacity=".32"/>
+        <rect x="25" y="22" width="5" height="72" rx="2.5" fill="#ffd76a" opacity=".82"/>
+        <text x="48" y="50" class="display" fill="#f4e8cf" font-size="22" font-weight="700">PLAYER</text>
+        <text x="48" y="76" class="small muted">quiet carved bevel + one warm focus edge</text>
+        <circle cx="414" cy="59" r="16" fill="#4b2868" stroke="#d7a7ff"/>
+        <path d="M407 59 l7-10 7 10 -7 10z" fill="#f2d3ff" filter="url(#violetGlow)"/>
+      </g>
+
+      <!-- hp and chip -->
+      <text x="28" y="432" class="label" fill="#d7cdb9">HUD PRIMITIVES</text>
+      <g transform="translate(28 450)">
+        <text x="0" y="18" class="tiny muted">HP</text>
+        <path d="M36 0 H336 L348 12 V30 L336 42 H36 L26 32 V10Z" fill="#0b0b0f" stroke="#745d3d"/>
+        <path d="M42 7 H285 L294 14 V28 L285 35 H42 L34 28 V14Z" fill="url(#hpGreen)"/>
+        <text x="365" y="28" class="section" fill="#e8e2d6">78 / 100</text>
+      </g>
+      <g transform="translate(28 507)">
+        <path d="M12 0 H166 L178 12 V42 L166 54 H12 L0 42 V12Z" fill="#19151e" stroke="#8e6a38"/>
+        <circle cx="28" cy="27" r="13" fill="#5c347a" stroke="#d2a6ff"/>
+        <path d="M23 27 l5-7 5 7 -5 7z" fill="#f2dbff"/>
+        <text x="51" y="23" class="tiny muted">ROTATE</text>
+        <text x="51" y="42" class="section" fill="#fff0bf">×2</text>
+      </g>
+
+      <!-- button -->
+      <text x="28" y="591" class="label" fill="#d7cdb9">BUTTON</text>
+      <g transform="translate(28 608)" filter="url(#smallShadow)">
+        <path d="M12 0 H218 L232 14 V52 L218 66 H12 L0 54 V12Z" fill="url(#bronzeDark)" stroke="#f5c86b" stroke-width="2"/>
+        <path d="M18 7 H211 L224 18 V46 L211 58 H18 L8 49 V17Z" fill="#7b4c24" fill-opacity=".28" stroke="#ffd76a" stroke-opacity=".35"/>
+        <text x="116" y="42" text-anchor="middle" class="section" fill="#fff0c8">CLAIM REWARD</text>
+      </g>
+
+      <!-- item card -->
+      <text x="286" y="591" class="label" fill="#d7cdb9">ITEM FRAME</text>
+      <g transform="translate(286 608)">
+        <path d="M14 0 H184 L202 18 V134 L184 152 H14 L0 138 V14Z" fill="url(#stoneA)" stroke="#b4843e" stroke-width="2"/>
+        <path d="M24 13 H175 L190 28 V124 L175 139 H24 L12 127 V25Z" fill="none" stroke="#ffd76a" stroke-opacity=".28"/>
+        <circle cx="101" cy="66" r="34" fill="#39254a" stroke="#c79bff"/>
+        <path d="M82 71 C99 42 113 44 126 61 C113 58 106 68 100 86 C95 76 90 73 82 71Z" fill="#d8afff" filter="url(#violetGlow)"/>
+        <text x="101" y="123" text-anchor="middle" class="tiny" fill="#f3dfaa">ARCANE RELIC</text>
+      </g>
+
+      <text x="28" y="782" class="tiny muted">Corners: 8–12px clipped bevels · Type: restrained fantasy serif + clean sans · Glow: only focus / ability / rarity</text>
+      <text x="28" y="808" class="tiny" fill="#e7d6b5">Motion: 120ms press · 180ms hover lift · 240ms reward pop · no permanent bounce.</text>
+    </g>
+
+    <!-- Direction 2 -->
+    <g transform="translate(637 258)" filter="url(#shadow)">
+      <rect width="526" height="790" rx="22" fill="#0f0f10" stroke="#b85a29" stroke-opacity=".58"/>
+      <rect x="1" y="1" width="524" height="788" rx="21" fill="url(#hammered)" opacity=".9"/>
+      <path d="M0 22 Q0 0 22 0 H504 Q526 0 526 22 V116 H0Z" fill="#171414"/>
+      <rect x="0" y="114" width="526" height="2" fill="#d7642d" opacity=".6"/>
+      <text x="28" y="38" class="number" fill="#f08a44">02 · HEAVIER COMBAT</text>
+      <text x="28" y="78" class="display dirTitle paper">Runeforge</text>
+      <text x="28" y="104" class="small muted">rougher Act I energy · iron, copper, leather, ember runes</text>
+
+      <text x="28" y="150" class="label" fill="#d7cdb9">MATERIAL / COLOR</text>
+      <g transform="translate(28 168)">
+        <rect width="90" height="42" rx="4" fill="url(#stoneB)" stroke="#5d5550"/>
+        <rect x="98" width="90" height="42" rx="4" fill="#8c4d2c" stroke="#da7a42"/>
+        <rect x="196" width="90" height="42" rx="4" fill="#3b261d" stroke="#74513d"/>
+        <rect x="294" width="90" height="42" rx="4" fill="#f08a44"/>
+        <rect x="392" width="78" height="42" rx="4" fill="#79a9d6"/>
+      </g>
+      <text x="28" y="229" class="tiny muted">basalt / iron · hammered copper · leather · ember focus · steel-blue magic</text>
+
+      <text x="28" y="266" class="label" fill="#d7cdb9">PANEL / FRAME</text>
+      <g transform="translate(28 282)">
+        <path d="M20 0 H438 L458 20 V98 L438 118 H20 L0 98 V20Z" fill="url(#stoneB)" stroke="#9d542e" stroke-width="2"/>
+        <path d="M30 10 H426 L448 30 V88 L426 108 H30 L10 88 V30Z" fill="none" stroke="#e0783d" stroke-opacity=".28"/>
+        <circle cx="21" cy="21" r="5" fill="#af7549"/><circle cx="437" cy="21" r="5" fill="#af7549"/>
+        <circle cx="21" cy="97" r="5" fill="#af7549"/><circle cx="437" cy="97" r="5" fill="#af7549"/>
+        <text x="48" y="50" class="display" fill="#f1e5d7" font-size="22" font-weight="700">BATTLE</text>
+        <text x="48" y="76" class="small muted">sharper chamfers, fewer curves, more weight</text>
+        <path d="M403 47 l13-8 13 8 -5 15 5 12 -13 7 -13-7 5-12z" fill="#8c2d1c" stroke="#f08a44"/>
+        <path d="M409 63 l7-15 7 15 -7 8z" fill="#ffc16b"/>
+      </g>
+
+      <text x="28" y="432" class="label" fill="#d7cdb9">HUD PRIMITIVES</text>
+      <g transform="translate(28 450)">
+        <text x="0" y="18" class="tiny muted">HP</text>
+        <path d="M42 0 H332 L348 16 V26 L332 42 H42 L26 26 V16Z" fill="#09090a" stroke="#6d4a34"/>
+        <path d="M48 7 H285 L296 18 V24 L285 35 H48 L36 25 V17Z" fill="url(#hpGreen)"/>
+        <text x="365" y="28" class="section" fill="#e8e2d6">78 / 100</text>
+      </g>
+      <g transform="translate(28 507)">
+        <path d="M18 0 H160 L178 18 V36 L160 54 H18 L0 36 V18Z" fill="#171315" stroke="#9a512e"/>
+        <circle cx="29" cy="27" r="13" fill="#263a50" stroke="#79a9d6"/>
+        <path d="M21 27 h16 M29 19 v16" stroke="#c9e5ff" stroke-width="3"/>
+        <text x="51" y="23" class="tiny muted">ROTATE</text>
+        <text x="51" y="42" class="section" fill="#ffd9a8">×2</text>
+      </g>
+
+      <text x="28" y="591" class="label" fill="#d7cdb9">BUTTON</text>
+      <g transform="translate(28 608)" filter="url(#smallShadow)">
+        <path d="M18 0 H214 L232 18 V48 L214 66 H18 L0 48 V18Z" fill="#512419" stroke="#dc6a31" stroke-width="2"/>
+        <path d="M25 8 H207 L223 23 V43 L207 58 H25 L9 43 V23Z" fill="url(#ember)" fill-opacity=".32"/>
+        <text x="116" y="42" text-anchor="middle" class="section" fill="#ffe0bc">CLAIM REWARD</text>
+      </g>
+
+      <text x="286" y="591" class="label" fill="#d7cdb9">ITEM FRAME</text>
+      <g transform="translate(286 608)">
+        <path d="M20 0 H182 L202 20 V132 L182 152 H20 L0 132 V20Z" fill="url(#stoneB)" stroke="#a75a32" stroke-width="2"/>
+        <path d="M28 11 H174 L191 28 V124 L174 141 H28 L11 124 V28Z" fill="none" stroke="#e1783d" stroke-opacity=".36"/>
+        <circle cx="101" cy="66" r="34" fill="#251517" stroke="#ef7a3c"/>
+        <path d="M88 89 C91 73 82 67 91 48 C100 56 101 64 105 68 C111 59 115 51 112 42 C132 58 127 78 114 91Z" fill="#ffb047" filter="url(#goldGlow)"/>
+        <text x="101" y="123" text-anchor="middle" class="tiny" fill="#f3c49c">FORGED RELIC</text>
+      </g>
+
+      <text x="28" y="782" class="tiny muted">Corners: 45° chamfers · Type: compact fantasy capitals + sturdy sans · Glow: ember grooves / attack urgency</text>
+      <text x="28" y="808" class="tiny" fill="#dfbd9b">Motion: 90–150ms snap · 2px impact kick · restrained shake for boss / heavy hit only.</text>
+    </g>
+
+    <!-- Direction 3 -->
+    <g transform="translate(1202 258)" filter="url(#shadow)">
+      <rect width="526" height="790" rx="22" fill="#101514" stroke="#78cbb0" stroke-opacity=".42"/>
+      <rect x="1" y="1" width="524" height="788" rx="21" fill="url(#stoneNoise)" opacity=".65"/>
+      <path d="M0 22 Q0 0 22 0 H504 Q526 0 526 22 V116 H0Z" fill="#14201d"/>
+      <rect x="0" y="114" width="526" height="2" fill="#7ed7b9" opacity=".44"/>
+      <text x="28" y="38" class="number" fill="#8fe0c4">03 · MORE MAGICAL / ADVENTURE</text>
+      <text x="28" y="78" class="display dirTitle paper">Enchanted Relic</text>
+      <text x="28" y="104" class="small muted">warmer exploration tone · carved stone, wood, aged gold, crystal</text>
+
+      <text x="28" y="150" class="label" fill="#d7cdb9">MATERIAL / COLOR</text>
+      <g transform="translate(28 168)">
+        <rect width="90" height="42" rx="10" fill="url(#stoneC)" stroke="#53665d"/>
+        <rect x="98" width="90" height="42" rx="10" fill="url(#wood)" stroke="#8d6740"/>
+        <rect x="196" width="90" height="42" rx="10" fill="#8b7443" stroke="#d2bc73"/>
+        <rect x="294" width="90" height="42" rx="10" fill="#42b89a"/>
+        <rect x="392" width="78" height="42" rx="10" fill="#9c83d9"/>
+      </g>
+      <text x="28" y="229" class="tiny muted">carved stone · dark wood/leather · aged gold · emerald focus · crystal-violet rarity</text>
+
+      <text x="28" y="266" class="label" fill="#d7cdb9">PANEL / FRAME</text>
+      <g transform="translate(28 282)">
+        <path d="M16 0 H442 Q458 0 458 16 V102 Q458 118 442 118 H16 Q0 118 0 102 V16 Q0 0 16 0Z" fill="url(#stoneC)" stroke="#7e7048" stroke-width="2"/>
+        <path d="M22 9 H436 Q448 9 448 21 V97 Q448 108 436 108 H22 Q10 108 10 97 V21 Q10 9 22 9Z" fill="none" stroke="#b9a869" stroke-opacity=".28"/>
+        <path d="M12 98 Q72 68 122 95 T230 95 T340 95 T446 96" fill="none" stroke="#47745e" stroke-opacity=".35" stroke-width="2"/>
+        <text x="48" y="50" class="display" fill="#f3ead8" font-size="22" font-weight="700">JOURNEY</text>
+        <text x="48" y="76" class="small muted">softer carved arcs, still weighty and game-like</text>
+        <circle cx="414" cy="59" r="17" fill="#183a35" stroke="#79d4b8"/>
+        <path d="M414 42 C427 53 426 67 414 77 C403 67 402 53 414 42Z" fill="#9cf0d0" filter="url(#tealGlow)"/>
+      </g>
+
+      <text x="28" y="432" class="label" fill="#d7cdb9">HUD PRIMITIVES</text>
+      <g transform="translate(28 450)">
+        <text x="0" y="18" class="tiny muted">HP</text>
+        <rect x="26" y="0" width="322" height="42" rx="17" fill="#0b0f0e" stroke="#6d674b"/>
+        <rect x="34" y="7" width="260" height="28" rx="12" fill="url(#hpGreen)"/>
+        <text x="365" y="28" class="section" fill="#e8e2d6">78 / 100</text>
+      </g>
+      <g transform="translate(28 507)">
+        <rect x="0" y="0" width="178" height="54" rx="18" fill="#18211f" stroke="#7c7048"/>
+        <circle cx="29" cy="27" r="13" fill="#17483d" stroke="#87ddc1"/>
+        <path d="M22 30 C29 16 36 19 36 27 C36 35 28 37 22 30Z" fill="#b9f6df"/>
+        <text x="51" y="23" class="tiny muted">ROTATE</text>
+        <text x="51" y="42" class="section" fill="#e7e0ad">×2</text>
+      </g>
+
+      <text x="28" y="591" class="label" fill="#d7cdb9">BUTTON</text>
+      <g transform="translate(28 608)" filter="url(#smallShadow)">
+        <rect width="232" height="66" rx="18" fill="url(#wood)" stroke="#b09b5c" stroke-width="2"/>
+        <rect x="8" y="7" width="216" height="52" rx="14" fill="#2d503f" fill-opacity=".5" stroke="#78cbb0" stroke-opacity=".34"/>
+        <text x="116" y="42" text-anchor="middle" class="section" fill="#ecf3dd">CLAIM REWARD</text>
+      </g>
+
+      <text x="286" y="591" class="label" fill="#d7cdb9">ITEM FRAME</text>
+      <g transform="translate(286 608)">
+        <rect x="0" y="0" width="202" height="152" rx="22" fill="url(#stoneC)" stroke="#9b8952" stroke-width="2"/>
+        <rect x="12" y="12" width="178" height="128" rx="16" fill="none" stroke="#87d8bd" stroke-opacity=".25"/>
+        <circle cx="101" cy="66" r="34" fill="#17362f" stroke="#6ac9ad"/>
+        <path d="M82 74 C93 49 104 45 122 53 C117 58 116 66 124 77 C107 75 102 84 96 91 C94 82 90 77 82 74Z" fill="#9ee8cd" filter="url(#tealGlow)"/>
+        <text x="101" y="123" text-anchor="middle" class="tiny" fill="#e2dda8">WILD RELIC</text>
+      </g>
+
+      <text x="28" y="782" class="tiny muted">Corners: 14–18px carved arcs · Type: warmer story serif + clean sans · Glow: soft teal rune halo, rarity violet</text>
+      <text x="28" y="808" class="tiny" fill="#bfe3d3">Motion: 180–260ms ease-out · slight float on rewards · particles only at reveal / selection.</text>
+    </g>
+
+    <g transform="translate(72 1076)">
+      <text class="tiny" fill="#a9a293">Shared rule: the board remains visually dominant. UI is opaque enough to read, but never grows into a decorative wall around the puzzle.</text>
+      <text x="1656" text-anchor="end" class="tiny" fill="#ffd76a">FINAL STYLE: USER CHOICE</text>
+    </g>
+  </g>
+</svg>
