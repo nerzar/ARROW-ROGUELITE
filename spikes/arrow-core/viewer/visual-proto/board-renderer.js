@@ -38,6 +38,13 @@ const FLEE_EXIT_MS = 850
 const FLEE_BACK_DRIFT_PX = 20
 const FLEE_BACK_SLIDE_MS = 1200
 
+// Presentation constants for mob defeat:
+// After lethal arrow impact, the corpse lies visibly on the ground for a beat,
+// then smoothly dissolves away.
+const ENEMY_DEATH_LINGER_MS = 1400
+const ENEMY_DEATH_FADE_MS = 700
+const ENEMY_DEATH_TOTAL_MS = ENEMY_DEATH_LINGER_MS + ENEMY_DEATH_FADE_MS
+
 // FIX-023: an ARENA_CALIBRATIONS entry's {top,left,right} anchor group (either `anchors` or
 // `effectAnchors`), converted into arena-layout.js's PODIUM_GROUND/EFFECT_GROUND side-number
 // shape (0=N/top, 1=E/right, 3=W/left; side 2/S stays on the shared unused fallback -- no current
@@ -469,7 +476,7 @@ export function createBoardRenderer(canvas, stageEl) {
       shots = shots.filter((sh) => now - sh.t0 < FLIGHT_MS)
     if (shots.length) animating = true
     for (const fx of targetFx.values()) {
-      if (now - fx.hitT < 260 || now - fx.attackT < 320 || now - fx.interruptT < 700 || now - fx.deathT < 550) animating = true
+      if (now - fx.hitT < 260 || now - fx.attackT < 320 || now - fx.interruptT < 700 || now - fx.deathT < ENEMY_DEATH_TOTAL_MS) animating = true
       // STORY-001: an exit slide is also a function of `now` — keep the loop alive until it
       // plays out. (The taunt hold needs no extra rule: a fled enemy counts as alive above.)
       if (now - fx.fleeExitT < FLEE_EXIT_MS) animating = true
@@ -596,17 +603,28 @@ export function createBoardRenderer(canvas, stageEl) {
       // CAL-005: species HUD size scales the plate's own font/bar metrics (measured and drawn
       // at the scaled size); the offset above stays a pure position shift. Default 1 = no-op.
       const hudScale = speciesHudScale(speciesId)
-      const idle = Math.sin(now / 900 + t.side * 1.7) * 1.6
+      const idle = (t.isBoss || t.dead) ? 0 : Math.sin(now / 900 + t.side * 1.7) * 1.6
       const shake = now - fx.hitT >= 0 && now - fx.hitT < 200 ? Math.sin((now - fx.hitT) / 16) * 3 : 0
       const lunge = now - fx.attackT >= 0 && now - fx.attackT < 320 ? Math.sin(((now - fx.attackT) / 320) * Math.PI) * 0.28 * charCell : 0
       const deathT = now - fx.deathT
-      const dying = t.dead && deathT >= 0 && deathT < 550
+      const dying = t.dead && deathT >= 0 && deathT < ENEMY_DEATH_TOTAL_MS
       // FIX: a boss is the level's final target, not a mob that should vanish -- the fade-to-
       // fully-transparent "terminal hold" below (correct for an ordinary enemy: its slot empties)
       // left the boss's podium empty for the ~150ms between the fade finishing and the win overlay
       // appearing, and its defeat pose (with the settle/squash transform below) was never actually
       // seen fully visible. A boss never fades -- it stays fully opaque, defeat pose + settle only.
-      const deathP = t.isBoss ? 0 : dying ? clamp01(deathT / 550) : t.dead ? 1 : 0
+      let deathP = 0
+      if (!t.isBoss) {
+        if (t.dead) {
+          if (deathT >= 0 && deathT < ENEMY_DEATH_LINGER_MS) {
+            deathP = 0
+          } else if (deathT >= ENEMY_DEATH_LINGER_MS && deathT < ENEMY_DEATH_TOTAL_MS) {
+            deathP = clamp01((deathT - ENEMY_DEATH_LINGER_MS) / ENEMY_DEATH_FADE_MS)
+          } else {
+            deathP = 1
+          }
+        }
+      }
       if (t.dead && deathP >= 1 && !t.isBoss) return // fully dead regular enemy: slot stays empty
 
       // STORY-001: scripted flee — taunt once the hit lands (one turn), back slide (next
@@ -767,19 +785,6 @@ export function createBoardRenderer(canvas, stageEl) {
       if (img) {
         if (bossImg) drawBossArt(img, bossPose, bossSince, t, charW, charH, scenePivot, artScale)
         else if (wolfImg || fleeImg) drawWolfArt(img, wolfPoseShown, wolfSince, t, charW, charH, scenePivot, artScale)
-        if (t.dead && !t.isBoss) {
-          // Same alpha-masked tint as the hit-flash below -- a dead sprite darkens, it
-          // doesn't grow a translucent box around its transparent edges. FIX: a boss is kept
-          // fully opaque/undarkened now (see the deathP note above) -- this 55%-black tint,
-          // applied forever (not just during the fade), made its defeat pose nearly
-          // indistinguishable from the arena's own dark background. Its defeat pose art already
-          // reads as "defeated" without an extra tint.
-          ctx.save()
-          ctx.globalCompositeOperation = 'source-atop'
-          ctx.fillStyle = col.deadOverlay
-          ctx.fillRect(-charW / 2, -charH / 2, charW, charH)
-          ctx.restore()
-        }
       } else {
         // Missing art fallback: a soft radial glow, deliberately NOT a box.
         const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, Math.max(charW, charH) / 2)
@@ -876,51 +881,52 @@ export function createBoardRenderer(canvas, stageEl) {
       // above the head everywhere except the S slot (below the feet), always away from the
       // board. It never sizes or clips the character, and two simultaneous targets (e.g.
       // cp-e4's two enemies) can never draw over each other.
-      // CAL-005 follow-up: no name/label line. It only ever showed authoring-debug text
-      // (enemy ids, "urgent"/"slow", boss phase labels like "Phase 1: Center/TOP (North)") --
-      // gameplay decisions need HP + timers, not that. Numeric lines are never truncated.
+      // CAL-005 follow-up: streamlined combat HUD -- compact HP + actions with premium aesthetic.
+      // Gameplay decisions need HP + timers; lines are compact and clean so they fit any screen.
       // Layout, not z-index: nothing belonging to the HUD may overlap the board footprint.
-      const fontPx = Math.max(10, Math.floor(charCell * (t.isBoss ? 0.3 : 0.25))) * hudScale
+      const fontPx = Math.max(10, Math.floor(charCell * (t.isBoss ? 0.28 : 0.24))) * hudScale
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      const lines = [
-        { text: t.dead ? 'убит' : t.fled ? (fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!') : `HP ${t.hp}/${t.hpMax}`, bold: false, color: t.dead || t.fled ? col.muted : (t.hp / t.hpMax <= 0.25 ? col.danger : col.text) },
-      ]
+      const lines = []
+      if (t.fled) {
+        lines.push({
+          text: fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!',
+          bold: true,
+          color: col.muted,
+        })
+      } else if (!t.dead) {
+        lines.push({
+          text: `HP ${t.hp}/${t.hpMax}`,
+          bold: true,
+          color: t.hp / t.hpMax <= 0.25 ? col.danger : col.text,
+        })
+      } else {
+        lines.push({ text: '', bold: false, color: col.muted })
+      }
       const isCast = t.attackKind === 'cast'
       if (!t.dead && !t.fled && Number.isFinite(t.countdown)) {
-        lines.push({ text: isCast ? `CAST IN ${t.countdown}` : `ATTACK IN ${t.countdown}`, bold: true, color: isCast ? col.cast : t.countdown <= 1 ? col.danger : col.text })
+        lines.push({
+          text: isCast ? `CAST ${t.countdown}` : `ATK ${t.countdown}`,
+          bold: true,
+          color: isCast ? col.cast : t.countdown <= 1 ? col.danger : col.text,
+        })
       }
       if (!t.dead && !t.fled && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
         if (t.abilityKind === 'shield') {
-          lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD IN ${t.abilityCountdown}`, bold: true, color: col.cast })
-        } else if (t.abilityKind === 'shift') {
-          // LD-007 provisional: the enemy walks to another arena side when this hits 0.
-          if (t.abilityTrigger === 'hit') lines.push({ text: 'STAGGERS WHEN HIT', bold: true, color: col.cast })
-          else lines.push({ text: `MOVE IN ${t.abilityCountdown}`, bold: true, color: col.cast })
-        } else if (t.abilityKind === 'heal') {
-          // ACT-I-003: support enemy — heals the most wounded ally when this hits 0.
-          lines.push({ text: `HEAL IN ${t.abilityCountdown}`, bold: true, color: col.cast })
+          lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD ${t.abilityCountdown}`, bold: true, color: col.cast })
         } else {
-          lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
+          lines.push({ text: `THROW ${t.abilityCountdown}`, bold: true, color: col.rock })
         }
       }
-      // ACT-I-003: temporary target countdown and kill reward.
-      if (!t.dead && !t.fled && t.turnsLeft !== undefined) {
-        lines.push({ text: `LEAVES IN ${t.turnsLeft}`, bold: true, color: t.turnsLeft <= 1 ? col.danger : col.text })
-      }
-      if (!t.dead && !t.fled && t.reward && ((t.reward.heal ?? 0) > 0 || (t.reward.rotate ?? 0) > 0)) {
-        const parts = []
-        if (t.reward.heal) parts.push(`+${t.reward.heal} HP`)
-        if (t.reward.rotate) parts.push(`+${t.reward.rotate} Rotate`)
-        lines.push({ text: `LOOT: ${parts.join(' ')}`, bold: true, color: col.cast })
-      }
-      const lineH = fontPx * 1.15
+      const lineH = fontPx * 1.18
       let maxW = 0
       for (const ln of lines) {
-        ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
+        if (!ln.text) continue
+        ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui, -apple-system, sans-serif`
         maxW = Math.max(maxW, ctx.measureText(ln.text).width)
       }
-      const barH = Math.max(5, charCell * 0.16) * hudScale
+      if (maxW === 0) maxW = 40
+      const barH = Math.max(5, charCell * 0.14) * hudScale
       const hud = hudBoxes({
         slot: { x: 0, y: 0 },
         char: { x: -charW / 2, y: -charH / 2, w: charW, h: charH },
@@ -935,59 +941,250 @@ export function createBoardRenderer(canvas, stageEl) {
       // shaken"). Everything above (telegraph, shadow, art, flash, sparks) is world and shakes.
       ctx.save()
       ctx.translate(-frameCam.x, -frameCam.y)
-      if (!t.dead || t.isBoss) {
+      if (!t.dead) {
         const frac = t.hpMax > 0 ? Math.max(0, t.hp) / t.hpMax : 0
-        ctx.fillStyle = col.hpTrack
-        roundRect(hud.bar.x, hud.bar.y, hud.bar.w, hud.bar.h, hud.bar.h / 2)
-        ctx.fill()
-        ctx.fillStyle = frac <= 0.25 ? col.danger : col.hpFill
-        roundRect(hud.bar.x, hud.bar.y, Math.max(hud.bar.h, hud.bar.w * frac), hud.bar.h, hud.bar.h / 2)
-        ctx.fill()
-      }
-      ctx.fillStyle = col.labelBacking
-      roundRect(hud.plate.x, hud.plate.y, hud.plate.w, hud.plate.h, 6)
-      ctx.fill()
-      lines.forEach((ln, i) => {
-        ctx.font = `${ln.bold ? 700 : 600} ${fontPx}px system-ui`
-        ctx.fillStyle = ln.color
-        ctx.fillText(ln.text, hud.lineX, hud.lineY(i))
-      })
+        const isLow = frac <= 0.25
+        const isDown = t.side === 2
+        const isUrgent = Number.isFinite(t.countdown) && t.countdown <= 1
+        const isWarning = Number.isFinite(t.countdown) && t.countdown <= 3
 
-      // ATTACK/CAST IN badge: a small numeric chip at the HUD plate's outer corner
-      // (outward = away from the board on this target's own side). Colored by attack kind
-      // so it matches the telegraph ellipse/text line above.
-      if (Number.isFinite(t.countdown) && !t.dead) {
-        const r = hud.badge.r
-        const bxo = hud.badge.x
-        const byo = hud.badge.y
+        // Unified Combat Frame: pixel-perfect geometry in authentic game UI aesthetic
+        const cardW = Math.round(t.isBoss ? Math.max(126 * hudScale, 126) : Math.max(112 * hudScale, 112))
+        const cardH = Math.round(38 * hudScale)
+        let cardX = Math.round(hud.plate.x + (hud.plate.w - cardW) / 2)
+        let cardY = Math.round(isDown ? hud.bar.y : hud.bar.y + hud.bar.h - cardH)
+
+        // Viewport safety clamp: ensure the unified card never clips outer screen edges
+        const pad = 6
+        if (cardX + slot.x < pad) cardX = pad - slot.x
+        if (cardX + cardW + slot.x > g.stageW - pad) cardX = g.stageW - pad - cardW - slot.x
+        if (cardY + slot.y < pad) cardY = pad - slot.y
+        if (cardY + cardH + slot.y > g.stageH - pad) cardY = g.stageH - pad - cardH - slot.y
+
+        // Card Backdrop & Depth Shadow
         ctx.save()
-        ctx.fillStyle = isCast ? col.cast : t.countdown <= 1 ? col.danger : col.badgeFill
-        ctx.beginPath()
-        ctx.arc(bxo, byo, r, 0, Math.PI * 2)
+        ctx.shadowColor = isUrgent ? 'rgba(239, 68, 68, 0.45)' : 'rgba(0, 0, 0, 0.65)'
+        ctx.shadowBlur = isUrgent ? 14 : 10
+        ctx.shadowOffsetY = 3
+        ctx.fillStyle = col.labelBacking
+        roundRect(cardX, cardY, cardW, cardH, 7)
         ctx.fill()
-        ctx.fillStyle = '#fff'
-        ctx.font = `800 ${Math.floor(r * 1.15)}px system-ui`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(String(t.countdown), bxo, byo + 1)
         ctx.restore()
-      }
-      // Enemy-ability badge: Stone Throw uses rock-brown; Shield uses cast-violet and "S" while up.
-      if (!t.dead && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
-        const r = hud.badge.r
-        const bxo = hud.plate.x + r * 0.5
-        const byo = hud.badge.y
+
+        // Card Border: vibrant glow for imminent threat, shield, boss, or low HP
         ctx.save()
-        ctx.fillStyle = t.abilityKind === 'shield' ? col.cast : col.rock
-        ctx.beginPath()
-        ctx.arc(bxo, byo, r, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.fillStyle = '#fff'
-        ctx.font = `800 ${Math.floor(r * 1.15)}px system-ui`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(t.abilityKind === 'shield' && t.shielded ? 'S' : String(t.abilityCountdown), bxo, byo + 1)
+        ctx.lineWidth = isUrgent ? 1.5 : 1
+        ctx.strokeStyle = isUrgent
+          ? 'rgba(239, 68, 68, 0.85)'
+          : t.shielded
+            ? 'rgba(192, 132, 252, 0.8)'
+            : isLow
+              ? 'rgba(239, 68, 68, 0.7)'
+              : (t.isBoss ? 'rgba(255, 215, 106, 0.5)' : col.panelBorder)
+        roundRect(cardX, cardY, cardW, cardH, 7)
+        ctx.stroke()
         ctx.restore()
+
+        // Left Accent Strip (exact match to player-card's border-left accent)
+        ctx.save()
+        ctx.fillStyle = isUrgent
+          ? '#ef4444'
+          : t.shielded
+            ? '#c084fc'
+            : t.isBoss
+              ? '#ffd76a'
+              : isCast
+                ? '#c084fc'
+                : (isLow ? '#ef4444' : '#f87171')
+        ctx.beginPath()
+        roundRect(cardX, cardY, cardW, cardH, 7)
+        ctx.clip()
+        ctx.fillRect(cardX, cardY, isUrgent ? 4.5 : 3.5, cardH)
+        ctx.restore()
+
+        // Health Bar: flush inside the card with balanced horizontal margins
+        const barPadX = 8
+        const inBarH = 6
+        const inBarW = cardW - barPadX * 2
+        const inBarX = cardX + barPadX
+        const inBarY = isDown ? cardY + 7 : cardY + cardH - inBarH - 6
+
+        // Health bar track
+        ctx.save()
+        ctx.fillStyle = 'rgba(0,0,0,0.65)'
+        roundRect(inBarX, inBarY, inBarW, inBarH, inBarH / 2)
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)'
+        ctx.lineWidth = 0.8
+        roundRect(inBarX, inBarY, inBarW, inBarH, inBarH / 2)
+        ctx.stroke()
+        ctx.restore()
+
+        // Health bar fill
+        if (frac > 0) {
+          ctx.save()
+          const fillW = Math.max(inBarH, inBarW * frac)
+          ctx.fillStyle = isLow ? col.danger : col.hpFill
+          if (typeof ctx.createLinearGradient === 'function') {
+            try {
+              const grad = ctx.createLinearGradient(inBarX, inBarY, inBarX + fillW, inBarY)
+              if (grad && typeof grad.addColorStop === 'function') {
+                if (isLow) {
+                  grad.addColorStop(0, '#f87171')
+                  grad.addColorStop(1, '#dc2626')
+                } else {
+                  grad.addColorStop(0, '#34d399')
+                  grad.addColorStop(1, '#059669')
+                }
+                ctx.fillStyle = grad
+              }
+            } catch {
+              // fallback in mock canvas
+            }
+          }
+          roundRect(inBarX, inBarY, fillW, inBarH, inBarH / 2)
+          ctx.fill()
+          ctx.restore()
+        }
+
+        // Action & Status Row inside the card
+        const rowTopY = isDown ? cardY + 16 : cardY + 5
+        const chipH = 19
+        const chipY = rowTopY
+        const rowMidY = chipY + chipH / 2
+
+        if (t.fled) {
+          ctx.save()
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.font = `700 ${fontPx}px system-ui, -apple-system, sans-serif`
+          ctx.fillStyle = col.muted
+          ctx.fillText(fleeStage === 'away' ? 'сбежал!' : fleeStage === 'back' ? 'сбегает!' : 'дразнит!', cardX + cardW / 2, rowMidY)
+          ctx.restore()
+        } else {
+          // Left: high-threat attack countdown badge
+          let curX = cardX + 9
+
+          if (Number.isFinite(t.countdown)) {
+            const icon = isCast ? '✦' : '⚔'
+            const numStr = String(t.countdown)
+            ctx.font = '800 12px system-ui, -apple-system, sans-serif'
+            const numW = ctx.measureText(numStr).width
+            ctx.font = '700 11px system-ui, -apple-system, sans-serif'
+            const iconW = ctx.measureText(icon).width
+            const chipW = Math.max(34, Math.round(iconW + numW + 12))
+
+            // Threat Badge Background & Radiant Glow
+            ctx.save()
+            if (isUrgent) {
+              ctx.shadowColor = 'rgba(239, 68, 68, 0.95)'
+              ctx.shadowBlur = 10
+            } else if (isWarning) {
+              ctx.shadowColor = 'rgba(245, 158, 11, 0.7)'
+              ctx.shadowBlur = 7
+            } else if (isCast) {
+              ctx.shadowColor = 'rgba(192, 132, 252, 0.85)'
+              ctx.shadowBlur = 8
+            }
+
+            // High-contrast gradient based on threat level
+            let fillGrad = null
+            if (typeof ctx.createLinearGradient === 'function') {
+              try {
+                fillGrad = ctx.createLinearGradient(curX, chipY, curX, chipY + chipH)
+                if (isUrgent) {
+                  fillGrad.addColorStop(0, '#ef4444')
+                  fillGrad.addColorStop(1, '#991b1b')
+                } else if (isWarning) {
+                  fillGrad.addColorStop(0, '#f59e0b')
+                  fillGrad.addColorStop(1, '#b45309')
+                } else if (isCast) {
+                  fillGrad.addColorStop(0, '#a855f7')
+                  fillGrad.addColorStop(1, '#6b21a8')
+                } else {
+                  fillGrad.addColorStop(0, '#4b5563')
+                  fillGrad.addColorStop(1, '#1f2937')
+                }
+              } catch {}
+            }
+            ctx.fillStyle = fillGrad || (isUrgent ? '#b91c1c' : isWarning ? '#b45309' : '#374151')
+            roundRect(curX, chipY, chipW, chipH, 5)
+            ctx.fill()
+
+            // Badge Border: sharp, glowing edge
+            ctx.strokeStyle = isUrgent
+              ? '#fef08a'
+              : isWarning
+                ? '#fde68a'
+                : isCast
+                  ? '#e9d5ff'
+                  : 'rgba(255, 255, 255, 0.25)'
+            ctx.lineWidth = isUrgent ? 1.4 : 1
+            roundRect(curX, chipY, chipW, chipH, 5)
+            ctx.stroke()
+            ctx.restore()
+
+            // Icon + Threat number
+            ctx.save()
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            // Icon
+            ctx.font = '700 10px system-ui, -apple-system, sans-serif'
+            ctx.fillStyle = isUrgent ? '#fef08a' : '#ffffff'
+            ctx.fillText(icon, curX + 7 + iconW / 2, rowMidY)
+            // Number
+            ctx.font = '800 12px system-ui, -apple-system, sans-serif'
+            ctx.fillStyle = '#ffffff'
+            ctx.fillText(numStr, curX + chipW - 5 - numW / 2, rowMidY)
+            ctx.restore()
+
+            curX += chipW + 4
+          }
+
+          // Ability chip if active
+          if (t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
+            const abIcon = t.abilityKind === 'shield' ? '🛡' : '🪨'
+            const abVal = t.abilityKind === 'shield' && t.shielded ? 'UP' : String(t.abilityCountdown)
+            const abText = `${abIcon} ${abVal}`
+            ctx.font = '700 10px system-ui, -apple-system, sans-serif'
+            const abW = Math.round(ctx.measureText(abText).width + 8)
+            ctx.save()
+            ctx.fillStyle = t.abilityKind === 'shield' ? 'rgba(147,51,234,0.45)' : 'rgba(180,83,9,0.45)'
+            roundRect(curX, chipY, abW, chipH, 4)
+            ctx.fill()
+            ctx.strokeStyle = t.abilityKind === 'shield' ? 'rgba(192,132,252,0.8)' : 'rgba(245,158,11,0.7)'
+            ctx.lineWidth = 1
+            roundRect(curX, chipY, abW, chipH, 4)
+            ctx.stroke()
+
+            ctx.fillStyle = '#ffffff'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(abText, curX + abW / 2, rowMidY)
+            ctx.restore()
+          }
+
+          // Right: HP readout (crisp label + bold numbers)
+          ctx.save()
+          ctx.textAlign = 'right'
+          ctx.textBaseline = 'middle'
+          ctx.font = '600 9px system-ui, -apple-system, sans-serif'
+          ctx.fillStyle = isLow ? '#fca5a5' : '#9ca3af'
+          const hpLabel = 'HP '
+          const hpLabelW = ctx.measureText(hpLabel).width
+
+          const hpVal = `${t.hp}/${t.hpMax}`
+          ctx.font = '800 12px system-ui, -apple-system, sans-serif'
+          const hpValW = ctx.measureText(hpVal).width
+
+          ctx.fillStyle = isLow ? '#ef4444' : '#ffffff'
+          ctx.fillText(hpVal, cardX + cardW - 9, rowMidY)
+
+          ctx.font = '600 9px system-ui, -apple-system, sans-serif'
+          ctx.fillStyle = isLow ? '#fca5a5' : '#9ca3af'
+          ctx.fillText(hpLabel, cardX + cardW - 9 - hpValW, rowMidY)
+          ctx.restore()
+        }
       }
 
       // CAST INTERRUPTED burst, rising just above the head -- local coords again, so it always
@@ -1089,41 +1286,231 @@ export function createBoardRenderer(canvas, stageEl) {
       const tr = bossPoseTransform(pose, since, t)
       ctx.save()
       ctx.translate(gx, gy)
+      if (tr.rot) ctx.rotate(tr.rot)
       ctx.scale(tr.sx, tr.sy)
       ctx.translate(-gx + tr.tx, -gy + tr.ty)
       ctx.drawImage(img, gx - dw * BOSS_ANCHOR.anchorX, gy - dh * BOSS_ANCHOR.anchorY, dw, dh)
+
+      // Cast flame orb: magical pulsing purple flame clot held between the caster's outstretched hands
+      if (pose === 'cast') {
+        drawShamanCastFlame(ctx, gx, gy, dw, dh, now, since, t)
+      }
+
       ctx.restore()
     }
 
     function bossPoseTransform(pose, since, t) {
-      const tr = { sx: 1, sy: 1, tx: 0, ty: 0 }
+      const tr = { sx: 1, sy: 1, tx: 0, ty: 0, rot: 0 }
+      const toBoard = { x: -DX[t.side], y: -DY[t.side] }
+      // Dynamic combat anticipation: when countdown turns are low, add tension
+      const urgent = Number.isFinite(t.countdown) && t.countdown <= 1
+      const warn = Number.isFinite(t.countdown) && t.countdown === 2
+
       if (pose === 'idle') {
-        tr.sy = 1 + 0.012 * Math.sin(now / 1100) // breathing
-        tr.ty = 1.5 * Math.sin(now / 1100 + 0.6)
+        // Organic breathing anchored to feet on podium floor:
+        // Chest expands/compresses cleanly while feet remain planted at gy (anchorY=1.0)
+        const breathe = Math.sin(now / 850)
+        const sway = Math.sin(now / 1700)
+        tr.sy = 1 + 0.038 * breathe // ~4% vertical expansion (clearly visible)
+        tr.sx = 1 - 0.018 * breathe // volume compensation
+        tr.rot = 0.02 * sway        // gentle breathing sway (±1.1 degrees)
+        tr.tx = 2.5 * sway
+
+        // If countdown approaches 0, lean aggressively forward toward the board
+        if (urgent) {
+          tr.tx += toBoard.x * 6
+          tr.ty += toBoard.y * 4
+          tr.sy += 0.02 * Math.sin(now / 200)
+          tr.rot += 0.015 * Math.sin(now / 200)
+        } else if (warn) {
+          tr.tx += toBoard.x * 3
+          tr.ty += toBoard.y * 2
+        }
       } else if (pose === 'angry') {
-        tr.sy = 1 + 0.008 * Math.sin(now / 420) // tenser, faster idle; no flashing
-        tr.sx = 1 - 0.006 * Math.sin(now / 420)
+        // Fast enraged panting + micro-tremor + aggressive hunch
+        const rage = Math.sin(now / 320)
+        tr.sy = 1 + 0.045 * rage
+        tr.sx = 1 - 0.022 * rage
+        tr.tx = toBoard.x * 5 + 1.8 * Math.sin(now / 100)
+        tr.ty = toBoard.y * 3.5
+        tr.rot = 0.028 * Math.sin(now / 640)
       } else if (pose === 'taunt' && since >= 0) {
         if (since < 150) { // anticipation crouch
-          tr.sx = tr.sy = 0.94 + 0.06 * (since / 150)
-        } else if (since < 400) { // pop
+          tr.sx = 1.06 - 0.06 * (since / 150)
+          tr.sy = 0.90 + 0.10 * (since / 150)
+        } else if (since < 400) { // energetic pop
           const p = (since - 150) / 250
-          tr.sx = tr.sy = 1 + 0.04 * Math.sin(p * Math.PI)
+          tr.sx = 0.94 + 0.10 * Math.sin(p * Math.PI)
+          tr.sy = 1.10 + 0.06 * Math.sin(p * Math.PI)
         }
-        tr.ty = -Math.abs(Math.sin(since / 180)) * 6 * Math.max(0, 1 - since / 1400) // bounce, held
+        // Continuous mocking swagger / laugh bounce
+        tr.ty = -Math.abs(Math.sin(since / 150)) * 9 * Math.max(0, 1 - since / 1600)
+        tr.rot = 0.045 * Math.sin(since / 170) * Math.max(0, 1 - since / 1600)
       } else if (pose === 'stunned' && since >= 0 && since < 260) {
-        tr.tx = Math.sin(since / 16) * 3 // shake, decaying with the hold
-        tr.ty = DY[t.side] * 6 * Math.max(0, 1 - since / 180) // recoil outward
-        tr.tx += DX[t.side] * 6 * Math.max(0, 1 - since / 180)
+        tr.tx = Math.sin(since / 12) * 6 // violent impact rattle
+        tr.ty = DY[t.side] * 10 * Math.max(0, 1 - since / 180) // recoil outward
+        tr.tx += DX[t.side] * 10 * Math.max(0, 1 - since / 180)
+        tr.rot = -0.05 * Math.sin(since / 18) * Math.max(0, 1 - since / 220)
       } else if (pose === 'cast') {
-        const p = 1 + 0.03 * Math.sin(now / 300) // pulse; castGlow hook draws separately
-        tr.sx = tr.sy = p
+        // Mystic surge: breathing power surge + hovering elevation + arcane oscillation
+        const surge = Math.sin(now / 220)
+        const hover = Math.sin(now / 440)
+        tr.sy = 1.05 + 0.045 * surge
+        tr.sx = 0.97 - 0.025 * surge
+        tr.ty = -7 + 3.5 * hover
+        tr.rot = 0.025 * Math.sin(now / 350)
       } else if (pose === 'defeat' && since >= 0) {
-        const p = clamp01(since / 350) // impact settle, then stays down
-        tr.sx = tr.sy = 1 + 0.1 * (1 - p) * (1 - p)
-        tr.ty = 4 * (1 - p)
+        const p = clamp01(since / 350) // impact settle, then stays slumped
+        tr.sx = 1 + 0.12 * (1 - p) * (1 - p)
+        tr.sy = 0.95 - 0.05 * p + 0.1 * (1 - p)
+        tr.ty = 6 * p
       }
       return tr
+    }
+
+    function drawShamanCastFlame(ctx, gx, gy, dw, dh, now, since, t) {
+      // Hands in the Goblin Shaman cast sprite are spread wide at ~58.5% of sprite height.
+      // The flame orb is centered directly between the palms.
+      const orbX = gx
+      const orbY = gy - dh * 0.585
+      const baseR = Math.max(16, dw * 0.135)
+
+      const urgent = Number.isFinite(t?.countdown) && t.countdown <= 1
+      const warn = Number.isFinite(t?.countdown) && t.countdown === 2
+      const pulseSpeed = urgent ? 100 : warn ? 150 : 220
+      const pulseAmp = urgent ? 0.18 : warn ? 0.12 : 0.08
+      const pulse = 1 + pulseAmp * Math.sin(now / pulseSpeed) + 0.04 * Math.sin(now / 75)
+      const r = baseR * pulse
+
+      ctx.save()
+
+      // 1. Ambient purple back-glow: illuminates chest, arms, and surrounding arena
+      const bgGrad = ctx.createRadialGradient(orbX, orbY, r * 0.2, orbX, orbY, r * 2.8)
+      bgGrad.addColorStop(0, 'rgba(217, 70, 239, 0.45)')
+      bgGrad.addColorStop(0.5, 'rgba(147, 51, 234, 0.22)')
+      bgGrad.addColorStop(1, 'rgba(88, 28, 135, 0)')
+      ctx.fillStyle = bgGrad
+      ctx.beginPath()
+      ctx.arc(orbX, orbY, r * 2.8, 0, Math.PI * 2)
+      ctx.fill()
+
+      // 2. Arcane lightning arcs connecting palms to the central flame orb
+      const leftPalmX = gx - dw * 0.285
+      const leftPalmY = gy - dh * 0.585
+      const rightPalmX = gx + dw * 0.275
+      const rightPalmY = gy - dh * 0.575
+
+      ctx.save()
+      ctx.globalCompositeOperation = 'screen'
+      drawArcStreamer(ctx, leftPalmX, leftPalmY, orbX, orbY, now, 1.0, urgent)
+      drawArcStreamer(ctx, rightPalmX, rightPalmY, orbX, orbY, now, 2.7, urgent)
+
+      // Palm gathering flare nodes
+      for (const palm of [{ x: leftPalmX, y: leftPalmY }, { x: rightPalmX, y: rightPalmY }]) {
+        const pGrad = ctx.createRadialGradient(palm.x, palm.y, 0, palm.x, palm.y, r * 0.65)
+        pGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)')
+        pGrad.addColorStop(0.3, 'rgba(232, 121, 249, 0.8)')
+        pGrad.addColorStop(0.7, 'rgba(168, 85, 247, 0.35)')
+        pGrad.addColorStop(1, 'rgba(147, 51, 234, 0)')
+        ctx.fillStyle = pGrad
+        ctx.beginPath()
+        ctx.arc(palm.x, palm.y, r * 0.65, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // 3. Turbulent rotating flame tongues / plasma petals (additive blend)
+      const numTongues = 7
+      const rotBase = now * 0.0028
+      for (let i = 0; i < numTongues; i++) {
+        const angle = (i / numTongues) * Math.PI * 2 + rotBase
+        const reach = r * (1.15 + 0.35 * Math.sin(now * 0.007 + i * 2.1))
+        const p1x = orbX + Math.cos(angle - 0.28) * (r * 0.6)
+        const p1y = orbY + Math.sin(angle - 0.28) * (r * 0.6)
+        const tipX = orbX + Math.cos(angle) * reach
+        const tipY = orbY + Math.sin(angle) * reach - r * 0.25 // slight upward flick
+        const p2x = orbX + Math.cos(angle + 0.28) * (r * 0.6)
+        const p2y = orbY + Math.sin(angle + 0.28) * (r * 0.6)
+
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(217, 70, 239, 0.65)' : 'rgba(168, 85, 247, 0.55)'
+        ctx.beginPath()
+        ctx.moveTo(p1x, p1y)
+        ctx.quadraticCurveTo(tipX + Math.sin(now * 0.01 + i) * 3, tipY, p2x, p2y)
+        ctx.closePath()
+        ctx.fill()
+      }
+
+      // Secondary counter-rotating inner flame ring
+      const innerTongues = 5
+      const innerRot = -now * 0.0035
+      for (let i = 0; i < innerTongues; i++) {
+        const angle = (i / innerTongues) * Math.PI * 2 + innerRot
+        const reach = r * (0.85 + 0.25 * Math.sin(now * 0.009 + i * 1.7))
+        const tipX = orbX + Math.cos(angle) * reach
+        const tipY = orbY + Math.sin(angle) * reach - r * 0.15
+        ctx.fillStyle = 'rgba(240, 171, 252, 0.7)'
+        ctx.beginPath()
+        ctx.arc(tipX, tipY, r * 0.28, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // 4. Central plasma sphere with superhot glowing nucleus
+      const coreGrad = ctx.createRadialGradient(orbX, orbY, r * 0.08, orbX, orbY, r)
+      coreGrad.addColorStop(0, '#ffffff')
+      coreGrad.addColorStop(0.2, '#fdf4ff')
+      coreGrad.addColorStop(0.4, '#e879f9')
+      coreGrad.addColorStop(0.7, '#a855f7')
+      coreGrad.addColorStop(0.9, '#6b21a8')
+      coreGrad.addColorStop(1, 'rgba(88, 28, 135, 0)')
+      ctx.fillStyle = coreGrad
+      ctx.beginPath()
+      ctx.arc(orbX, orbY, r, 0, Math.PI * 2)
+      ctx.fill()
+
+      // 5. Rising magical embers / floating sparks
+      const sparkCount = 14
+      for (let i = 0; i < sparkCount; i++) {
+        const loopMs = 1200 + (i % 5) * 150
+        const progress = ((now + i * 317) % loopMs) / loopMs
+        const sparkAlpha = Math.sin(progress * Math.PI) * (urgent ? 0.95 : 0.8)
+        const sparkRise = progress * r * 2.8
+        const sway = Math.sin(i * 1.5 + now * 0.005) * (r * (0.35 + progress * 0.7))
+        const sx = orbX + sway
+        const sy = orbY - sparkRise + r * 0.3
+        const sz = Math.max(1.5, (1 - progress * 0.6) * 3.5)
+
+        ctx.fillStyle = i % 3 === 0 ? `rgba(255, 255, 255, ${sparkAlpha})` : `rgba(232, 121, 249, ${sparkAlpha})`
+        ctx.beginPath()
+        ctx.arc(sx, sy, sz, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      ctx.restore()
+      ctx.restore()
+    }
+
+    function drawArcStreamer(ctx, x1, y1, x2, y2, now, phase, urgent) {
+      const segs = 6
+      const dx = (x2 - x1) / segs
+      const dy = (y2 - y1) / segs
+      const jitter = urgent ? 7 : 4.5
+
+      ctx.strokeStyle = urgent ? 'rgba(255, 255, 255, 0.9)' : 'rgba(240, 171, 252, 0.85)'
+      ctx.lineWidth = urgent ? 2.5 : 1.8
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+
+      for (let i = 1; i < segs; i++) {
+        const px = x1 + dx * i + Math.sin(now * 0.02 + phase + i * 2) * jitter
+        const py = y1 + dy * i + Math.cos(now * 0.025 + phase + i * 3) * (jitter * 0.7)
+        ctx.lineTo(px, py)
+      }
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+
+      // Glow envelope behind the streamer
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.45)'
+      ctx.lineWidth = urgent ? 6 : 4
+      ctx.stroke()
     }
 
     // VIS-006/VIS-007: anchored wolf draw + presentation-only transforms. Same
@@ -1145,6 +1532,7 @@ export function createBoardRenderer(canvas, stageEl) {
       const tr = wolfPoseTransform(pose, since, t)
       ctx.save()
       ctx.translate(gx, gy)
+      if (tr.rot) ctx.rotate(tr.rot * mirror)
       ctx.scale(mirror * tr.sx, tr.sy)
       ctx.translate(-gx + tr.tx, -gy + tr.ty)
       ctx.drawImage(img, gx - dw * ENEMY_ANCHOR.anchorX, gy - dh * ENEMY_ANCHOR.anchorY, dw, dh)
@@ -1152,16 +1540,20 @@ export function createBoardRenderer(canvas, stageEl) {
     }
 
     function wolfPoseTransform(pose, since, t) {
-      const tr = { sx: 1, sy: 1, tx: 0, ty: 0 }
+      const tr = { sx: 1, sy: 1, tx: 0, ty: 0, rot: 0 }
       const toBoard = { x: -DX[t.side], y: -DY[t.side] }
       if (pose === 'idle') {
-        tr.sy = 1 + 0.012 * Math.sin(now / 1000) // breathing
-        tr.tx = 1.5 * Math.sin(now / 1400 + 0.9) // shifting weight
+        const breathe = Math.sin(now / 920 + t.side * 0.8)
+        tr.sy = 1 + 0.02 * breathe // breathing
+        tr.sx = 1 - 0.01 * breathe
+        tr.tx = 1.8 * Math.sin(now / 1300 + 0.9) // shifting weight
+        tr.rot = 0.012 * Math.sin(now / 1600 + t.side)
       } else if (pose === 'attackReady') {
-        tr.sy = 0.96 // low stance: squash...
-        tr.sx = 1.03 // ...and coil
+        tr.sy = 0.94 // low stance: squash...
+        tr.sx = 1.04 // ...and coil
         tr.tx = toBoard.x * 4 // forward tension toward the board
-        tr.ty = toBoard.y * 4 + 0.8 * Math.sin(now / 500)
+        tr.ty = toBoard.y * 4 + 1.2 * Math.sin(now / 450)
+        tr.rot = 0.02 * Math.sin(now / 450)
       } else if (pose === 'attack' && since >= 0) {
         // Pose swap carries the lunge; the fx lunge offset adds travel. A short pop + recoil
         // sells the strike without a skeletal rig.
@@ -1178,8 +1570,16 @@ export function createBoardRenderer(canvas, stageEl) {
         // unchanged, so no actor can hold this outside the flee path). Continuous bounce
         // for the whole one-turn hold (no decay — the taunt waits for the player's next tap).
         tr.ty = -Math.abs(Math.sin(since / 300)) * 5
+      } else if (pose === 'defeat' && since >= 0) {
+        // Fatal impact reaction & slump onto the podium
+        const p = clamp01(since / 420)
+        const recoil = Math.max(0, 1 - since / 280)
+        tr.tx = DX[t.side] * 10 * recoil
+        tr.ty = DY[t.side] * 6 * recoil + 3.0 * p // settle slightly down onto the ground
+        tr.sx = 1 + 0.08 * (1 - p) * (1 - p)     // horizontal impact compression
+        tr.sy = 0.96 - 0.08 * p + 0.12 * (1 - p) // slump downward onto the floor
+        tr.rot = (DX[t.side] !== 0 ? DX[t.side] * 0.05 : 0.03) * (1 - p)
       }
-      // defeat: static -- the death fade (globalAlpha 1-deathP) is the terminal hold/fade.
       return tr
     }
 
@@ -1623,12 +2023,12 @@ export function createBoardRenderer(canvas, stageEl) {
       text: dark ? '#eee' : '#20180f', muted: dark ? '#999' : '#777',
       bossA: dark ? '#5b4a63' : '#8d7a96', bossB: dark ? '#332a3a' : '#5c4d63', bossGlow: dark ? 'rgba(180,120,220,0.5)' : 'rgba(120,70,150,0.4)',
       enemyA: dark ? '#4a5563' : '#7c8ea0', enemyB: dark ? '#2b323c' : '#54606e', enemyGlow: dark ? 'rgba(120,170,220,0.45)' : 'rgba(70,100,140,0.35)',
-      deadA: dark ? '#333336' : '#cfcac0', deadB: dark ? '#222224' : '#a8a299', deadOverlay: 'rgba(20,20,22,0.55)',
-      panelBorder: dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.28)',
-      labelBacking: dark ? 'rgba(10,8,14,0.6)' : 'rgba(255,252,244,0.72)',
-      badgeFill: dark ? '#4a4a52' : '#5c5348',
-      hpTrack: dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)', hpFill: dark ? '#7be08a' : '#2e8b3d',
-      danger: dark ? '#ff6b6b' : '#c62828', good: dark ? '#7be08a' : '#1a7f37',
+      deadA: dark ? '#333336' : '#cfcac0', deadB: dark ? '#222224' : '#a8a299', deadOverlay: 'rgba(0,0,0,0)',
+      panelBorder: dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.14)',
+      labelBacking: dark ? 'rgba(15,18,24,0.88)' : 'rgba(255,255,255,0.92)',
+      badgeFill: dark ? '#374151' : '#4b5563',
+      hpTrack: dark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.14)', hpFill: dark ? '#10b981' : '#16a34a',
+      danger: dark ? '#ff5252' : '#dc2626', good: dark ? '#10b981' : '#16a34a',
       // EXP-011/VS-001: cast telegraph is visually distinct from a plain attack (violet, matching
       // design/visual-assets-v01's "amethyst"/purple cast-glow direction) rather than reusing the
       // attack's amber/red. EXP-013/VS-001: rock-brown for anything Stone-Throw-related, matching
