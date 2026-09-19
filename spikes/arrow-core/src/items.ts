@@ -10,7 +10,7 @@ import type { Dir } from './dir.js'
  * and abilities advance exactly as after a successful tap; 0 = free action).
  */
 
-export type ItemId = 'bow' | 'shield' | 'health_flask'
+export type ItemId = 'bow' | 'shield' | 'potion' | 'arrow'
 
 export type ItemEffect =
   /** Direct projectile hit for `du` damage on a chosen live target side. Treated like an arrow
@@ -22,6 +22,9 @@ export type ItemEffect =
   | { kind: 'ward'; absorb: number }
   /** Heals `hp`, capped at the encounter's `playerMaxHp`. */
   | { kind: 'heal'; hp: number }
+  /** Puts a fresh, immediately free 2-cell arrow on the board pointing `target` (see
+   * `EncounterState.useItem`). Ammo you conjure; releasing it is still a normal tap/turn. */
+  | { kind: 'spawn_arrow' }
 
 export interface ItemDef {
   id: ItemId
@@ -32,6 +35,8 @@ export interface ItemDef {
   recharge: 'encounter' | 'run'
   turnCost: 0 | 1
   effect: ItemEffect
+  /** Consumable: picking it up again adds charges up to `maxCharges` (never refilled by itself). */
+  maxCharges?: number
 }
 
 export const ITEMS: Record<ItemId, ItemDef> = {
@@ -43,9 +48,13 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'shield', label: 'Щит', text: 'Поглощает 2 урона следующей атаки.',
     charges: 1, recharge: 'encounter', turnCost: 0, effect: { kind: 'ward', absorb: 2 },
   },
-  health_flask: {
-    id: 'health_flask', label: 'Фляга', text: '+3 HP. Один раз за забег.',
-    charges: 1, recharge: 'run', turnCost: 0, effect: { kind: 'heal', hp: 3 },
+  potion: {
+    id: 'potion', label: 'Зелье', text: '+3 HP. Расходуется; пополняется наградами.',
+    charges: 1, recharge: 'run', turnCost: 0, effect: { kind: 'heal', hp: 3 }, maxCharges: 3,
+  },
+  arrow: {
+    id: 'arrow', label: 'Стрела', text: 'Кладёт на доску свободную стрелу в выбранном направлении.',
+    charges: 2, recharge: 'run', turnCost: 0, effect: { kind: 'spawn_arrow' }, maxCharges: 5,
   },
 }
 
@@ -68,8 +77,10 @@ export interface Inventory {
 export const INVENTORY_SLOTS = 3
 
 export function itemNeedsTarget(id: ItemId): boolean {
-  return ITEMS[id].effect.kind === 'damage'
+  const k = ITEMS[id].effect.kind
+  return k === 'damage' || k === 'spawn_arrow'
 }
+export const isConsumable = (id: ItemId): boolean => ITEMS[id].maxCharges !== undefined
 
 /** What an item use looks like as an encounter action. `target` = arena side for targeted items. */
 export interface ItemAction {

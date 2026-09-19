@@ -434,6 +434,7 @@ export function createBoardRenderer(canvas, stageEl) {
         fled: e.fled || e.expired, // ACT-I-003: an expired temporary target leaves like a fled one
         turnsLeft: e.turnsLeft,
         countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
+        abilities: e.abilities,
         shielded: e.shielded,
         abilityKind: def.enemies.find((raw) => raw.id === e.id)?.ability?.kind ?? (def.enemies.find((raw) => raw.id === e.id)?.ability ? 'stone_throw' : undefined),
         abilityTrigger: def.enemies.find((raw) => raw.id === e.id)?.ability?.trigger,
@@ -911,12 +912,17 @@ export function createBoardRenderer(canvas, stageEl) {
           color: isCast ? col.cast : t.countdown <= 1 ? col.danger : col.text,
         })
       }
-      if (!t.dead && !t.fled && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
-        if (t.abilityKind === 'shield') {
-          lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD ${t.abilityCountdown}`, bold: true, color: col.cast })
-        } else {
-          lines.push({ text: `THROW ${t.abilityCountdown}`, bold: true, color: col.rock })
+      // ITEM-001b: one line per ability (an enemy may have several, e.g. the Matron heals AND throws).
+      if (!t.dead && !t.fled) {
+        for (const ab of t.abilities ?? []) {
+          if (ab.kind === 'shield') lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD ${ab.countdown}`, bold: true, color: col.cast })
+          else if (ab.kind === 'shift') lines.push({ text: ab.trigger === 'hit' ? 'STAGGERS' : `MOVE ${ab.countdown}`, bold: true, color: col.cast })
+          else if (ab.kind === 'heal') lines.push({ text: `HEAL ${ab.countdown}`, bold: true, color: col.cast })
+          else if (Number.isFinite(ab.countdown)) lines.push({ text: `THROW ${ab.countdown}`, bold: true, color: col.rock })
         }
+        if (t.turnsLeft !== undefined) lines.push({ text: `LEAVES ${t.turnsLeft}`, bold: true, color: t.turnsLeft <= 1 ? col.danger : col.text })
+        const rw = t.reward
+        if (rw && ((rw.heal ?? 0) > 0 || (rw.rotate ?? 0) > 0)) lines.push({ text: `LOOT ${rw.heal ? `+${rw.heal}HP` : ''}${rw.rotate ? ` +${rw.rotate}R` : ''}`.trim(), bold: true, color: col.cast })
       }
       const lineH = fontPx * 1.18
       let maxW = 0

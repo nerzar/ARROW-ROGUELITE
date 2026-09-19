@@ -80,14 +80,14 @@ describe('Shield item (ward)', () => {
   })
 })
 
-describe('Health Flask', () => {
+describe('Potion', () => {
   it('heals 3 capped at max, free action, one charge per run', () => {
     const def = base([{ id: 'g', side: W, hp: 9 }])
-    const i = inv('health_flask')
+    const i = inv('potion')
     const s = EncounterState.fromLevel(eArrows(3), def, 8, null, 10, i)
-    expect(s.useItem('health_flask').ok).toBe(true)
+    expect(s.useItem('potion').ok).toBe(true)
     expect(s.playerHp).toBe(10)
-    expect(s.canUseItem('health_flask')).toBe(false)
+    expect(s.canUseItem('potion')).toBe(false)
   })
 })
 
@@ -156,7 +156,8 @@ describe('RunState: inventory, reward draft, persistence', () => {
     for (let seed = 1; seed <= N; seed++) {
       const run = new RunState({ playerMaxHp: 10, runSeed: seed, itemChance: 0.3 }, [step('s1', d()), step('s2', d())])
       run.encounter.tap(0)
-      if (run.rewardOffers()[2].kind === 'item') items++
+      const o = run.rewardOffers()[2]
+      if (o.kind === 'item' && o.id !== 'arrow') items++
     }
     expect(items / N).toBeGreaterThan(0.18)
     expect(items / N).toBeLessThan(0.42)
@@ -178,46 +179,113 @@ describe('RunState: inventory, reward draft, persistence', () => {
     expect(back.stepIndex).toBe(1)
   })
 
-  it('heal reward applies on advance, rotate reward goes to the pool, no reward on excluded steps', () => {
-    const run = new RunState({ playerMaxHp: 10, runSeed: 3, noRewardAfter: ['s1'] }, [step('s1', d()), step('s2', d()), step('s3', d())])
+  it('potion card while hurt (stacks up to max), rotate card at full HP, no reward on excluded steps', () => {
+    const run = new RunState({ playerMaxHp: 10, runSeed: 3, noRewardAfter: ['s1'] }, [step('s1', d()), step('s2', d()), step('s3', d()), step('s4', d()), step('s5', d())])
     run.encounter.tap(0)
     expect(run.rewardPending).toBe(false)
     run.advance()
     ;(run.encounter as any).playerHpValue = 4
     run.encounter.tap(0)
-    const offers = run.rewardOffers()
-    const heal = offers.findIndex((o) => o.kind === 'heal')
-    const rot = offers.findIndex((o) => o.kind === 'rotate')
-    if (heal >= 0) {
-      run.chooseReward(heal)
-      run.advance()
-      expect(run.encounter.playerHp).toBe(7)
-    } else if (rot >= 0) {
-      const before = run.rotateCharges
-      run.chooseReward(rot)
-      expect(run.rotateCharges).toBe(before + 1)
-    }
+    let offers = run.rewardOffers()
+    expect(offers[1]).toEqual({ kind: 'item', id: 'potion', charges: 1 })
+    run.chooseReward(1)
+    expect(run.inventory.find((i) => i.id === 'potion')?.charges).toBe(1)
+    run.advance()
+    run.encounter.tap(0) // still hurt -> another potion charge stacks into the same slot
+    offers = run.rewardOffers()
+    expect(offers[1]).toEqual({ kind: 'item', id: 'potion', charges: 1 })
+    run.chooseReward(1)
+    expect(run.inventory.length).toBe(1)
+    expect(run.inventory[0].charges).toBe(2)
+    run.advance()
+    run.encounter.useItem('potion')
+    expect(run.encounter.playerHp).toBe(7)
+    expect(run.inventory[0].charges).toBe(1)
+    ;(run.encounter as any).playerHpValue = 10
+    run.encounter.tap(0)
+    expect(run.rewardOffers()[1]).toEqual({ kind: 'rotate', charges: 1 })
   })
 
   it('a full inventory needs a replace slot; restartStep restores charges; toJSON/fromJSON round-trips', () => {
-    const run = new RunState({ playerMaxHp: 10, startingItems: ['bow', 'shield', 'health_flask'] }, [step('s1', d()), step('s2', d())])
+    const run = new RunState({ playerMaxHp: 10, startingItems: ['bow', 'shield', 'potion'] }, [step('s1', d()), step('s2', d())])
     expect(run.inventoryFull).toBe(true)
     expect(run.addItem('bow')).toBe(false)
-    run.encounter.useItem('health_flask')
+    run.encounter.useItem('potion')
     expect(run.inventory[2].charges).toBe(0)
-    run.restartStep() // back to the entry snapshot: flask charge restored
+    run.restartStep() // back to the entry snapshot: potion charge restored
     expect(run.inventory[2].charges).toBe(1)
     expect(run.addItem('bow', 1)).toBe(true)
     expect(run.inventory[1].id).toBe('bow')
-    run.encounter.useItem('health_flask')
+    run.encounter.useItem('potion')
     run.encounter.tap(0)
     run.skipReward()
     run.advance()
     const save = JSON.parse(JSON.stringify(run.toJSON()))
     const back = RunState.fromJSON({ playerMaxHp: 10 }, [step('s1', d()), step('s2', d())], save)
     expect(back.stepIndex).toBe(1)
-    expect(back.inventory.map((i) => i.id)).toEqual(['bow', 'bow', 'health_flask'])
-    expect(back.inventory[2].charges).toBe(0) // run-scoped charge stays spent
+    expect(back.inventory.map((i) => i.id)).toEqual(['bow', 'bow', 'potion'])
+    expect(back.inventory[2].charges).toBe(0) // run-scoped consumable stays spent
     expect(back.inventory[0].charges).toBe(1)
+  })
+})
+
+describe('Arrow item (spawn_arrow)', () => {
+  it('conjures a free 2-cell arrow toward the target side, the level/board grow, undo un-conjures', () => {
+    // 3x3 empty-ish board: one W arrow in the middle row; enemy on E has no ammo.
+    const lvl = levelXY(3, 3, [[[2, 1], [1, 1]]])
+    const def = base([{ id: 'g', side: E, hp: 1 }])
+    const i = inv('arrow')
+    const s = EncounterState.fromLevel(lvl, def, 10, null, 10, i)
+    expect(s.canUseItem('arrow', E)).toBe(true)
+    expect(s.canUseItem('arrow', W)).toBe(true)
+    const r = s.useItem('arrow', E)
+    expect(r.ok && r.spawnedArrow).toBe(1)
+    expect(s.level!.arrows.length).toBe(2)
+    expect(s.board.topo.arrowCount).toBe(2)
+    expect(s.board.canExit(1)).toBe(true)
+    expect(s.wouldHit(1)).toBe(true)
+    expect(i.slots[0].charges).toBe(1)
+    expect(s.board.isAlive(0)).toBe(true)
+    const t = s.tap(1)
+    expect(t.ok && t.hit && s.won).toBe(true)
+    s.undo()
+    s.undo()
+    expect(s.level!.arrows.length).toBe(1)
+    expect(s.board.topo.arrowCount).toBe(1)
+    expect(i.slots[0].charges).toBe(2)
+  })
+
+  it('keeps the alive set across the spawn and the solver can plan with it', () => {
+    const lvl = levelXY(3, 3, [[[2, 0], [1, 0]], [[2, 2], [1, 2]]]) // two W arrows, top and bottom rows
+    const def = base([{ id: 'g', side: E, hp: 1, attackTimer: { interval: 1, damage: 5 } }]) // any miss = death
+    const s = EncounterState.fromLevel(lvl, def, 10, null, 10, inv('arrow'))
+    s.tap(0) // remove the top arrow (the enemy bites once; 10 HP survives it)
+    const r = s.useItem('arrow', E)
+    expect(r.ok).toBe(true)
+    expect(s.board.isAlive(0)).toBe(false)
+    expect(s.board.isAlive(1)).toBe(true)
+    const md = minDamageToWin(EncounterState.fromLevel(lvl, def, 4, null, 10, inv('arrow')))
+    expect(md.win).toBe(true)
+    expect(md.minDamage).toBe(0)
+    expect(md.sequence.some((a) => a.kind === 'item' && a.id === 'arrow')).toBe(true)
+  })
+})
+
+describe('Multiple abilities per enemy (Matron: heal + stone throw)', () => {
+  it('runs both countdowns independently', () => {
+    const def = base([
+      { id: 'matron', side: N, hp: 3, ability: { id: 'h', kind: 'heal', interval: 2 }, abilities: [{ id: 'rocks', interval: 3, targetPolicy: 'free-arrow', pinDuration: 2 }] },
+      { id: 'grunt', side: E, hp: 3 },
+    ])
+    const s = EncounterState.fromLevel(eArrows(8), def, 10)
+    expect(s.enemies[0].abilities.map((a) => [a.kind, a.countdown])).toEqual([['heal', 2], ['stone_throw', 3]])
+    s.tap(0) // grunt 2/3
+    s.tap(1) // grunt 1/3 -> heal fires (2), throw countdown 1
+    expect(s.enemies[1].hp).toBe(2)
+    const r = s.tap(2) // grunt 1/3 -> throw fires: pins an arrow
+    expect(r.ok && r.pinnedThisTurn!.length).toBe(1)
+    expect(s.enemies[0].abilities.map((a) => a.countdown)).toEqual([1, 3])
+    s.undo()
+    expect(s.enemies[0].abilities.map((a) => a.countdown)).toEqual([2, 1])
   })
 })

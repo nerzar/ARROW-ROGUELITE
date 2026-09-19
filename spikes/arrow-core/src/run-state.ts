@@ -1,5 +1,5 @@
 import { type EncounterDef, EncounterState, type RotatePool } from './encounter.js'
-import { type Inventory, INVENTORY_SLOTS, type ItemId, type ItemInstance, ITEM_IDS, ITEMS } from './items.js'
+import { type Inventory, INVENTORY_SLOTS, isConsumable, type ItemId, type ItemInstance, ITEM_IDS, ITEMS } from './items.js'
 import type { Level } from './level.js'
 import { createRng, deriveSeed, hashString } from './rng.js'
 
@@ -54,12 +54,13 @@ export interface RunConfig {
  */
 export type RewardOffer =
   | { kind: 'gold'; amount: number }
-  | { kind: 'item'; id: ItemId }
-  | { kind: 'heal'; hp: number }
+  /** A rare item, or `charges` more of a consumable (potion / arrows) you may already own. */
+  | { kind: 'item'; id: ItemId; charges?: number }
   | { kind: 'rotate'; charges: number }
 
-export const REWARD_HEAL = 3
 export const REWARD_ROTATE = 1
+export const REWARD_POTIONS = 1
+export const REWARD_ARROWS = 2
 
 /** ITEM-001: what survives between sessions. */
 export interface RunSave {
@@ -133,9 +134,15 @@ export class RunState {
   hasItem(id: ItemId): boolean {
     return this.inv.slots.some((it) => it.id === id)
   }
-  /** Adds `id` with full charges. Returns false when the inventory is full and no `replaceSlot` is given. */
-  addItem(id: ItemId, replaceSlot?: number): boolean {
-    const inst: ItemInstance = { id, charges: ITEMS[id].charges }
+  /** Adds `id` with full charges (a consumable already owned just gains `charges`, capped at its
+   * `maxCharges`). Returns false when the inventory is full and no `replaceSlot` is given. */
+  addItem(id: ItemId, replaceSlot?: number, charges = ITEMS[id].charges): boolean {
+    const owned = this.inv.slots.find((it) => it.id === id)
+    if (owned && isConsumable(id)) {
+      owned.charges = Math.min(ITEMS[id].maxCharges!, owned.charges + charges)
+      return true
+    }
+    const inst: ItemInstance = { id, charges: Math.min(ITEMS[id].maxCharges ?? charges, charges) }
     if (replaceSlot !== undefined) {
       if (replaceSlot < 0 || replaceSlot >= this.inv.slots.length) return false
       this.inv.slots[replaceSlot] = inst
@@ -166,13 +173,17 @@ export class RunState {
     const rng = createRng(deriveSeed(this.config.runSeed ?? 1, hashString(step.id)))
     const gold = (this.config.goldBase ?? 8) + (this.config.goldPerStep ?? 2) * this.idx
     const offers: RewardOffer[] = [{ kind: 'gold', amount: gold }]
-    // Card 2: heal while hurt, otherwise a Rotate charge.
-    offers.push(this.encounterState.playerHp < this.config.playerMaxHp ? { kind: 'heal', hp: REWARD_HEAL } : { kind: 'rotate', charges: REWARD_ROTATE })
-    // Card 3: a rare item — forced by the step, else by chance — from the ones not yet owned.
-    const unowned = ITEM_IDS.filter((id) => !this.hasItem(id))
+    // Card 2 (user rule 2026-09-19): a potion while hurt (a consumable you carry, not an instant heal),
+    // otherwise a Rotate charge.
+    const potionFull = this.inv.slots.find((it) => it.id === 'potion')?.charges === ITEMS.potion.maxCharges
+    offers.push(this.encounterState.playerHp < this.config.playerMaxHp && !potionFull ? { kind: 'item', id: 'potion', charges: REWARD_POTIONS } : { kind: 'rotate', charges: REWARD_ROTATE })
+    // Card 3: a rare non-consumable item (forced by the step or by chance), else arrows, else big gold.
+    const rare = ITEM_IDS.filter((id) => !isConsumable(id) && !this.hasItem(id))
     const roll = rng.next()
-    const wantItem = unowned.length > 0 && (step.def.rewardItem === true || roll < (this.config.itemChance ?? 0.3))
-    if (wantItem) offers.push({ kind: 'item', id: unowned[rng.int(unowned.length)] })
+    const itemChance = this.config.itemChance ?? 0.3
+    const arrowsFull = this.inv.slots.find((it) => it.id === 'arrow')?.charges === ITEMS.arrow.maxCharges
+    if (rare.length > 0 && (step.def.rewardItem === true || roll < itemChance)) offers.push({ kind: 'item', id: rare[rng.int(rare.length)] })
+    else if (!arrowsFull && roll < itemChance + 0.35) offers.push({ kind: 'item', id: 'arrow', charges: REWARD_ARROWS })
     else offers.push({ kind: 'gold', amount: gold * 2 })
     this.offers = offers
     return this.offers
@@ -190,9 +201,8 @@ export class RunState {
     if (o.kind === 'gold') {
       this.goldValue += o.amount
     } else if (o.kind === 'item') {
-      if (!this.addItem(o.id, this.inventoryFull ? replaceSlot : undefined)) return false
-    } else if (o.kind === 'heal') {
-      this.pendingHeal += o.hp
+      const needsSlot = this.inventoryFull && !(isConsumable(o.id) && this.hasItem(o.id))
+      if (!this.addItem(o.id, needsSlot ? replaceSlot : undefined, o.charges)) return false
     } else {
       this.rotatePool.charges += o.charges
     }

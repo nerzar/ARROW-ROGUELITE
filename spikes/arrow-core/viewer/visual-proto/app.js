@@ -92,7 +92,7 @@ const itemBar = createItemBar(document.querySelector('.hud-left'), {
   onUse: (id, target) => useItem(id, target),
   targetLabel: (side) => {
     const t = run ? renderer.collectTargets(run.encounter, def).find((x) => x.side === side && !x.dead && !x.fled) : null
-    return t?.label ?? DIR_NAMES[side]
+    return t?.label ?? ''
   },
 })
 
@@ -569,6 +569,11 @@ function useItem(id, target) {
     return
   }
   const label = ITEMS[id].label
+  // ITEM-001b: the Arrow item grew the level — the renderer draws `level`, so follow the engine's copy.
+  if (r.spawnedArrow !== undefined && s.level) {
+    level = s.level
+    renderer.resize(level, activeCalibration)
+  }
   const after = renderer.collectTargets(s, def)
   const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
   if (r.hit) {
@@ -599,7 +604,8 @@ function useItem(id, target) {
   let text = `${label}`
   if (r.hit) text += ` · попадание (${r.hitDamage}) · HP целей ${s.hp}/${s.totalHp}`
   if (id === 'shield') text += ` · щит ${s.wardHp}`
-  if (id === 'health_flask') text += ` · HP игрока ${s.playerHp}`
+  if (id === 'potion') text += ` · HP игрока ${s.playerHp}`
+  if (r.spawnedArrow !== undefined) text += ` · стрела #${r.spawnedArrow} на доске`
   if (r.enemyAttacked) {
     text += ` · ВРАГ АТАКУЕТ (HP игрока ${r.playerHp})`
     flashPlayerHit()
