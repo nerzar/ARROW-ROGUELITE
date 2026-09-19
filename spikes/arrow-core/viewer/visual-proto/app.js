@@ -4,6 +4,7 @@
 // 16:9 desktop shell: board-renderer.js draws the board/targets, this file owns scene loading,
 // input, HUD DOM, and the win/loss overlay. No combat rule is duplicated here.
 import {
+  DEFAULT_ACT1_ROUTE_GRAPH,
   DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, ITEMS, PRESETS, RELICS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
@@ -23,6 +24,7 @@ import {
 } from './enemy-visual-state.js'
 import { FLIGHT_MS } from './projectile-flight.js'
 import { createItemBar, showRewardDraft } from './items-ui.js'
+import { createRouteMapModal } from './route-map-ui.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
@@ -35,7 +37,7 @@ const ui = {
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayBody: $('overlayBody'), overlayNext: $('overlayNext'), overlayRestartAll: $('overlayRestartAll'),
   bakedArenaPick: $('bakedArenaPick'), bakedArenaLoadBtn: $('bakedArenaLoadBtn'),
   arrowStylePick: $('arrowStylePick'), arrowMatPick: $('arrowMatPick'), flightStylePick: $('flightStylePick'),
-  adminToggle: $('adminToggle'),
+  adminToggle: $('adminToggle'), mapBtn: $('mapBtn'),
 }
 
 // BUILD-025/CAL-004: canon Prologue sequence -- now shared with calibration-editor.js via
@@ -101,6 +103,49 @@ const itemBar = createItemBar(document.querySelector('.hud-left'), {
   },
 })
 
+function saveRunProgress() {
+  if (run && run.hasRouteGraph) {
+    try {
+      localStorage.setItem('arrow_act1_run_save', JSON.stringify(run.toJSON()))
+    } catch {}
+  }
+}
+
+// MAP-001: Route map modal and shop screen controller
+const routeMapModal = createRouteMapModal({
+  onSelectNode: (nodeId) => {
+    if (!run || !run.hasRouteGraph) return
+    const ok = run.selectRouteNode(nodeId)
+    if (!ok) return
+    saveRunProgress()
+    if (run.inShop) {
+      routeMapModal.render(run)
+    } else {
+      routeMapModal.hide()
+      loadActiveStep()
+    }
+  },
+  onClose: () => {},
+  onLeaveShop: () => {
+    if (!run || !run.hasRouteGraph) return
+    run.leaveShop()
+    saveRunProgress()
+    routeMapModal.render(run)
+  },
+})
+
+if (ui.mapBtn) {
+  ui.mapBtn.onclick = () => {
+    if (!run || !run.hasRouteGraph) return
+    if (routeMapModal.isVisible()) {
+      if (!run.routeMapPending && !run.inShop) routeMapModal.hide()
+    } else {
+      routeMapModal.render(run)
+      routeMapModal.show()
+    }
+  }
+}
+
 let run = null
 let level = null
 let def = null
@@ -128,6 +173,11 @@ let sceneEntryKey = null
 /** UI-001: point the scene dropdown at the ACTUAL runtime scene (single source of truth).
  * Debug boards (no static option) get one reusable transient option labelled live. */
 function syncScenePick() {
+  if (sceneKind === 'route') {
+    ui.scenePick.value = 'route-act1'
+    ui.scenePick.querySelector('option[data-transient]')?.remove()
+    return
+  }
   const { key, transient } = resolveActiveSceneKey({
     kind: sceneKind,
     entryKey: sceneEntryKey,
@@ -181,14 +231,44 @@ async function loadScene(key) {
   activeCalibration = null // flexible-arena regression path -- see loadBakedArenaDebug
   restoreDefaultBackground()
   // UI-001: remember how this run was entered so the dropdown can stay truthful on advance.
-  sceneKind = key.startsWith('authored-')
-    ? 'authored'
-    : SEQUENCE_STEPS.some((s) => s.key === key)
-      ? 'sequence'
-      : 'single'
+  sceneKind = key === 'route-act1'
+    ? 'route'
+    : key.startsWith('authored-')
+      ? 'authored'
+      : SEQUENCE_STEPS.some((s) => s.key === key)
+        ? 'sequence'
+        : 'single'
   sceneEntryKey = key
 
-  if (key.startsWith('authored-') && authoredSteps.length > 0) {
+  if (key === 'route-act1') {
+    const graph = loadedCampaignInfo?.campaign?.routeGraph ?? DEFAULT_ACT1_ROUTE_GRAPH
+    const steps = authoredSteps.length > 0 ? authoredSteps : await Promise.all(SEQUENCE_STEPS.map(getStep))
+    const initialCharges = 2
+    let restored = null
+    const rawSave = localStorage.getItem('arrow_act1_run_save')
+    if (rawSave && !new URLSearchParams(location.search).has('reset')) {
+      try {
+        const parsed = JSON.parse(rawSave)
+        restored = RunState.fromJSON({ ...runConfig, initialRotateCharges: initialCharges, routeGraph: graph }, steps, parsed)
+      } catch (e) {
+        console.warn('Failed to restore act 1 run save', e)
+      }
+    }
+    if (restored) {
+      run = restored
+    } else {
+      const qp = new URLSearchParams(location.search)
+      const startOnMap = qp.get('map') === '1' || qp.get('route') === '1'
+      const initNode = qp.get('node')
+      run = new RunState({
+        ...runConfig,
+        initialRotateCharges: initialCharges,
+        routeGraph: graph,
+        initialRouteNodeId: initNode ?? undefined,
+        startOnRouteMap: startOnMap,
+      }, steps)
+    }
+  } else if (key.startsWith('authored-') && authoredSteps.length > 0) {
     const authIdx = Number(key.replace('authored-', ''))
     run = new RunState({ ...runConfig, initialRotateCharges: 0 }, authoredSteps)
     if (authIdx > 0 && authIdx < authoredSteps.length) {
@@ -366,6 +446,18 @@ function loadActiveStep() {
     : `Цель: ${def.boss?.id ?? 'boss'}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
   ui.report.textContent = formatEncounterReport(rep)
+  if (ui.mapBtn) {
+    ui.mapBtn.style.display = run.hasRouteGraph ? 'inline-block' : 'none'
+  }
+  if (run.hasRouteGraph) {
+    if (run.currentNode) {
+      ui.sceneTitle.textContent = `${run.currentNode.title} [${run.currentNode.type.toUpperCase()}] · ${step.title ?? step.id}`
+    }
+    routeMapModal.render(run)
+    if (run.routeMapPending || run.inShop) {
+      routeMapModal.show()
+    }
+  }
   renderPanel()
   kick()
 }
@@ -733,7 +825,17 @@ function showOverlay(kind) {
     if (ui.overlayRestartAll) ui.overlayRestartAll.style.display = 'none'
 
     if (isSeq && isLast) {
-      if (isAuthored) {
+      if (run.hasRouteGraph && (run.isLastStep || run.currentNode?.type === 'boss')) {
+        ui.overlayTitle.textContent = 'Акт I пройден!'
+        ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}. Король гоблинов повержен! Поход по Стране гоблинов успешно завершен!`
+        ui.overlayNext.textContent = 'Пройти Акт I заново'
+        ui.overlayNext.onclick = () => {
+          hideOverlay()
+          localStorage.removeItem('arrow_act1_run_save')
+          run.restartRun()
+          loadActiveStep()
+        }
+      } else if (isAuthored) {
         ui.overlayTitle.textContent = 'Кампания пройдена!'
         ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}. Все этапы авторской кампании успешно завершены!`
         ui.overlayNext.textContent = 'В редактор кампании →'
@@ -746,17 +848,33 @@ function showOverlay(kind) {
         if (reward > 0) {
           body += `Награда за босса: +${reward} ROTATE (общий пул: ${run.rotateCharges + reward}). `
         }
-        body += 'Все 5 этапов текущего пролога успешно завершены! Теперь обсуждаем дальнейшие изменения.'
+        body += 'Все 5 этапов текущего пролога успешно завершены! Вы готовы отправиться в Страну гоблинов.'
         ui.overlayBody.textContent = body
-        ui.overlayNext.textContent = 'Пройти пролог заново'
+        ui.overlayNext.textContent = 'В Страну гоблинов (Карта) →'
         ui.overlayNext.onclick = () => {
           hideOverlay()
-          run.restartRun()
-          loadActiveStep()
+          loadScene('route-act1')
+        }
+        if (ui.overlayRestartAll) {
+          ui.overlayRestartAll.style.display = 'inline-block'
+          ui.overlayRestartAll.textContent = 'Пройти пролог заново'
+          ui.overlayRestartAll.onclick = () => {
+            hideOverlay()
+            run.restartRun()
+            loadActiveStep()
+          }
         }
       }
-    } else if (isSeq) {
+    } else if (isSeq || run?.hasRouteGraph) {
       const showNext = () => {
+        if (run.hasRouteGraph) {
+          hideOverlay()
+          run.advance()
+          saveRunProgress()
+          routeMapModal.render(run)
+          routeMapModal.show()
+          return
+        }
         ui.overlayTitle.style.display = ''
         ui.overlayBody.style.display = ''
         ui.overlayNext.style.display = ''
@@ -989,6 +1107,16 @@ window.addEventListener('keydown', (ev) => {
   }
   else if (k === 'h') showHint()
   else if (k === 'd') ui.debugPanel.classList.toggle('hidden')
+  else if (k === 'm') {
+    if (run?.hasRouteGraph) {
+      if (routeMapModal.isVisible()) {
+        if (!run.routeMapPending && !run.inShop) routeMapModal.hide()
+      } else {
+        routeMapModal.render(run)
+        routeMapModal.show()
+      }
+    }
+  }
   else return
   ev.preventDefault()
 })
@@ -1002,6 +1130,9 @@ if (loadedCampaignInfo?.campaign?.levels?.length > 0) {
     console.warn('Failed to parse authored campaign steps', e)
   }
 }
+
+// MAP-001: Dedicated entry for Act I Route Map
+ui.scenePick.append(new Option('🗺️ Карта: Страна гоблинов (Акт I)', 'route-act1'))
 
 for (const scene of SEQUENCE_STEPS) ui.scenePick.append(new Option(scene.title, scene.key))
 
@@ -1070,7 +1201,9 @@ initCleanMode(queryParams, hashParams) // UI-001: ?clean=1 starts in clean game 
 }
 
 let initialKey = queryParams.get('scene') ?? hashParams.get('scene')
-if (mode === 'authored' && authoredSteps.length > 0) {
+if (queryParams.get('map') === '1' || queryParams.get('route') === '1' || queryParams.get('act1') === '1' || mode === 'route') {
+  initialKey = 'route-act1'
+} else if (mode === 'authored' && authoredSteps.length > 0) {
   const stIdx = Number(stageParam ?? 0)
   initialKey = `authored-${stIdx}`
 }
