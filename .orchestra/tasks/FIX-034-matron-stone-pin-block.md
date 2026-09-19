@@ -1,10 +1,10 @@
 # TASK: FIX-034 — Stone Pin blocks arrow correctly in Matron encounter
 
-STATUS: READY
+STATUS: BLOCKED — wait for Gemini skill branch to be merged
 TYPE: FIX
 SIZE: S
 AGENT:
-BASE_BRANCH: main
+BASE_BRANCH: fresh main AFTER the Gemini branch that contains the Matron/Stone Pin behavior is integrated
 BRANCH: fix/FIX-034-matron-stone-pin-block
 
 ## Цель
@@ -32,3 +32,7 @@ BRANCH: fix/FIX-034-matron-stone-pin-block
 - tests/typecheck/build зелёные.
 
 После сдачи STOP.
+
+## Dependency / correction
+
+2026-09-19: The bug is **not reproducible on current main because the relevant Matron/Stone Pin skill is not there yet**. Do not spend another agent on this task before the Gemini branch containing that behavior is merged/integrated and the bug is reproduced on the new main. The earlier Devin/Fable attempt used the wrong baseline, so its browser reproduction is not valid evidence for FIX-034.
