@@ -319,6 +319,7 @@ export function createBoardRenderer(canvas, stageEl) {
         fx.sparks = { at: now + FLIGHT_MS, seed, parts: sparkParts(seed, LIGHT_HIT.sparkCount, backAng) }
         fx.squashT = { at: now + FLIGHT_MS }
         fx.shakeC = { at: now + FLIGHT_MS }
+        if (r.shieldConsumed?.some((s) => s.id === hitTarget.id)) fx.shieldT = now + FLIGHT_MS
         // EXP-011/VS-001: only a genuine cast-interrupt gets the "CAST INTERRUPTED" burst -- the
         // legacy EXP-010 interruptOnHit reset (r.interrupted without r.castInterrupted) is unused
         // by any current content and isn't a cast, so it gets no burst text.
@@ -425,6 +426,8 @@ export function createBoardRenderer(canvas, stageEl) {
         id: e.id, label: e.label, side: e.side, hp: e.hp, hpMax: e.hpMax, dead: e.dead,
         fled: e.fled,
         countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
+        shielded: e.shielded,
+        abilityKind: def.enemies.find((raw) => raw.id === e.id)?.ability?.kind ?? (def.enemies.find((raw) => raw.id === e.id)?.ability ? 'stone_throw' : undefined),
         species: def.enemies.find((raw) => raw.id === e.id)?.species,
         isBoss: false,
       }))
@@ -696,6 +699,20 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.restore()
       }
 
+      // COMBAT-001 playtest: active one-shot shield gets a simple readable aura. This is
+      // intentionally presentation-only and cheap; final shield art/VFX comes later if the mechanic survives playtest.
+      if (t.shielded && !t.dead && !t.fled) {
+        const pulse = 0.82 + Math.sin(now / 120) * 0.08
+        ctx.save()
+        ctx.globalAlpha = 0.72
+        ctx.strokeStyle = col.cast
+        ctx.lineWidth = Math.max(3, charCell * 0.08)
+        ctx.beginPath()
+        ctx.ellipse(0, 0, charW * 0.56 * pulse, charH * 0.52 * pulse, 0, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.restore()
+      }
+
       // Ground shadow: soft ellipse at the feet, keeps the actor planted on the arena. Stays on
       // the character's own foot point (not the effect anchor) -- this is "where I stand", not a
       // telegraph. CAL-005: the species shadow offset moves it independently of the art pivot --
@@ -871,7 +888,11 @@ export function createBoardRenderer(canvas, stageEl) {
         lines.push({ text: isCast ? `CAST IN ${t.countdown}` : `ATTACK IN ${t.countdown}`, bold: true, color: isCast ? col.cast : t.countdown <= 1 ? col.danger : col.text })
       }
       if (!t.dead && !t.fled && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
-        lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
+        if (t.abilityKind === 'shield') {
+          lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD IN ${t.abilityCountdown}`, bold: true, color: col.cast })
+        } else {
+          lines.push({ text: `THROW IN ${t.abilityCountdown}`, bold: true, color: col.rock })
+        }
       }
       const lineH = fontPx * 1.15
       let maxW = 0
@@ -931,14 +952,13 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.fillText(String(t.countdown), bxo, byo + 1)
         ctx.restore()
       }
-      // THROW IN badge (EXP-013): opposite plate corner from the attack badge, rock-brown,
-      // independent countdown -- a target can carry both at once.
+      // Enemy-ability badge: Stone Throw uses rock-brown; Shield uses cast-violet and "S" while up.
       if (!t.dead && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
         const r = hud.badge.r
         const bxo = hud.plate.x + r * 0.5
         const byo = hud.badge.y
         ctx.save()
-        ctx.fillStyle = col.rock
+        ctx.fillStyle = t.abilityKind === 'shield' ? col.cast : col.rock
         ctx.beginPath()
         ctx.arc(bxo, byo, r, 0, Math.PI * 2)
         ctx.fill()
@@ -946,7 +966,7 @@ export function createBoardRenderer(canvas, stageEl) {
         ctx.font = `800 ${Math.floor(r * 1.15)}px system-ui`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText(String(t.abilityCountdown), bxo, byo + 1)
+        ctx.fillText(t.abilityKind === 'shield' && t.shielded ? 'S' : String(t.abilityCountdown), bxo, byo + 1)
         ctx.restore()
       }
 
@@ -954,6 +974,18 @@ export function createBoardRenderer(canvas, stageEl) {
       // reads next to its own target. Only fires for a real EXP-011 cast interrupt (see
       // onTapResult), never the legacy interruptOnHit reset.
       const sinceInterrupt = now - fx.interruptT
+      const sinceShield = now - (fx.shieldT ?? -1e9)
+      if (sinceShield >= 0 && sinceShield < 650) {
+        const p = sinceShield / 650
+        ctx.save()
+        ctx.globalAlpha = 1 - p
+        ctx.fillStyle = col.cast
+        ctx.font = `800 ${Math.max(11, Math.floor(charCell * 0.26))}px system-ui`
+        ctx.textAlign = 'center'
+        ctx.fillText('SHIELD BLOCKED', 0, -charH / 2 - 8 - p * 10)
+        ctx.restore()
+      }
+
       if (sinceInterrupt >= 0 && sinceInterrupt < 700) {
         const p = sinceInterrupt / 700
         ctx.save()

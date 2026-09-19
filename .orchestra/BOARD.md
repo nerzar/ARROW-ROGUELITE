@@ -40,7 +40,7 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task/направление | Статус | Что именно хотим |
 |---|---|---|
-| ACT-I-002 — Act I Vertical Slice | PLAYTEST | В campaign добавлены 8 provisional Act I stages: патруль → cross-lock → caster → rock thrower → three-front → captain → mixed exam → Goblin King. Пользователь проходит и тюнит в Campaign Editor. |
+| ACT-I-002 — Act I Vertical Slice | PLAYTEST | В campaign добавлены 8 provisional Act I stages: патруль → cross-lock → caster → rock thrower → three-front → Shield Captain → mixed exam → Goblin King. Пользователь проходит и тюнит в Campaign Editor. |
 | RUN-002 — Roguelite Rewards / Progression | PLANNED | Проверить короткий run: meaningful rewards между боями, расход/ценность Rotate, небольшой понятный набор апгрейдов, желание сделать ещё один забег. |
 | VFX integration (остальные пресеты после light-hit) | PLANNED | VFX-003 принят (light-hit целиком) — дальше heavy hit / magic hit / boss hit / kill / boss kill / blocked tap / reward, тем же паттерном (`fxFor(key).новое_поле`), по одному за раз. |
 | AUDIO-001 — Combat Audio | PLANNED LATER | После принятого визуального combat feel: hit/cast/death/reward SFX, без преждевременного большого sound-system. |

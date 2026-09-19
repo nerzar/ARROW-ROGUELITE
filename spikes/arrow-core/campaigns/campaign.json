@@ -1286,6 +1286,12 @@
             "attackTimer": {
               "interval": 4,
               "damage": 3
+            },
+            "ability": {
+              "id": "guard_shield",
+              "kind": "shield",
+              "interval": 3,
+              "label": "shield"
             }
           },
           {
@@ -1306,7 +1312,7 @@
           "useRunPool": true
         },
         "blockedTapDamage": 1,
-        "notes": "Story: капитан охраны пытается задержать игрока перед внутренней частью лагеря. PLAYTEST PLACEHOLDER: после принятия COMBAT-001 сюда первым кандидатом подключаем Shield ability; сейчас это честный elite по HP/таймеру без несуществующей механики."
+        "notes": "Story: капитан охраны задерживает игрока перед внутренней частью лагеря. COMBAT-001 playtest: Captain поднимает одноразовый Shield каждые 3 world turns; следующий projectile hit снимает щит без HP damage. Второй мелкий враг заставляет решать, тратить ли стрелы на капитана до/после Shield. HP/timers/interval provisional — пользователь тюнит после ручного прохождения."
       }
     },
     {
