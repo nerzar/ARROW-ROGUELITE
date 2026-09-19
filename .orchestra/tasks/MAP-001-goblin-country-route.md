@@ -1,10 +1,11 @@
 # TASK: MAP-001 — Goblin Country Route Map v1
 
-STATUS: PLANNED
+STATUS: READY
 TYPE: BUILD
 SIZE: M
-AGENT:
-BASE_BRANCH: main
+AGENT: Gemini / Antigravity
+BASE_BRANCH: build/ITEM-002-items-v1-set
+START_SHA: 95efe0e6f8b450d3b6f86e77af405c801841ef31
 BRANCH: build/MAP-001-goblin-country-route
 
 ## Цель
@@ -57,5 +58,7 @@ BRANCH: build/MAP-001-goblin-country-route
 - save/load восстанавливает выбранный маршрут;
 - существующая линейная campaign не ломается;
 - тесты/typecheck/build зелёные.
+
+Перед сдачей: tests/typecheck/build + реальный browser/playable check. Оставь dev/viewer сервер запущенным и дай точный URL карты для быстрой проверки пользователем.
 
 После сдачи STOP.
