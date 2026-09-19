@@ -101,14 +101,18 @@ describe('Authored Prologue + Act I campaign', () => {
     expect(king.def.boss!.phases.length).toBe(2)
   })
 
-  it('LD-007: every Act I stage has a 0-damage line WITHOUT Rotate (0-Rotate agency, not a Rotate lock)', () => {
+  it('fairness with the base kit (user rule 2026-09-19): every Act I stage has a line WITHOUT Rotate whose damage is covered by Bow+Shield / winHeal', () => {
     for (const lvl of act1Raw) {
       const step = convertLevelToStep(lvl)
-      const enc = EncounterState.fromLevel(step.level, step.def, 10, { charges: 0 })
-      const r = minDamageToWin(enc, { nodeBudget: 1_500_000, maxRotates: 0 })
-      expect(r.win, lvl.id).toBe(true)
-      const allowance = step.def.winHeal ?? 0 // a rest beat may compensate a deliberate attrition stage (ACT-I-003 «Стена щитов»)
-      expect(r.minDamage, `${lvl.id} min damage at 0 Rotate`).toBeLessThanOrEqual(allowance)
+      const bare = minDamageToWin(EncounterState.fromLevel(step.level, step.def, 10, { charges: 0 }), { nodeBudget: 1_200_000, maxRotates: 0 })
+      expect(bare.win, lvl.id).toBe(true)
+      const kit = { slots: [{ id: 'bow' as const, charges: 1 }, { id: 'shield' as const, charges: 1 }] }
+      const withKit = minDamageToWin(EncounterState.fromLevel(step.level, step.def, 10, { charges: 0 }, 10, kit), { nodeBudget: 1_200_000, maxRotates: 0 })
+      expect(withKit.win, lvl.id).toBe(true)
+      const allowance = step.def.winHeal ?? 0
+      expect(withKit.minDamage, `${lvl.id} min damage with Bow+Shield, 0 Rotate`).toBeLessThanOrEqual(allowance)
+      // Regular stages still have a bare-hands 0-damage line; the late exam (17) may lean on the kit.
+      if (!['act1-stage-14', 'act1-stage-17'].includes(lvl.id)) expect(bare.minDamage, `${lvl.id} bare`).toBe(0)
     }
   })
 

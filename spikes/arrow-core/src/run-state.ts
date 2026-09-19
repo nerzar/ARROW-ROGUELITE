@@ -1,5 +1,5 @@
 import { type EncounterDef, EncounterState, type RotatePool } from './encounter.js'
-import { type Inventory, INVENTORY_SLOTS, type ItemId, type ItemInstance, ITEM_IDS, ITEMS, type RelicId, RELIC_IDS, RELICS } from './items.js'
+import { type Inventory, INVENTORY_SLOTS, isConsumable, type ItemId, type ItemInstance, ITEM_IDS, ITEMS, type RelicId, RELIC_IDS, RELICS } from './items.js'
 import type { Level } from './level.js'
 import { createRng, deriveSeed, hashString } from './rng.js'
 import { getAvailableRouteNodes, type RouteGraph, type RouteNode } from './route-map.js'
@@ -58,18 +58,19 @@ export interface RunConfig {
 /**
  * ITEM-001 / ITEM-002: one card of the post-encounter draft. The draft is always three cards:
  *   1. gold (the ordinary reward, always present);
- *   2. +HP or +Rotate (heal only while HP is below max);
- *   3. an item or relic (rare, `itemChance`, or forced by `def.rewardItem`) — else a bigger gold pile.
+ *   2. a potion charge while hurt (and potion not full), else +Rotate;
+ *   3. a rare item or relic (`itemChance`, or forced by `def.rewardItem`) — else arrows ×2 — else a bigger gold pile.
  */
 export type RewardOffer =
   | { kind: 'gold'; amount: number }
-  | { kind: 'item'; id: ItemId }
+  /** A rare item, or `charges` more of a consumable (potion / arrows) you may already own. */
+  | { kind: 'item'; id: ItemId; charges?: number }
   | { kind: 'relic'; id: RelicId }
-  | { kind: 'heal'; hp: number }
   | { kind: 'rotate'; charges: number }
 
-export const REWARD_HEAL = 3
 export const REWARD_ROTATE = 1
+export const REWARD_POTIONS = 1
+export const REWARD_ARROWS = 2
 
 /** ITEM-001 / MAP-001: what survives between sessions. */
 export interface RunSave {
@@ -192,9 +193,15 @@ export class RunState {
   hasItem(id: ItemId): boolean {
     return this.inv.slots.some((it) => it.id === id)
   }
-  /** Adds `id` with full charges. Returns false when the inventory is full and no `replaceSlot` is given. */
-  addItem(id: ItemId, replaceSlot?: number): boolean {
-    const inst: ItemInstance = { id, charges: ITEMS[id].charges }
+  /** Adds `id` with full charges (a consumable already owned just gains `charges`, capped at its
+   * `maxCharges`). Returns false when the inventory is full and no `replaceSlot` is given. */
+  addItem(id: ItemId, replaceSlot?: number, charges = ITEMS[id].charges): boolean {
+    const owned = this.inv.slots.find((it) => it.id === id)
+    if (owned && isConsumable(id)) {
+      owned.charges = Math.min(ITEMS[id].maxCharges!, owned.charges + charges)
+      return true
+    }
+    const inst: ItemInstance = { id, charges: Math.min(ITEMS[id].maxCharges ?? charges, charges) }
     if (replaceSlot !== undefined) {
       if (replaceSlot < 0 || replaceSlot >= this.inv.slots.length) return false
       this.inv.slots[replaceSlot] = inst
@@ -239,41 +246,38 @@ export class RunState {
     const rng = createRng(deriveSeed(this.config.runSeed ?? 1, hashString(step.id)))
     const gold = (this.config.goldBase ?? 8) + (this.config.goldPerStep ?? 2) * this.idx
     const offers: RewardOffer[] = [{ kind: 'gold', amount: gold }]
-    // Card 2: heal while hurt, otherwise a Rotate charge.
-    offers.push(this.encounterState.playerHp < this.config.playerMaxHp ? { kind: 'heal', hp: REWARD_HEAL } : { kind: 'rotate', charges: REWARD_ROTATE })
-    // Card 3: an item or relic — weighted from unowned candidates.
-    const unownedItems = ITEM_IDS.filter((id) => !this.hasItem(id))
+    // Card 2 (user rule 2026-09-19): a potion while hurt (a consumable you carry, not an instant heal),
+    // otherwise a Rotate charge.
+    const potionFull = this.inv.slots.find((it) => it.id === 'potion')?.charges === ITEMS.potion.maxCharges
+    offers.push(this.encounterState.playerHp < this.config.playerMaxHp && !potionFull ? { kind: 'item', id: 'potion', charges: REWARD_POTIONS } : { kind: 'rotate', charges: REWARD_ROTATE })
+    // Card 3: a rare item or relic — weighted from unowned non-consumable candidates (forced by the
+    // step or by chance); else arrows for the consumable; else a big gold pile.
+    const unownedItems = ITEM_IDS.filter((id) => !isConsumable(id) && !this.hasItem(id) && ITEMS[id].weight > 0)
     const unownedRelics = RELIC_IDS.filter((id) => !this.hasRelic(id))
     const pool: ({ kind: 'item'; id: ItemId; weight: number } | { kind: 'relic'; id: RelicId; weight: number })[] = [
       ...unownedItems.map((id) => ({ kind: 'item' as const, id, weight: ITEMS[id].weight })),
       ...unownedRelics.map((id) => ({ kind: 'relic' as const, id, weight: RELICS[id].weight })),
     ]
+    const pickWeighted = <T extends { weight: number }>(list: T[]): T => {
+      const total = list.reduce((sum, e) => sum + e.weight, 0)
+      let pickVal = rng.next() * total
+      for (const e of list) {
+        if (pickVal < e.weight) return e
+        pickVal -= e.weight
+      }
+      return list[list.length - 1]
+    }
     const roll = rng.next()
+    const itemChance = this.config.itemChance ?? 0.3
+    const arrowsFull = this.inv.slots.find((it) => it.id === 'arrow')?.charges === ITEMS.arrow.maxCharges
     if (step.def.rewardItem === true && unownedItems.length > 0) {
-      const totalItemWeight = unownedItems.reduce((sum, id) => sum + ITEMS[id].weight, 0)
-      let pickVal = rng.next() * totalItemWeight
-      let chosen = unownedItems[unownedItems.length - 1]
-      for (const id of unownedItems) {
-        if (pickVal < ITEMS[id].weight) {
-          chosen = id
-          break
-        }
-        pickVal -= ITEMS[id].weight
-      }
-      offers.push({ kind: 'item', id: chosen })
-    } else if (pool.length > 0 && roll < (this.config.itemChance ?? 0.3)) {
-      const totalWeight = pool.reduce((sum, entry) => sum + entry.weight, 0)
-      let pickVal = rng.next() * totalWeight
-      let chosen = pool[pool.length - 1]
-      for (const entry of pool) {
-        if (pickVal < entry.weight) {
-          chosen = entry
-          break
-        }
-        pickVal -= entry.weight
-      }
+      offers.push({ kind: 'item', id: pickWeighted(unownedItems.map((id) => ({ id, weight: ITEMS[id].weight }))).id })
+    } else if (pool.length > 0 && roll < itemChance) {
+      const chosen = pickWeighted(pool)
       if (chosen.kind === 'item') offers.push({ kind: 'item', id: chosen.id })
       else offers.push({ kind: 'relic', id: chosen.id })
+    } else if (!arrowsFull && roll < itemChance + 0.35) {
+      offers.push({ kind: 'item', id: 'arrow', charges: REWARD_ARROWS })
     } else {
       offers.push({ kind: 'gold', amount: gold * 2 })
     }
@@ -293,11 +297,10 @@ export class RunState {
     if (o.kind === 'gold') {
       this.goldValue += o.amount
     } else if (o.kind === 'item') {
-      if (!this.addItem(o.id, this.inventoryFull ? replaceSlot : undefined)) return false
+      const needsSlot = this.inventoryFull && !(isConsumable(o.id) && this.hasItem(o.id))
+      if (!this.addItem(o.id, needsSlot ? replaceSlot : undefined, o.charges)) return false
     } else if (o.kind === 'relic') {
       this.addRelic(o.id)
-    } else if (o.kind === 'heal') {
-      this.pendingHeal += o.hp
     } else {
       this.rotatePool.charges += o.charges
     }

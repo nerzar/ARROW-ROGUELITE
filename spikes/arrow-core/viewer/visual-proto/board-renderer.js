@@ -358,7 +358,7 @@ export function createBoardRenderer(canvas, stageEl) {
     if (r.shifted) for (const sh of r.shifted) {
       const hitVictim = r.hit ? targetsBefore.find((t) => t.side === r.arenaDir) : null
       const mover = targetsBefore.find((t) => t.id === sh.id)
-      const hitTriggered = !!hitVictim && hitVictim.id === sh.id && mover?.abilityTrigger === 'hit'
+      const hitTriggered = !!hitVictim && hitVictim.id === sh.id && (mover?.abilities ?? []).some((ab) => ab.kind === 'shift' && ab.trigger === 'hit')
       fxFor(sh.id).shiftT = { at: now + (hitTriggered ? FLIGHT_MS : 0), from: sh.from, to: sh.to }
     }
     // Shield raise: bronze disc pops in. Consume (shieldT) is stamped with the hit above.
@@ -484,9 +484,11 @@ export function createBoardRenderer(canvas, stageEl) {
         expired: !!e.expired, // PRESENT-001: expired leaves immediately (no taunt beat), see drawTarget
         turnsLeft: e.turnsLeft,
         countdown: e.countdown, attackKind: e.attackKind, abilityCountdown: e.abilityCountdown,
+        abilities: e.abilities,
         shielded: e.shielded,
-        abilityKind: def.enemies.find((raw) => raw.id === e.id)?.ability?.kind ?? (def.enemies.find((raw) => raw.id === e.id)?.ability ? 'stone_throw' : undefined),
-        abilityTrigger: def.enemies.find((raw) => raw.id === e.id)?.ability?.trigger,
+        // ITEM-001b: `abilities` carries every ability; these two mirror the first one for legacy code.
+        abilityKind: e.abilities?.[0]?.kind,
+        abilityTrigger: e.abilities?.[0]?.trigger,
         reward: def.enemies.find((raw) => raw.id === e.id)?.reward,
         species: def.enemies.find((raw) => raw.id === e.id)?.species,
         isBoss: false,
@@ -1165,16 +1167,17 @@ export function createBoardRenderer(canvas, stageEl) {
           color: isCast ? col.cast : t.countdown <= 1 ? col.danger : col.text,
         })
       }
-      if (!t.dead && !t.fled && t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
-        if (t.abilityKind === 'shield') {
-          lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD ${t.abilityCountdown}`, bold: true, color: col.cast })
-        } else if (t.abilityKind === 'heal') {
-          lines.push({ text: `HEAL ${t.abilityCountdown}`, bold: true, color: col.good })
-        } else if (t.abilityKind === 'shift') {
-          lines.push({ text: `SHIFT ${t.abilityCountdown}`, bold: true, color: col.aim })
-        } else {
-          lines.push({ text: `THROW ${t.abilityCountdown}`, bold: true, color: col.rock })
+      // ITEM-001b: one line per ability (an enemy may have several, e.g. the Matron heals AND throws).
+      if (!t.dead && !t.fled) {
+        for (const ab of t.abilities ?? []) {
+          if (ab.kind === 'shield') lines.push({ text: t.shielded ? 'SHIELD UP' : `SHIELD ${ab.countdown}`, bold: true, color: col.cast })
+          else if (ab.kind === 'heal') lines.push({ text: `HEAL ${ab.countdown}`, bold: true, color: col.good })
+          else if (ab.kind === 'shift') lines.push({ text: ab.trigger === 'hit' ? 'STAGGERS' : `SHIFT ${ab.countdown}`, bold: true, color: col.aim })
+          else if (Number.isFinite(ab.countdown)) lines.push({ text: `THROW ${ab.countdown}`, bold: true, color: col.rock })
         }
+        if (t.turnsLeft !== undefined) lines.push({ text: `LEAVES ${t.turnsLeft}`, bold: true, color: t.turnsLeft <= 1 ? col.danger : col.text })
+        const rw = t.reward
+        if (rw && ((rw.heal ?? 0) > 0 || (rw.rotate ?? 0) > 0)) lines.push({ text: `LOOT ${rw.heal ? `+${rw.heal}HP` : ''}${rw.rotate ? ` +${rw.rotate}R` : ''}`.trim(), bold: true, color: col.cast })
       }
       const lineH = fontPx * 1.18
       let maxW = 0
@@ -1281,7 +1284,7 @@ export function createBoardRenderer(canvas, stageEl) {
             ? (bossSpeciesFor(t.id) === 'goblin-taunter' ? 'Goblin King' : 'Goblin Shaman')
             : (t.label ?? t.id)
           const statusCount = (Number.isFinite(t.countdown) ? 1 : 0) +
-            (t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown) ? 1 : 0)
+            (t.abilities ?? []).filter((ab) => Number.isFinite(ab.countdown) || (ab.kind === 'shift' && ab.trigger === 'hit')).length
           const nameCenter = t.isBoss ? 0.5 : statusCount > 1 ? 0.43 : statusCount === 1 ? 0.47 : 0.5
           const nameWidth = t.isBoss ? 0.45 : statusCount > 1 ? 0.27 : statusCount === 1 ? 0.34 : 0.42
           const nameY = cardY + approvedH * (t.isBoss ? 0.315 : 0.327)
@@ -1310,19 +1313,22 @@ export function createBoardRenderer(canvas, stageEl) {
             text: `${isCast ? 'CAST' : 'ATK'}${t.countdown}`,
             color: isUrgent ? '#ef4444' : isCast ? '#8b5cf6' : '#78350f',
           })
-          if (t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
-            const abilityText = t.abilityKind === 'shield'
-              ? (t.shielded ? 'SHD↑' : `SHD${t.abilityCountdown}`)
-              : t.abilityKind === 'heal'
-                ? `HEAL${t.abilityCountdown}`
-                : t.abilityKind === 'shift'
-                  ? `SHIFT${t.abilityCountdown}`
-                  : `THR${t.abilityCountdown}`
-            const abilityColor = t.abilityKind === 'shield'
+          // ITEM-001b: one chip per ability (the Matron heals AND her kids throw stones).
+          for (const ab of t.abilities ?? []) {
+            if (ab.kind === 'shift' && ab.trigger === 'hit') { chips.push({ text: 'STAG', color: '#075985' }); continue }
+            if (!Number.isFinite(ab.countdown)) continue
+            const abilityText = ab.kind === 'shield'
+              ? (t.shielded ? 'SHD↑' : `SHD${ab.countdown}`)
+              : ab.kind === 'heal'
+                ? `HEAL${ab.countdown}`
+                : ab.kind === 'shift'
+                  ? `SHIFT${ab.countdown}`
+                  : `THR${ab.countdown}`
+            const abilityColor = ab.kind === 'shield'
               ? '#6d28d9'
-              : t.abilityKind === 'heal'
+              : ab.kind === 'heal'
                 ? '#166534'
-                : t.abilityKind === 'shift'
+                : ab.kind === 'shift'
                   ? '#075985'
                   : '#92400e'
             chips.push({ text: abilityText, color: abilityColor })
@@ -1556,22 +1562,23 @@ export function createBoardRenderer(canvas, stageEl) {
 
           // Ability chip if active. PRESENT-001: every ability kind gets its own icon --
           // a scout/healer used to wear the rock chip, which read as a lie.
-          if (t.abilityCountdown !== undefined && Number.isFinite(t.abilityCountdown)) {
-            const abIcon = t.abilityKind === 'shield' ? '🛡' : t.abilityKind === 'shift' ? '⇄' : t.abilityKind === 'heal' ? '✚' : '🪨'
-            const abVal = t.abilityKind === 'shield' && t.shielded ? 'UP' : String(t.abilityCountdown)
+          for (const ab of t.abilities ?? []) {
+            if (!Number.isFinite(ab.countdown)) continue
+            const abIcon = ab.kind === 'shield' ? '🛡' : ab.kind === 'shift' ? '⇄' : ab.kind === 'heal' ? '✚' : '🪨'
+            const abVal = ab.kind === 'shield' && t.shielded ? 'UP' : String(ab.countdown)
             const abText = `${abIcon} ${abVal}`
             ctx.font = '700 10px system-ui, -apple-system, sans-serif'
             const abW = Math.round(ctx.measureText(abText).width + 8)
             ctx.save()
-            ctx.fillStyle = t.abilityKind === 'shield' ? 'rgba(147,51,234,0.45)'
-              : t.abilityKind === 'shift' ? 'rgba(45,140,160,0.45)'
-                : t.abilityKind === 'heal' ? 'rgba(20,120,70,0.5)'
+            ctx.fillStyle = ab.kind === 'shield' ? 'rgba(147,51,234,0.45)'
+              : ab.kind === 'shift' ? 'rgba(45,140,160,0.45)'
+                : ab.kind === 'heal' ? 'rgba(20,120,70,0.5)'
                   : 'rgba(180,83,9,0.45)'
             roundRect(curX, chipY, abW, chipH, 4)
             ctx.fill()
-            ctx.strokeStyle = t.abilityKind === 'shield' ? 'rgba(192,132,252,0.8)'
-              : t.abilityKind === 'shift' ? 'rgba(120,220,240,0.8)'
-                : t.abilityKind === 'heal' ? 'rgba(110,230,160,0.8)'
+            ctx.strokeStyle = ab.kind === 'shield' ? 'rgba(192,132,252,0.8)'
+              : ab.kind === 'shift' ? 'rgba(120,220,240,0.8)'
+                : ab.kind === 'heal' ? 'rgba(110,230,160,0.8)'
                   : 'rgba(245,158,11,0.7)'
             ctx.lineWidth = 1
             roundRect(curX, chipY, abW, chipH, 4)

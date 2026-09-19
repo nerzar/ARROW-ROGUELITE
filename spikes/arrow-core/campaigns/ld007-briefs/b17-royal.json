@@ -57,7 +57,16 @@
     "interval": 3,
     "amount": 1,
     "label": "heal"
-   }
+   },
+   "abilities": [
+    {
+     "id": "kids_rocks",
+     "interval": 3,
+     "targetPolicy": "free-arrow",
+     "pinDuration": 2,
+     "label": "kids throw stones"
+    }
+   ]
   }
  ],
  "rotate": {

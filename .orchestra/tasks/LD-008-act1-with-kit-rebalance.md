@@ -1,6 +1,6 @@
 # TASK: LD-008 — Act I под предметы и волны: новый критерий честности, 9x9, волновые бои
 
-STATUS: PLANNED (после ITEM-001 и WAVE-001)
+STATUS: READY AFTER INT-ITEM-001b (движки предметов/волн в main; честность считать с Лук+Щит; stage'и привязать к точкам карты MAP-001)
 TYPE: EXP/DESIGN
 SIZE: M
 AGENT:

@@ -18,131 +18,60 @@ CURRENT_PLAYABLE_BASE: main
 
 ## Текущий этап
 
-Проект находится в стадии **сборки первого полноценного vertical slice: Prologue + Act I + rewards/items + route map + merchant + presentation polish**.
+Проект находится в стадии **сборки vertical slice Act I: все основные механики уже реализованы, их нужно допилить и собрать в единый забег**.
 
-Базовая механика уже доказана:
-- Prologue проходится целиком;
-- tooling для арен/кампании/поз работает;
-- стрелы сведены в новый filled renderer и считаются текущей принятой базой;
-- presentation мобов через CAL-005 сведён в main;
-- мобильный landscape вручную проверен пользователем и в целом работает без отдельного порта.
+Состояние на 2026-09-19 (вечер):
+- Prologue проходится целиком; Act I «Край гоблинов» — 18 stage'ов на плотных досках (LD-007 + ACT-I-003);
+- боевой слой: multi-enemy, способности врагов (`stone_throw` / `shield` / `shift` / `heal`, несколько способностей у одного врага), волны (`arrival.afterKill` / `onTurn`), scripted flee, boss phases;
+- run-слой: инвентарь 3 слота, действие `item`, reward draft 1-из-3 (золото — обычная награда, предмет — редкий), run-gold, save/load run-state;
+- предметы v1: Лук, Щит, Ледяной дротик, Карманный гироскоп, Боевой рог + реликвии Утилизация / Замковый камень / Предохранитель (ITEM-002); Зелье и «Стрела» (расходники) — на ветке ITEM-001, ещё не сведены (см. INT-ITEM-001b);
+- презентация: approved HUD (player/enemy card, rotate), projectile flight, light-hit VFX, damage numbers, презентация способностей (shift/heal/loot/shield/pin);
+- route map: движок графа маршрута + иллюстрированная карта на пользовательской approved-картинке — в main (`e69cd10`);
+- пользователь сгенерировал и одобрил референсы reward / map / merchant (персонаж + экран лавки) / level-up — `docs/visual-refs/README.md`.
 
-Текущий ближний план хранится в BOARD и сейчас состоит из нескольких уже согласованных независимых задач:
-- VFX-001 — подобрать combat feel на отдельном стенде;
-- BUILD-035 — Projectile Flight v1;
-- UI-001 — привести game shell в порядок;
-- REF-001 — собрать браузерные HUD/VFX/animation references.
-
-Не строить заранее большую VFX-архитектуру и не превращать согласованный roadmap в бесконечный backlog. Но уже принятые пользователем планы нельзя терять только потому, что они ещё не стали RUNNING.
+Главное сейчас — не новые механики, а **сведение**: доинтегрировать потерянные куски, подключить карту и торговца, переписать Act I под предметы/волны (LD-008) и прогнать забег целиком.
 
 ## Что уже есть в текущей playable-линии
 
 Это описание фактической текущей базы, а не обещание неизменяемой production-архитектуры:
 
-- pure TypeScript arrow-core с deterministic generator/solver и seed/property tests;
-- combat-pressure / multi-enemy runtime;
-- единый playable Prologue из 5 шагов;
-- Goblin Shaman как boss пролога;
-- Goblin King flee intro;
-- arena calibration + ручной calibration editor;
-- Campaign Editor: этапы, каталог существ, Arena Default, импорт арен, persistence;
-- Pose Editor;
-- species presentation defaults:
-  - pivot X/Y;
-  - scale;
-  - HUD offset X/Y;
-  - HUD scale;
-  - shadow offset X/Y;
-  - editor/runtime parity;
-- baked arena loader;
-- filled-arrow renderer в реальной игре;
-- 15 arrow materials;
-- `viewer/filled-arrow.html`;
-- stroke fallback для debug;
-- end-of-Prologue completion/reward flow;
-- shared Rotate reward.
+- pure TypeScript arrow-core с deterministic generator/solver и seed/property tests (39 test files / 435 tests на main `e69cd10`);
+- combat-pressure / multi-enemy runtime, concurrent enemy timers, ward (щит), `worldTurn`;
+- enemy ability framework (COMBAT-001): `stone_throw`, `shield`, `shift` (timer или `trigger:'hit'`), `heal`; `EnemyDef.reward`, `expiresAfter`, `EncounterDef.winHeal`, `rewardItem`;
+- волны врагов с телеграфом (WAVE-001): движок в main, в campaign ещё не использованы;
+- единый playable Prologue из 5 шагов + Act I 18 stage'ов (`campaigns/campaign.json`, briefs в `campaigns/ld007-briefs/`, сборка `tools/ld007-build-campaign.mjs`);
+- board-профили `short` / `mixed` / `long` (`board-profiles.js`), designer-инструменты `tools/ld007-audit.mjs` / `ld007-scan.mjs`;
+- 13 species (goblin-grunt/matron/drunkard/scout/captain, wolves, shaman, king …), 36 арен (`arena-library.js`), подиумные калибровки;
+- Goblin Shaman как boss пролога, Goblin King flee intro, boss phases;
+- RunState: инвентарь, золото, reward draft (детерминированный от `runSeed` + step id), `RunSave v1`, restart step;
+- предметы ITEM-001/002 (`src/items.ts`, data-driven, солвер видит предметы через `WinQuery.maxItems`);
+- approved HUD (ART-012B/BUILD-036), item bar и reward draft (плейсхолдер), presentation способностей (PRESENT-001);
+- arena calibration, Campaign Editor, Pose Editor, species presentation defaults (CAL-005), baked arena loader;
+- filled-arrow renderer, 15 arrow materials, projectile flight v1, light-hit VFX, damage numbers;
+- clean game view (UI-001), FIX-033 HUD fit;
+- route map MAP-001: `src/route-map.ts` (граф, save/load узла в RunState) + `viewer/visual-proto/route-map-ui.js` (fullscreen иллюстрированная карта, программные подписи).
 
 Стрелочный трек завершён. BUILD-032/033 и старые VIS/FIX arrow-ветки считаются историей/источниками отдельных идей, а не активной основой разработки.
 
-## Ближайший принятый план
+## Сборка Act I — принятый порядок (2026-09-19)
 
-### 1. VFX-001 — Combat Feel Lab
+AGREED FOR NOW. Порядок — в BOARD «Ближайшая точка сведения». Кратко:
 
-AGREED FOR NOW.
+1. **INT-ITEM-001b** — свести Зелье, «Стрелу», Матрону heal + камни детей и честность «с набором» в main (готово на ветке `099d753`, FIX-034 переписан).
+2. **MAP-001** — в main (`e69cd10`); проверить вход в карту после Prologue reward в едином забеге.
+3. **SHOP-001** — торговец по approved-экрану «Лавка Хрягуна»; тратит существующее run-gold.
+4. **RUN-003** — решение пользователя: входит ли level-up в первый slice (референс уже есть).
+5. **LD-008** — Act I поверх предметов/волн: критерий честности `baseline / booster-helpful / power-gated`, ≥4 волновых боя, 9x9 к концу акта, точки карты ↔ stage'и.
+6. **Popups/presentation** (ART-011B/013/014, FIX-035/036) — по approved-референсам, одно семейство карточек.
+7. Полный ручной прогон Prologue → reward → карта → бой/лавка → Король гоблинов, затем economy/balance pass.
 
-Сначала отдельный визуальный стенд, без изменения gameplay:
-- projectile trail;
-- impact flash;
-- hit sparks / particles;
-- damage number;
-- enemy hit squash/recoil;
-- visual hit-stop;
-- camera impulse/shake;
-- death burst;
-- boss impact;
-- reward pop.
+Отдельные mobile/VK/market треки остаются DEFERRED (см. ниже).
 
-Цель — подобрать ощущения глазами.
-Только после пользовательского выбора решать, какие эффекты интегрировать и какая reusable-архитектура действительно нужна.
+### MOB-001 — Mobile/Game UI Polish
 
-Полная generic VFX-система со scheduler/particles/camera/etc. сейчас остаётся IDEA, а не принятой задачей.
+DEFERRED BY USER. Не запускать до явной команды пользователя. Мобильный landscape уже проверен вручную (~740×360 и крупнее). Когда вернёмся: safe-area, responsive HUD polish, touch-size/real-phone проверка, точечные viewport fixes.
 
-### 2. BUILD-035 — Projectile Flight v1
-
-ACCEPTED AND MERGED (INT-BUILD-035).
-
-Стрела после выхода из puzzle:
-- сначала продолжает исходное направление;
-- затем плавно доворачивает к текущему hit-anchor цели;
-- не меняет target selection, damage или combat state.
-
-Это presentation-only задача. Траекторию держать расширяемой под будущие Ricochet/Piercing, но сами эти механики сейчас не реализовывать.
-
-### 3. UI-001 — Game Shell Cleanup
-
-READY.
-
-Отдельно от mobile polish исправить уже подтверждённые проблемы обычной игровой версии:
-- возможность скрыть административные/debug controls и получить clean game view;
-- убрать кашу в левом верхнем углу;
-- scene dropdown всегда показывает фактически активную runtime scene.
-
-### 4. Browser game visual reference pass / REF-001
-
-READY, task-card создан.
-
-Пользователь хочет смотреть похожие браузерные игры как источник вдохновения для:
-- HUD animations;
-- damage / HP feedback;
-- attack/cast telegraphs;
-- boss presentation;
-- projectile / impact effects;
-- death feedback;
-- rewards / victory presentation.
-
-Цель — анализ приёмов и вдохновение, не копирование чужого арта/кода.
-
-### 5. MOB-001 — Mobile/Game UI Polish
-
-DEFERRED BY USER.
-
-Не запускать до явной команды пользователя.
-
-Мобильный landscape уже проверен вручную примерно на 740×360 и более крупных viewport: базовая композиция, board и арена работают.
-
-Когда пользователь вернётся к mobile polish, там остаются только mobile-specific вещи:
-- safe-area;
-- небольшой responsive polish player HUD;
-- touch-size/real-phone проверка;
-- точечные viewport fixes по факту.
-
-Общие admin/scene/top-left проблемы вынесены в UI-001 и не должны ждать mobile.
-
-AGREED FOR NOW mobile direction:
-- одна web/TypeScript codebase;
-- landscape-first;
-- без отдельного Unity/React Native rewrite;
-- отдельный standalone Android/iOS wrapper рассматривать только позже, если появится реальная необходимость.
+AGREED FOR NOW mobile direction: одна web/TypeScript codebase; landscape-first; без отдельного Unity/React Native rewrite; standalone wrapper — только позже при реальной необходимости.
 
 ## Vertical Slice v1 — обязательный run flow
 
@@ -152,13 +81,13 @@ Vertical slice считается собранным не тогда, когда
 
 `Prologue -> reward -> Goblin Country map -> battle / merchant choice -> rewards/items -> дальнейший маршрут -> Goblin King`
 
-Обязательные части:
-- ITEM-001/002: предметы, reward draft, inventory, run-gold;
-- WAVE-001: волновые encounters;
-- MAP-001: карта Страны гоблинов с выбором маршрута;
-- SHOP-001: торговец, где run-gold превращается в силу текущего забега;
-- LD-008: rebalance Act I уже поверх предметов/волн;
-- approved HUD/reward/presentation слой;
+Обязательные части и их состояние:
+- ITEM-001/002: предметы, reward draft, inventory, run-gold — **в main** (расходники Зелье/Стрела — INT-ITEM-001b);
+- WAVE-001: волновые encounters — **движок в main**, контент в LD-008;
+- MAP-001: карта Страны гоблинов с выбором маршрута — **в main**;
+- SHOP-001: торговец, где run-gold превращается в силу текущего забега — **референсы одобрены, код не начат**;
+- LD-008: rebalance Act I уже поверх предметов/волн — **не начат, разблокирован после INT-ITEM-001b**;
+- approved HUD/reward/presentation слой — **HUD в main; reward/popup/shop/map по референсам — впереди**;
 - затем единый ручной playtest и economy/balance pass.
 
 До полного run-flow цены, частота наград, heal/Rotate economy и power-gating считаются provisional.
@@ -220,6 +149,16 @@ AGREED FOR NOW / текущий gameplay canon:
 - позже run должен раскрыть Serpent Form;
 - ещё позже — Chain;
 - позднее допускается управляемый power-gating: не каждый encounter обязан проходиться базовым набором без run/meta-power или помощи.
+
+AGREED FOR NOW (пользователь, 2026-09-19, экономика и предметы):
+
+- предметы — редкость; обычная награда за бой — золото; третья карточка драфта — редкий предмет / стрелы / большое золото;
+- мгновенных «+HP» наград нет: вместо них Зелье — расходник, который игрок пьёт когда хочет;
+- расходники пополняемые (заряды складываются при повторной награде/покупке); нужны расходники, которые **создают стрелы на доске** — первый такой «Стрела»: одна стрела в выбранном направлении;
+- Матрона = лечение **и** бросок камня (дети на спине с камнями); у врага может быть несколько способностей на своих таймерах;
+- «100 % без урона голыми руками» перестал быть критерием обычного боя; честность считается с базовым набором (Лук + Щит) — 0 урона; 15/17 обычных Act I-боёв по-прежнему проходятся в 0 без предметов;
+- дальше усложняем сами головоломки и число мобов (волны, 8x8–10x10, профиль `short`), а не только цифры HP;
+- run-gold тратится у торговца (SHOP-001); второй валюты нет.
 
 ## Act I / content authoring — принятый рабочий подход
 

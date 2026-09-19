@@ -1,6 +1,6 @@
 # TASK: ART-019 — Goblin Country Map + Merchant Visual Direction
 
-STATUS: PLANNED
+STATUS: DONE BY USER (2026-09-19) — референсы карты и торговца одобрены и сведены в `docs/visual-refs/map/`, `docs/visual-refs/trader/`; production-подготовка живёт в MAP-001 / SHOP-001
 TYPE: ART
 SIZE: S
 AGENT:

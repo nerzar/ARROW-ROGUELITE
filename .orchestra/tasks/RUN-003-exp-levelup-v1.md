@@ -1,6 +1,6 @@
 # TASK: RUN-003 — XP / Level Up v1
 
-STATUS: PLANNED / DECISION BEFORE FINAL BALANCE
+STATUS: DECISION NEEDED (референс экрана одобрен: `docs/visual-refs/progression/levelup-reference.png` — три карточки с плашкой редкости ОБЫЧНЫЙ/РЕДКИЙ, общая кнопка «Выбрать»)
 TYPE: BUILD/DESIGN
 SIZE: M
 AGENT:

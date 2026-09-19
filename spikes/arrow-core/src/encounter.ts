@@ -1,8 +1,9 @@
 import { type Dir, DIR_NAMES, rotateDir } from './dir.js'
 import { generateLevel } from './generator.js'
-import { type Level, levelHash } from './level.js'
+import { type Arrow, type Level, levelHash, rayCells } from './level.js'
 import { PRESETS, type PresetName } from './presets.js'
 import { type Inventory, type ItemAction, type ItemId, ITEMS, itemNeedsTarget, itemIsPassive, type RelicId } from './items.js'
+import { DX, DY } from './dir.js'
 import { BoardState } from './state.js'
 import { BoardTopology } from './topology.js'
 
@@ -217,6 +218,10 @@ export type EnemyAbility = StoneThrowAbility | ShieldAbility | ShiftAbility | He
 /** Resolution kind of an ability; absent `kind` is the legacy Stone Throw shape. */
 export const abilityKind = (a: EnemyAbility): AbilityKind => a.kind ?? 'stone_throw'
 
+/** ITEM-001b: every ability of an enemy — `ability` first, then `abilities` — as one list. */
+export const abilitiesOf = (e: { ability?: EnemyAbility; abilities?: EnemyAbility[] }): EnemyAbility[] =>
+  [...(e.ability ? [e.ability] : []), ...(e.abilities ?? [])]
+
 /** One-line ability description for reports/viewer/debug HUD (`THROW IN N` / `SHIELD IN N`). */
 export function describeAbility(a: EnemyAbility): string {
   if (abilityKind(a) === 'shield') return `SHIELD IN ${a.interval} (one-shot, absorbs next hit)`
@@ -260,6 +265,9 @@ export interface EnemyDef {
   /** EXP-013: a board-affecting ability on its own independent countdown. Absent = none. Not
    * modeled on `BossPhase` — this spike only needs it on simultaneous enemies. */
   ability?: EnemyAbility
+  /** ITEM-001b: further abilities, each on its own countdown (e.g. the Matron heals AND her kids
+   * throw stones). `ability` + `abilities` are read as one list, in that order. */
+  abilities?: EnemyAbility[]
   /** STORY-001: optional scripted flee (see above). Absent = this enemy fights to the death. */
   flee?: EnemyFlee
   /** ACT-I-003: granted to the player the moment this enemy dies. `heal` is capped at the
@@ -380,6 +388,8 @@ export type TapResult =
       rewards?: { id: string; heal: number; rotate: number }[]
       /** ACT-I-003, `enemies` mode only: temporary targets whose window closed this turn. */
       expired?: { id: string; label?: string }[]
+      /** ITEM-001b: id of the arrow the Arrow item just put on the board (the level grew by one). */
+      spawnedArrow?: number
       /** WAVE-001: enemies entering after this turn's attacks/abilities have resolved. */
       arrived?: { id: string }[]
       /** COMBAT-001, `enemies` mode only: enemy ids whose shield absorbed this turn's hit (no HP damage). */
@@ -428,8 +438,8 @@ interface TimerSnapshot {
   /** EXP-013: pin state is board-level, not mode-specific, so both modes carry it (always all-zero
    * in boss mode, which has no `ability`). One entry per board arrow id. */
   pinTurnsLeft: number[]
-  /** EXP-013, enemies mode only: one entry per `def.enemies[i]` — that enemy's `THROW IN N`. */
-  enemyAbilityCountdown?: number[]
+  /** EXP-013/ITEM-001b, enemies mode only: one entry per `def.enemies[i]`, one countdown per ability. */
+  enemyAbilityCountdown?: number[][]
   /** COMBAT-001, enemies mode only: one entry per `def.enemies[i]` — that enemy's shield is up. */
   enemyShield?: boolean[]
   /** LD-007 shift, enemies mode only: one entry per `def.enemies[i]` — current arena side. */
@@ -455,12 +465,15 @@ interface TimerSnapshot {
 type Entry = (
   | { kind: 'tap'; id: number; hit: boolean; poolReward?: number; units?: number }
   | { kind: 'rotate'; turn: Turn; timerBefore: TimerSnapshot; spentGyro?: boolean }
-  | { kind: 'item'; item: ItemId; target?: Dir; hit: boolean; poolReward?: number; slot: number; units?: number }
+  | { kind: 'item'; item: ItemId; target?: Dir; hit: boolean; poolReward?: number; slot: number; units?: number; boardBefore?: BoardState; levelBefore?: Level }
 ) & { timerBefore: TimerSnapshot }
 
 export class EncounterState {
   readonly def: EncounterDef
-  readonly board: BoardState
+  /** The live board. Reassigned only by the Arrow item (`spawn_arrow`), which grows the topology. */
+  board: BoardState
+  /** ITEM-001b: the current Level (grows with spawned arrows); undefined when built from a bare topology. */
+  private levelValue: Level | undefined
   readonly totalHp: number
   /** phaseEnd[i] = total hits after which phase i is over. */
   private readonly phaseEnd: number[]
@@ -485,8 +498,8 @@ export class EncounterState {
   /** EXP-013: world turns left before arrow `id` becomes tappable again; 0 = not pinned. Indexed by
    * board arrow id, board-level (not mode-specific) — see the module doc comment. */
   private pinTurnsLeft: number[] = []
-  /** EXP-013, enemies mode only: `def.enemies[i]`'s `THROW IN N`; Infinity if that enemy has no ability. */
-  private enemyAbilityCountdown: number[] = []
+  /** EXP-013/ITEM-001b, enemies mode only: `def.enemies[i]`'s countdowns, one per ability (in `abilitiesOf` order). */
+  private enemyAbilityCountdown: number[][] = []
   /** COMBAT-001, enemies mode only: `def.enemies[i]`'s one-shot shield is currently up. */
   private enemyShield: boolean[] = []
   /** LD-007 shift, enemies mode only: `def.enemies[i]`'s CURRENT arena side (starts at `def.side`). */
@@ -533,10 +546,12 @@ export class EncounterState {
     playerMaxHp = playerHp,
     inventory: Inventory | null = null,
     relics: readonly RelicId[] = [],
+    level?: Level,
   ) {
     checkEncounter(def)
     this.def = def
     this.board = new BoardState(topo)
+    this.levelValue = level
     this.inventory = inventory
     this.relics = relics
     this.playerHpValue = playerHp
@@ -556,7 +571,7 @@ export class EncounterState {
       this.enemyCountdown = def.enemies.map((e) => e.attackTimer?.interval ?? Infinity)
       this.enemyHitsThisCycle = def.enemies.map(() => 0)
       this.enemyCastInterrupted = def.enemies.map(() => false)
-      this.enemyAbilityCountdown = def.enemies.map((e) => e.ability?.interval ?? Infinity)
+      this.enemyAbilityCountdown = def.enemies.map((e) => abilitiesOf(e).map((a) => a.interval))
       this.enemyShield = def.enemies.map(() => false)
       this.enemySide = def.enemies.map((e) => e.side)
       this.enemyPending = def.enemies.map((e) => e.arrival !== undefined)
@@ -583,7 +598,12 @@ export class EncounterState {
     inventory: Inventory | null = null,
     relics: readonly RelicId[] = [],
   ): EncounterState {
-    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool, playerMaxHp, inventory, relics)
+    return new EncounterState(BoardTopology.fromLevel(level), def, playerHp, rotatePool, playerMaxHp, inventory, relics, level)
+  }
+
+  /** ITEM-001b: the level as it is now (spawned arrows included). Undefined without a source level. */
+  get level(): Level | undefined {
+    return this.levelValue
   }
 
   clone(): EncounterState {
@@ -596,7 +616,11 @@ export class EncounterState {
       inv = { slots: this.inventory.slots.map((it) => ({ ...it })) }
       for (const e of this.log) if (e.kind === 'item') inv.slots[e.slot].charges++
     }
-    const c = new EncounterState(this.board.topo, this.def, this.playerHpStart, pool, this.playerMaxHp, inv, this.relics)
+    // Spawned arrows are replayed from the log, so the clone starts from the pre-spawn topology.
+    const first = this.log.find((e) => e.kind === 'item' && e.boardBefore)
+    const topo0 = first && first.kind === 'item' && first.boardBefore ? first.boardBefore.topo : this.board.topo
+    const level0 = first && first.kind === 'item' ? first.levelBefore : this.levelValue
+    const c = new EncounterState(topo0, this.def, this.playerHpStart, pool, this.playerMaxHp, inv, this.relics, level0)
     for (const e of this.log) {
       if (e.kind === 'tap') c.tap(e.id)
       else if (e.kind === 'rotate') c.rotate(e.turn)
@@ -715,8 +739,10 @@ export class EncounterState {
     label?: string
     /** EXP-011: this enemy's current attack type, or undefined if it has no attackTimer. */
     attackKind?: AttackKind
-    /** EXP-013: this enemy's ability countdown, or undefined if it has no ability. */
+    /** EXP-013: this enemy's FIRST ability countdown, or undefined if it has no ability (legacy view). */
     abilityCountdown?: number
+    /** ITEM-001b: every ability with its live countdown, in definition order. */
+    abilities: { kind: AbilityKind; trigger?: 'timer' | 'hit'; countdown: number; label?: string }[]
     /** COMBAT-001: this enemy's one-shot shield is currently up (absorbs the next hit). */
     shielded: boolean
   }[] {
@@ -739,7 +765,8 @@ export class EncounterState {
         mandatory: e.mandatory ?? true,
         label: e.label,
         attackKind: at ? (at.kind ?? 'normal') : undefined,
-        abilityCountdown: e.ability ? this.enemyAbilityCountdown[i] : undefined,
+        abilityCountdown: abilitiesOf(e).length ? this.enemyAbilityCountdown[i][0] : undefined,
+        abilities: abilitiesOf(e).map((a, k) => ({ kind: abilityKind(a), trigger: (a as ShiftAbility).trigger, countdown: this.enemyAbilityCountdown[i][k], label: a.label })),
         shielded: this.enemyShield[i] ?? false,
       }
     })
@@ -798,7 +825,7 @@ export class EncounterState {
       if (this.targetIndexAt(this.enemySide[i]) >= 0) continue
       this.enemyPending[i] = false
       this.enemyCountdown[i] = defs[i].attackTimer?.interval ?? Infinity
-      this.enemyAbilityCountdown[i] = defs[i].ability?.interval ?? Infinity
+      this.enemyAbilityCountdown[i] = abilitiesOf(defs[i]).map((a) => a.interval)
       arrived.push({ id: defs[i].id })
     }
     return arrived
@@ -890,7 +917,7 @@ export class EncounterState {
         enemyCountdown: [...this.enemyCountdown],
         enemyHitsThisCycle: [...this.enemyHitsThisCycle],
         enemyCastInterrupted: [...this.enemyCastInterrupted],
-        enemyAbilityCountdown: [...this.enemyAbilityCountdown],
+        enemyAbilityCountdown: this.enemyAbilityCountdown.map((cds) => [...cds]),
         enemyShield: [...this.enemyShield],
         enemySide: [...this.enemySide],
         enemyPending: [...this.enemyPending],
@@ -986,12 +1013,13 @@ export class EncounterState {
     const defs = this.def.enemies!
     for (let i = 0; i < defs.length; i++) {
       if (this.enemyHp[i] <= 0 || this.isGone(i)) continue
-      const ability = defs[i].ability
-      if (!ability) continue
+      const list = abilitiesOf(defs[i])
+      for (let k = 0; k < list.length; k++) {
+      const ability = list[k]
       if (abilityKind(ability) === 'shift' && (ability as ShiftAbility).trigger === 'hit') continue // hit-driven, see tapEnemies
-      this.enemyAbilityCountdown[i]--
-      if (this.enemyAbilityCountdown[i] > 0) continue
-      this.enemyAbilityCountdown[i] = ability.interval
+      this.enemyAbilityCountdown[i][k]--
+      if (this.enemyAbilityCountdown[i][k] > 0) continue
+      this.enemyAbilityCountdown[i][k] = ability.interval
       if (abilityKind(ability) === 'shield') {
         // One-shot shield: raise it unless one is already up (no stacking — fizzle keeps the
         // old shield, the countdown still reset above and retries next cycle).
@@ -1024,6 +1052,7 @@ export class EncounterState {
       if (target >= 0) {
         this.pinTurnsLeft[target] = (ability as StoneThrowAbility).pinDuration
         pinnedThisTurn.push({ id: target, turnsLeft: (ability as StoneThrowAbility).pinDuration })
+      }
       }
       // target < 0: fizzle -- no safe arrow to pin this cycle. The countdown still reset above, so
       // the ability simply tries again next cycle rather than retrying every turn.
@@ -1185,8 +1214,65 @@ export class EncounterState {
     const inst = this.inventory.slots.find((it) => it.id === id)
     if (!inst || inst.charges <= 0) return false
     if (!itemNeedsTarget(id)) return true
+    if (ITEMS[id].effect.kind === 'spawn_arrow') {
+      if (!this.levelValue) return false
+      if (target === undefined) return ([0, 1, 2, 3] as Dir[]).some((d) => this.spawnPlacement(d) !== null)
+      return this.spawnPlacement(target) !== null
+    }
     if (target === undefined) return this.liveTargetSides().length > 0
     return this.liveTargetSides().includes(target)
+  }
+
+  /**
+   * ITEM-001b: where a conjured arrow pointing `arenaDir` would go, or null. The arrow is 2 cells
+   * (tail + head), both empty, with a clear ray from the head to the edge — so it is free the
+   * moment it appears and can never soft-lock the board (it only ever adds a removable arrow).
+   * Preference: shortest ray (least blocking of others), then not lying on any live arrow's ray,
+   * then lowest cell index. Board-local direction = arena direction minus the current rotation.
+   */
+  spawnPlacement(arenaDir: Dir): { cells: number[]; dir: Dir } | null {
+    if (!this.levelValue) return null
+    const dir = rotateDir(arenaDir, -this.rot)
+    const { width: w, height: h } = this.levelValue
+    const topo = this.board.topo
+    const occupied = (c: number) => this.board.ownerAt(c) !== -1
+    // Cells under some live arrow's ray (placing there blocks that arrow until ours leaves).
+    const onRay = new Uint8Array(w * h)
+    for (let id = 0; id < topo.arrowCount; id++) {
+      if (!this.board.isAlive(id)) continue
+      for (let i = topo.rayStart[id]; i < topo.rayStart[id + 1]; i++) onRay[topo.rayCells[i]] = 1
+    }
+    // Dense boards (short profile fills ~90 % of the cells) often have no room for a 2-cell arrow;
+    // a single-cell arrow is then conjured instead (the renderer draws those fine).
+    let best: { cells: number[]; dir: Dir; score: number } | null = null
+    for (let head = 0; head < w * h; head++) {
+      if (occupied(head)) continue
+      const ray = rayCells(w, h, head, dir)
+      if (ray.some(occupied)) continue
+      const tx = (head % w) - DX[dir]
+      const ty = Math.floor(head / w) - DY[dir]
+      const tail = tx < 0 || ty < 0 || tx >= w || ty >= h ? -1 : ty * w + tx
+      const twoCell = tail >= 0 && !occupied(tail)
+      const cells = twoCell ? [tail, head] : [head]
+      const score = (twoCell ? 0 : 100) + ray.length * 10 + (cells.some((c) => onRay[c]) ? 5 : 0)
+      if (!best || score < best.score) best = { cells, dir, score }
+    }
+    return best ? { cells: best.cells, dir: best.dir } : null
+  }
+
+  /** ITEM-001b: grows the level/topology by one arrow, keeping the alive set. Returns the new arrow id. */
+  private spawnArrow(placement: { cells: number[]; dir: Dir }): number {
+    const old = this.levelValue!
+    const id = old.arrows.length
+    const arrow: Arrow = { id, cells: placement.cells, dir: placement.dir }
+    const level: Level = { width: old.width, height: old.height, arrows: [...old.arrows, arrow], solution: [], seed: old.seed }
+    const topo = BoardTopology.fromLevel(level)
+    const board = new BoardState(topo)
+    for (let a = 0; a < id; a++) if (!this.board.isAlive(a)) board.remove(a)
+    this.levelValue = level
+    this.board = board
+    this.pinTurnsLeft.push(0)
+    return id
   }
 
   /** ITEM-001: arena sides that currently hold a hittable target. */
@@ -1204,7 +1290,10 @@ export class EncounterState {
     for (const it of this.inventory.slots) {
       if (it.charges <= 0 || seen.has(it.id) || itemIsPassive(it.id)) continue
       seen.add(it.id)
-      if (itemNeedsTarget(it.id)) for (const d of this.liveTargetSides()) out.push({ kind: 'item', id: it.id, target: d })
+      if (ITEMS[it.id].effect.kind === 'spawn_arrow') {
+        // Only directions that reach a live target are worth conjuring for the solver/UI.
+        for (const d of this.liveTargetSides()) if (this.spawnPlacement(d)) out.push({ kind: 'item', id: it.id, target: d })
+      } else if (itemNeedsTarget(it.id)) for (const d of this.liveTargetSides()) out.push({ kind: 'item', id: it.id, target: d })
       else out.push({ kind: 'item', id: it.id })
     }
     return out
@@ -1233,6 +1322,16 @@ export class EncounterState {
       this.playerHpValue = Math.min(this.playerMaxHp, this.playerHpValue + def.effect.hp)
       this.log.push(entry)
       return this.freeActionResult()
+    }
+    if (def.effect.kind === 'spawn_arrow') {
+      const placement = this.spawnPlacement(target as Dir)!
+      entry.boardBefore = this.board
+      entry.levelBefore = this.levelValue
+      const newId = this.spawnArrow(placement)
+      this.log.push(entry)
+      const res = this.freeActionResult()
+      if (res.ok) res.spawnedArrow = newId
+      return res
     }
     if (def.effect.kind === 'buff') {
       this.warHornActive = true
@@ -1353,8 +1452,8 @@ export class EncounterState {
     // ACT-I-003: hit-triggered shift — a landed, non-killing hit knocks the target to its next side.
     const shifted: { id: string; from: Dir; to: Dir }[] = []
     if (hit && !shielded && this.enemyHp[targetIdx] > 0 && !this.isFled(targetIdx)) {
-      const ab = hitEnemy!.ability
-      if (ab && abilityKind(ab) === 'shift' && (ab as ShiftAbility).trigger === 'hit') {
+      const ab = abilitiesOf(hitEnemy!).find((a) => abilityKind(a) === 'shift' && (a as ShiftAbility).trigger === 'hit')
+      if (ab) {
         const moved = this.shiftEnemy(targetIdx, ab as ShiftAbility)
         if (moved) shifted.push(moved)
       }
@@ -1570,6 +1669,12 @@ export class EncounterState {
     } else if (e.kind === 'item') {
       // ITEM-001: refund the charge; a Bow kill reward that went to the pool is refunded too.
       if (this.inventory) this.inventory.slots[e.slot].charges++
+      if (e.boardBefore) {
+        // ITEM-001b: a spawned arrow is un-conjured — the old board object was never mutated.
+        this.board = e.boardBefore
+        this.levelValue = e.levelBefore
+        this.pinTurnsLeft = this.pinTurnsLeft.slice(0, this.board.topo.arrowCount)
+      }
       // Boss mode: hitCount is derived state, undo exactly the units this item landed.
       if (!this.def.enemies && e.hit) this.hitCount -= e.units ?? 0
       if (e.poolReward && this.rotatePool) this.rotatePool.charges -= e.poolReward
@@ -1600,7 +1705,7 @@ export class EncounterState {
     if (this.def.enemies) {
       const cd = this.enemyCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
       const ci = this.enemyCastInterrupted.map((b) => (b ? 1 : 0)).join(',')
-      const ac = this.enemyAbilityCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
+      const ac = this.enemyAbilityCountdown.map((cds) => cds.join('/')).join(',')
       const sh = this.enemyShield.map((b) => (b ? 1 : 0)).join(',')
       const sd = this.enemySide.join(',')
       const pending = this.enemyPending.map((b) => b ? 1 : 0).join(',')
@@ -1701,6 +1806,10 @@ export function checkEncounter(def: EncounterDef): void {
       if (!Number.isInteger(e.hp) || e.hp < 1) throw new Error(`enemy ${i}: hp must be a positive integer`)
       if (e.attackTimer) checkAttackTimer(e.attackTimer, `enemy ${i}`)
       if (e.ability) checkAbility(e.ability, `enemy ${i}`)
+      if (e.abilities !== undefined) {
+        if (!Array.isArray(e.abilities)) throw new Error(`enemy ${i}: abilities must be an array`)
+        e.abilities.forEach((a, k) => checkAbility(a, `enemy ${i} ability ${k}`))
+      }
       if (e.reward !== undefined) {
         if (e.reward.heal !== undefined && (!Number.isInteger(e.reward.heal) || e.reward.heal < 0)) throw new Error(`enemy ${i}: reward.heal must be a non-negative integer`)
         if (e.reward.rotate !== undefined && (!Number.isInteger(e.reward.rotate) || e.reward.rotate < 0)) throw new Error(`enemy ${i}: reward.rotate must be a non-negative integer`)
