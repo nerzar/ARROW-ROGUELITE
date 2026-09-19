@@ -84,6 +84,19 @@ Routing:
 - Sonnet: strong repo work/review/implementation when Opus is unnecessary.
 - Preserve Claude quota for integration and high-risk decisions; do not burn it on routine S fixes.
 
+### Nemotron 3
+
+NVIDIA positions Nemotron 3 Nano/Super/Ultra as agentic reasoning/coding models; Super/Ultra are intended for multi-step tool-heavy workflows and Nano for efficient targeted tasks.
+
+Project-local observation:
+- one Nemotron 3 attempt on FIX-034 produced heavily corrupted/gibberish output immediately after task start (mixed fragments, numbers and multilingual noise) before useful repo work began.
+- treat this as a **harness/provider/serving failure until proven otherwise**, not as evidence that the underlying Nemotron family cannot code.
+
+Routing:
+- DO NOT assign project work through the same endpoint/provider until a tiny read-only sanity-check returns clean text and correct repo facts.
+- if retrying, prefer an official NVIDIA NIM or a known-good OpenRouter route and record the exact model id (Nano/Super/Ultra).
+- only after sanity-check: S/FIX or shell workflow first; no critical-path task on the first retry.
+
 ### DeepSeek V4.1 Flash
 
 OpenRouter describes DeepSeek V4.1 Flash as a cost-efficient model for coding, terminal/computer-use agents and long-horizon tasks, with ~1M context.
