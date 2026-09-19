@@ -23,6 +23,8 @@ BOARD хранит не только одну текущую задачу, а **
 - VFX-003: light-hit feel целиком (flash + sparks + squash/recoil + camera impulse поверх dmg/trail).
 - LD-006: shortlist из 7 кандидатов Act I encounter'ов (design-only, см. `.orchestra/research/LD-006-act1-encounter-shortlist.md`) — выбор конкретного кандидата ещё не сделан.
 - REF-001: 12 браузерных VFX-референсов + 20 приёмов (см. `.orchestra/research/REF-001-browser-combat-ui-vfx-references.md`).
+- COMBAT-001: generic enemy ability framework, Shield доказан как вторая способность поверх обобщённого `stone_throw`.
+- ASSET-004: подключены уже нарисованные/откалиброванные attack/attackReady/hit/defeat позы у 7 обычных врагов (были на диске, но не в `assets.js`).
 
 Стрелочный renderer/material трек закончен. Старые BUILD-032/033 и VIS/FIX arrow-эксперименты — история/источники отдельных идей.
 
@@ -30,7 +32,7 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
-| COMBAT-001 — Generic enemy ability framework | READY | `build/COMBAT-001-enemy-ability-framework` | Обобщить EXP-013 `stone_throw` в небольшой enemy-ability framework и доказать второй debug-способностью Shield; gameplay/content Акта I не менять. |
+| ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
 
 Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
 
