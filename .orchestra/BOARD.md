@@ -56,8 +56,8 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task/направление | Статус | Что именно хотим |
 |---|---|---|
-| ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + 3 реликвии | PLANNED (ITEM-001 принят, можно заводить) | Набор до 6 активных + 3 пассивных; аудит уровней «с набором» (`--kit`). |
-| MAP-001 — Goblin Country Route Map v1 | PLANNED / VERTICAL SLICE | Между боями Act I — карта Страны гоблинов с развилками и выбором следующего узла; battle/shop/boss, save/load route-state, старый linear flow как fallback. |
+| ITEM-002 — Предметы v1: Frost Dart, Pocket Gyro, War Horn + 3 реликвии | DONE / AWAITING REVIEW+MERGE | Набор до 6 активных + 3 пассивных готов на `build/ITEM-002-items-v1-set`; 431 тест зелёный, нужен пользовательский live-check и интеграция. |
+| MAP-001 — Goblin Country Route Map v1 | IN PROGRESS (Gemini / Antigravity) | Stacked после ITEM-002 на `build/MAP-001-goblin-country-route`; route graph battle/shop/boss + save/load + fallback linear flow. |
 | SHOP-001 — Goblin Merchant v1 | PLANNED / VERTICAL SLICE | Торговец как shop-node: тратим уже существующее run-gold на item/heal/Rotate; stock и цены data-driven, баланс позже. |
 | ART-019 — Goblin Country Map + Merchant Visual Direction | PLANNED | Визуальный язык карты маршрута и торговца в текущем premium-fantasy стиле, без generic parchment/RPG UI. |
 | MAP-002 — Events / Points of Interest | PLANNED AFTER MAP-001 | Небоевые узлы на карте: event / POI / rest / optional challenge; 3–5 коротких data-driven событий для первой версии. |
