@@ -30,7 +30,7 @@ BOARD хранит не только одну текущую задачу, а **
 
 | Task | Статус | Ветка | Смысл |
 |---|---|---|---|
-| RUN-002 — Generic enemy ability framework | IN PROGRESS | `build/RUN-002-enemy-ability-framework` | Фаза 1 roguelite-слоя: обобщить `stone_throw` до framework, доказать второй способностью (Shield). |
+| COMBAT-001 — Generic enemy ability framework | READY | `build/COMBAT-001-enemy-ability-framework` | Обобщить EXP-013 `stone_throw` в небольшой enemy-ability framework и доказать второй debug-способностью Shield; gameplay/content Акта I не менять. |
 
 Эти задачи независимы по смыслу. Не нужно запускать все одновременно: архитектор выбирает 1–2 дешёвых исполнителя по текущей загрузке, без дублирования одной задачи нескольким агентам.
 
