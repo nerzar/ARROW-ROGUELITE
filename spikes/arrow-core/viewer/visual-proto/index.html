@@ -36,16 +36,22 @@
 
   <div class="hud hud-left">
     <div class="player-card" id="playerCard">
-      <div class="name">Игрок</div>
-      <div class="hp-bar"><div class="hp-fill" id="playerHpFill"></div></div>
+      <img class="player-hud-skin" id="playerHudSkin" alt="" aria-hidden="true">
+      <div class="player-hp-track" aria-hidden="true"><div class="hp-fill" id="playerHpFill"></div></div>
       <div class="hp-text" id="playerHpText">—</div>
+      <div class="player-charges" id="playerCharges" aria-label="Rotate charges">
+        <span class="charge-diamond"></span>
+        <span class="charge-diamond"></span>
+        <span class="charge-diamond"></span>
+      </div>
     </div>
   </div>
 
   <div class="rotate-controls">
-    <button id="rotCcw" class="rotate-btn" title="Q">⟲</button>
+    <img class="rotate-skin" id="rotateSkin" alt="" aria-hidden="true">
+    <button id="rotCcw" class="rotate-btn rotate-btn-ccw" title="Rotate counter-clockwise (Q)" aria-label="Rotate counter-clockwise"></button>
+    <button id="rotCw" class="rotate-btn rotate-btn-cw" title="Rotate clockwise (E)" aria-label="Rotate clockwise"></button>
     <div class="rotate-charges" id="rotateCharges"></div>
-    <button id="rotCw" class="rotate-btn" title="E">⟳</button>
   </div>
 
   <aside class="debug-panel hidden" id="debugPanel">
