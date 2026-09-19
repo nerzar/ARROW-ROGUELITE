@@ -180,6 +180,9 @@ AGREED FOR NOW / текущий gameplay canon:
 - Stone Pin pinned-tap: без HP damage, без world turn, timers не двигаются;
 - после boss пролога игрок получает **2 shared Rotate charges**;
 - shared Rotate pool переносится дальше и не восстанавливается самовольно между encounters;
+- обычный encounter должен иметь осмысленную 0-Rotate линию; Rotate усиливает решение, а не обычно служит обязательным ключом;
+- `board clear while alive` остаётся валидной победой, но не делает encounter хорошим, если игрок после пары символических hit'ов только face-tank'ит и дочищает board;
+- будущие оружие/active abilities дают альтернативы, но не используются как оправдание слабой базовой puzzle-композиции;
 - Act I развивает multi-side combat и ведёт к boss reward Ricochet;
 - позже run должен раскрыть Serpent Form;
 - ещё позже — Chain;
@@ -191,7 +194,11 @@ AGREED FOR NOW:
 
 - Act I строим не через ранний «универсальный» генератор контента, а через ручной выбор интересных seed'ов;
 - для seed'ов смотрим direction/turn timeline и реальные branch points;
+- при shortlist отдельно проверяем 0-Rotate combat agency, а не только математическую solvability;
+- seed, где естественные направления дают лишь символические попадания и дальше остаётся только терпеть атаки до board-clear, для обычного encounter считаем плохим кандидатом;
 - enemy encounters поверх выбранных board'ов можно скриптовать вручную;
+- по мере роста Act I увеличиваем decision density самой головоломки: больше стрелок/branch points, более витиеватая topology, при необходимости больший board;
+- возможное укорочение стрел ради большей плотности — рабочая гипотеза для playtest, не зафиксированная геометрия;
 - generic direction quotas / infinite-generation rules — будущая работа, не текущий блокер;
 - визуальное производство не откладывать до самого конца: gameplay/content и нужные для playtest арты/VFX могут развиваться параллельно;
 - финальный визуальный выбор всё равно делает пользователь после просмотра.
