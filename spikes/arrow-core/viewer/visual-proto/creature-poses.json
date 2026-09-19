@@ -19,18 +19,18 @@
       "back": "back.png"
     },
     "pivot": {
-      "x": 0.4653062885310374,
-      "y": 0.8642856831453285
+      "x": 0.4672812184979839,
+      "y": 0.9104938271604939
     },
     "scale": 0.7,
     "hudOffset": {
       "x": 0,
-      "y": 0
+      "y": 0.515
     },
-    "hudScale": 1,
+    "hudScale": 0.5,
     "shadowOffset": {
       "x": 0,
-      "y": 0
+      "y": 0.04
     }
   },
   "skeleton-child": {
@@ -49,10 +49,10 @@
       "defeat": "ChatGPT Image Sep 17, 2026, 02_22_35 PM (8).png"
     },
     "pivot": {
-      "x": 0.5203704833984375,
-      "y": 0.8129629912199797
+      "x": 0.5250001130280672,
+      "y": 0.8620369522659866
     },
-    "scale": 0.66,
+    "scale": 0.505,
     "hudOffset": {
       "x": 0,
       "y": 0
@@ -82,7 +82,16 @@
       "x": 0.5,
       "y": 0.92
     },
-    "scale": 1
+    "scale": 0.505,
+    "hudOffset": {
+      "x": 0,
+      "y": 0.605
+    },
+    "hudScale": 1,
+    "shadowOffset": {
+      "x": 0,
+      "y": 0
+    }
   },
   "goblin-taunter": {
     "poses": {
@@ -107,15 +116,15 @@
       "x": 0.5,
       "y": 0.92
     },
-    "scale": 1,
+    "scale": 0.7,
     "hudOffset": {
-      "x": 0,
-      "y": 0
+      "x": 0.04,
+      "y": 0.37
     },
-    "hudScale": 1,
+    "hudScale": 0.6,
     "shadowOffset": {
       "x": 0,
-      "y": 0
+      "y": 0.045
     }
   },
   "green-slime": {
@@ -137,7 +146,7 @@
       "x": 0.5,
       "y": 0.92
     },
-    "scale": 1,
+    "scale": 0.505,
     "hudOffset": {
       "x": 0,
       "y": 0
@@ -167,12 +176,12 @@
       "x": 0.5,
       "y": 0.92
     },
-    "scale": 1,
+    "scale": 0.55,
     "hudOffset": {
       "x": 0,
-      "y": 0
+      "y": 0.53
     },
-    "hudScale": 1,
+    "hudScale": 0.7,
     "shadowOffset": {
       "x": 0,
       "y": 0

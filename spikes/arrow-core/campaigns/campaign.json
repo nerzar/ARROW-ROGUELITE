@@ -47,8 +47,8 @@
               "y": 0.62
             },
             "right": {
-              "x": 0.83,
-              "y": 0.62
+              "x": 0.8421677098435063,
+              "y": 0.49419833357280263
             }
           },
           "effectAnchors": {
@@ -61,12 +61,12 @@
               "y": 0.62
             },
             "right": {
-              "x": 0.83,
-              "y": 0.62
+              "x": 0.8469145331574146,
+              "y": 0.4899789349300623
             }
           },
           "actorScale": {
-            "top": 0.55,
+            "top": 1,
             "left": 1,
             "right": 1
           },
@@ -101,14 +101,6 @@
               "afterHits": 2,
               "label": "taunt-flee"
             }
-          },
-          {
-            "id": "mob_right",
-            "species": "skeleton-child",
-            "label": "Skeleton Child (Enemy)",
-            "side": 1,
-            "hp": 1,
-            "attackTimer": null
           }
         ],
         "rotate": {
@@ -180,7 +172,7 @@
             }
           },
           "actorScale": {
-            "top": 0.55,
+            "top": 1,
             "left": 1,
             "right": 1
           },
@@ -206,14 +198,11 @@
         "enemies": [
           {
             "id": "mob_top",
-            "species": "dire-wolf",
-            "label": "Dire Wolf (Target)",
+            "species": "skeleton-child",
+            "label": "Skeleton Child (Enemy)",
             "side": 0,
-            "hp": 2,
-            "attackTimer": {
-              "interval": 4,
-              "damage": 2
-            }
+            "hp": 1,
+            "attackTimer": null
           }
         ],
         "rotate": {
@@ -285,7 +274,7 @@
             }
           },
           "actorScale": {
-            "top": 0.55,
+            "top": 1,
             "left": 1,
             "right": 1
           },
@@ -345,20 +334,20 @@
           "boardSizeLocked": 5,
           "boardPlaneFrac": {
             "tl": [
-              0.3500791021530646,
-              0.40318258569721344
+              0.35482595564653957,
+              0.41824894339321783
             ],
             "tr": [
-              0.648338598259327,
-              0.40318258569721344
+              0.6459652167819395,
+              0.41824894339321783
             ],
             "br": [
-              0.6894778744845104,
-              0.8094046251183081
+              0.6855221783297312,
+              0.8036217412639407
             ],
             "bl": [
-              0.3113132979439687,
-              0.8094046251183081
+              0.3128955824417937,
+              0.8036217412639407
             ]
           },
           "anchors": {
@@ -390,9 +379,9 @@
             }
           },
           "actorScale": {
-            "top": 0.5,
+            "top": 1,
             "left": 1,
-            "right": 0.5
+            "right": 1
           },
           "spritePivot": {
             "top": {
@@ -418,7 +407,7 @@
             "id": "grunt_top",
             "species": "small-goblin",
             "label": "Small Goblin (Enemy)",
-            "side": 0,
+            "side": 1,
             "hp": 2,
             "attackTimer": {
               "interval": 5,
@@ -429,7 +418,7 @@
             "id": "grunt_right",
             "species": "small-goblin",
             "label": "Small Goblin (Enemy)",
-            "side": 1,
+            "side": 0,
             "hp": 2,
             "attackTimer": {
               "interval": 3,
@@ -479,16 +468,16 @@
           },
           "anchors": {
             "top": {
-              "x": 0.5027689676916272,
-              "y": 0.31557665937456775
+              "x": 0.5075158513646687,
+              "y": 0.30291846344634676
             },
             "left": {
               "x": 0.14359177494541875,
               "y": 0.4460933679675751
             },
             "right": {
-              "x": 0.8484968478348063,
-              "y": 0.43178977387745454
+              "x": 0.8524525439895854,
+              "y": 0.4632559874384323
             }
           },
           "effectAnchors": {
@@ -506,7 +495,7 @@
             }
           },
           "actorScale": {
-            "top": 0.63,
+            "top": 1,
             "left": 1,
             "right": 1
           },
