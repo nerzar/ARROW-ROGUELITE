@@ -1,6 +1,6 @@
 # TASK: MAP-001 — Goblin Country Route Map v1
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: M
 AGENT: Gemini / Antigravity
@@ -62,3 +62,34 @@ BRANCH: build/MAP-001-goblin-country-route
 Перед сдачей: tests/typecheck/build + реальный browser/playable check. Оставь dev/viewer сервер запущенным и дай точный URL карты для быстрой проверки пользователем.
 
 После сдачи STOP.
+
+## Результат (RESULT)
+
+1. **Data-driven Route Graph**:
+   - `spikes/arrow-core/src/route-map.ts`: типы `RouteNodeType` (`battle` | `shop` | `boss`), `RouteNode`, `RouteGraph`, функции `validateRouteGraph` и `getAvailableRouteNodes`.
+   - Авторский граф `DEFAULT_ACT1_ROUTE_GRAPH`: охватывает все 18 стадий Акта I (`act1-stage-1` .. `act1-stage-18`), 2 магазина (`node-3-shop`, `node-5-shop`), множественные ветвления/слияния и финального босса (`node-boss`). Добавлен в `campaigns/campaign.json` и экспортирован из ядра.
+2. **RunState**:
+   - Поддержка `routeGraph`, `currentNodeId`, `visitedNodeIds`, `routeMapPending`, `inShop`.
+   - Методы `selectRouteNode(nodeId)`, `leaveShop()`, `debugJumpToNode(nodeId)`.
+   - `advance()`: на победе в бою фиксирует награды, сохраняет пройденный узел и открывает карту (`routeMapPending = true`).
+   - На узле босса (`boss`): завершение боя ставит `runWon = true`.
+   - Полный save/load (`toJSON` / `fromJSON`) с восстановлением графа, посещенных узлов, текущего узла и экрана магазина.
+   - Линейный fallback: при отсутствии `routeGraph` логика кампании на 100% сохраняет старое поведение.
+3. **Route Map UI & Shop**:
+   - `viewer/visual-proto/route-map-ui.js`: интерактивная карта с колонками по тирам, SVG-линиями переходов, различимыми значками архетипов (⚔️ Бой, 🛒 Лавка, 👑 Босс) и состояниями (`.state-visited`, `.state-current`, `.state-available`, `.state-locked`).
+   - Placeholder-экран магазина (SHOP-001): отображение золота, реплика торговца и кнопка «Продолжить путь →» (`leaveShop()`), возвращающая на карту к выбору дальнейших узлов.
+   - Кнопка `🗺️ Карта` в тулбаре и горячая клавиша `M` для просмотра карты в любой момент.
+   - В селекторе сцен добавлен пункт `🗺️ Карта: Страна гоблинов (Акт I)`. Переход по победе над боссом пролога ведёт сразу на карту Акта I.
+   - Автоматическое сохранение прогресса маршрута в `localStorage`.
+
+## Верификация (VERIFY)
+
+- `npm run typecheck`: 0 ошибок.
+- `npm run build`: 0 ошибок.
+- `npm test`: 39 test files, 443 теста пройдено (включая 12 тестов в `test/map-001-route-graph.test.ts`).
+- End-to-end скрипт симуляции проверил полный цикл: старт на карте -> выбор развилки -> бой -> награда -> открытие карты -> выбор магазина -> выход из магазина -> продолжение маршрута -> save/load round-trip -> победа над боссом.
+- Сервер запущен на порту 5179 и проверен через HTTP fetch (200 OK на всех ассетах).
+
+**URL для проверки**:
+- Прямой запуск карты Акта I: `http://localhost:5179/viewer/visual-proto/?route=1`
+- Или через выбор в дропдауне сцен: `🗺️ Карта: Страна гоблинов (Акт I)`
