@@ -2,7 +2,7 @@
   "format": "arrow-campaign",
   "v": 1,
   "id": "square-prologue",
-  "title": "Пролог + Акт I (playtest v1)",
+  "title": "Пролог + Акт I (LD-007 provisional)",
   "levels": [
     {
       "id": "prologue-stage-1",
@@ -567,7 +567,8 @@
       "board": {
         "preset": "square-6",
         "size": 6,
-        "seed": 22
+        "seed": 11,
+        "profile": "short"
       },
       "presentation": {
         "arena": "imported-goblinas-na-approved-1789716079863",
@@ -644,8 +645,8 @@
         }
       },
       "encounter": {
-        "id": "act1_1_border_patrol",
-        "title": "Акт I · Пограничный патруль",
+        "id": "ld7_a1_patrol",
+        "title": "Акт I · 1 · Пограничный патруль",
         "enemies": [
           {
             "id": "raider_w",
@@ -663,7 +664,7 @@
             "species": "small-goblin",
             "label": "Goblin Guard",
             "side": 1,
-            "hp": 2,
+            "hp": 3,
             "attackTimer": {
               "interval": 5,
               "damage": 2
@@ -679,16 +680,17 @@
           "useRunPool": true
         },
         "blockedTapDamage": 1,
-        "notes": "Story: после победы над Shaman игрок продолжает погоню за Goblin King и упирается в первый нормальный патруль. Gameplay: самостоятельная проверка two-front priority после пролога; Rotate доступен как страховка, но не должен быть обязателен."
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
       }
     },
     {
       "id": "act1-stage-2",
-      "title": "Акт I · 2 · Взаимный заслон",
+      "title": "Акт I · 2 · Ученик шамана",
       "board": {
         "preset": "square-6",
         "size": 6,
-        "seed": 112
+        "seed": 126,
+        "profile": "short"
       },
       "presentation": {
         "arena": "imported-goblinas-na-approved-1789716079863",
@@ -765,136 +767,15 @@
         }
       },
       "encounter": {
-        "id": "act1_2_cross_lock",
-        "title": "Акт I · Взаимный заслон",
-        "enemies": [
-          {
-            "id": "guard_e",
-            "species": "small-goblin",
-            "label": "Goblin Guard",
-            "side": 1,
-            "hp": 2,
-            "attackTimer": {
-              "interval": 3,
-              "damage": 2
-            }
-          },
-          {
-            "id": "lookout_n",
-            "species": "small-goblin",
-            "label": "Goblin Lookout",
-            "side": 0,
-            "hp": 2,
-            "attackTimer": {
-              "interval": 4,
-              "damage": 2
-            }
-          }
-        ],
-        "rotate": {
-          "allow": [
-            1,
-            -1
-          ],
-          "advancesTurn": false,
-          "useRunPool": true
-        },
-        "blockedTapDamage": 1,
-        "notes": "Story: два гоблина держат узкий проход и прикрывают друг друга. Gameplay target: направления/очередность открытия стрел должны заставлять переключаться между TOP и EAST, а не просто фокусить один HP bar."
-      }
-    },
-    {
-      "id": "act1-stage-3",
-      "title": "Акт I · 3 · Ученик шамана",
-      "board": {
-        "preset": "square-6",
-        "size": 6,
-        "seed": 25
-      },
-      "presentation": {
-        "arena": "imported-goblinas-na-approved-1789716079863",
-        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
-        "calibration": {
-          "id": "prologue-5x5-good",
-          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
-          "boardSizeLocked": 6,
-          "boardPlaneFrac": {
-            "tl": [
-              0.35482595564653957,
-              0.41824894339321783
-            ],
-            "tr": [
-              0.6459652167819395,
-              0.41824894339321783
-            ],
-            "br": [
-              0.6855221783297312,
-              0.8036217412639407
-            ],
-            "bl": [
-              0.3128955824417937,
-              0.8036217412639407
-            ]
-          },
-          "anchors": {
-            "top": {
-              "x": 0.5027689676916272,
-              "y": 0.3044877646498292
-            },
-            "left": {
-              "x": 0.17,
-              "y": 0.62
-            },
-            "right": {
-              "x": 0.8445411516800271,
-              "y": 0.4646880293719555
-            }
-          },
-          "effectAnchors": {
-            "top": {
-              "x": 0.5019778405324979,
-              "y": 0.31593062900914937
-            },
-            "left": {
-              "x": 0.17,
-              "y": 0.62
-            },
-            "right": {
-              "x": 0.8627373177765313,
-              "y": 0.46039696205769565
-            }
-          },
-          "actorScale": {
-            "top": 1,
-            "left": 1,
-            "right": 1
-          },
-          "spritePivot": {
-            "top": {
-              "dx": 0,
-              "dy": 0
-            },
-            "left": {
-              "dx": 0,
-              "dy": 0
-            },
-            "right": {
-              "dx": 0,
-              "dy": 0
-            }
-          }
-        }
-      },
-      "encounter": {
-        "id": "act1_3_shaman_apprentice",
-        "title": "Акт I · Ученик шамана",
+        "id": "ld7_a2_caster",
+        "title": "Акт I · 2 · Ученик шамана",
         "enemies": [
           {
             "id": "apprentice_n",
             "species": "goblin-shaman",
             "label": "Shaman Apprentice",
             "side": 0,
-            "hp": 2,
+            "hp": 3,
             "attackTimer": {
               "interval": 3,
               "damage": 4,
@@ -928,16 +809,17 @@
           "useRunPool": true
         },
         "blockedTapDamage": 1,
-        "notes": "Story: обычные патрули не справились, поэтому в бой входит ученик шамана с охранником. Gameplay: уже знакомый по boss-прологу interrupt теперь становится обычным боевым правилом без tutorial-подсказки."
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
       }
     },
     {
-      "id": "act1-stage-4",
-      "title": "Акт I · 4 · Камнемёт",
+      "id": "act1-stage-3",
+      "title": "Акт I · 3 · Камнемёт",
       "board": {
-        "preset": "square-6",
-        "size": 6,
-        "seed": 723
+        "preset": "square-7",
+        "size": 7,
+        "seed": 21,
+        "profile": "short"
       },
       "presentation": {
         "arena": "imported-goblinas-na-approved-1789716079863",
@@ -1014,8 +896,8 @@
         }
       },
       "encounter": {
-        "id": "act1_4_rock_thrower",
-        "title": "Акт I · Камнемёт",
+        "id": "ld7_a3_rock",
+        "title": "Акт I · 3 · Камнемёт",
         "enemies": [
           {
             "id": "rock_n",
@@ -1024,7 +906,7 @@
             "side": 0,
             "hp": 3,
             "attackTimer": {
-              "interval": 5,
+              "interval": 6,
               "damage": 1
             },
             "ability": {
@@ -1040,7 +922,7 @@
             "species": "small-goblin",
             "label": "Goblin Escort",
             "side": 1,
-            "hp": 1,
+            "hp": 2,
             "attackTimer": {
               "interval": 3,
               "damage": 2
@@ -1056,16 +938,17 @@
           "useRunPool": true
         },
         "blockedTapDamage": 1,
-        "notes": "Story: гоблины начинают вмешиваться прямо в puzzle — Rock Thrower кидает камни и временно прибивает доступные стрелы. Gameplay: первая enemy ability в обычной кампании. Использует уже существующий EXP-013 stone_throw."
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
       }
     },
     {
-      "id": "act1-stage-5",
-      "title": "Акт I · 5 · Засада с трёх сторон",
+      "id": "act1-stage-4",
+      "title": "Акт I · 4 · Гоблин-разведчик",
       "board": {
-        "preset": "square-6",
-        "size": 6,
-        "seed": 428
+        "preset": "square-7",
+        "size": 7,
+        "seed": 53,
+        "profile": "short"
       },
       "presentation": {
         "arena": "imported-goblinas-na-approved-1789716079863",
@@ -1142,8 +1025,140 @@
         }
       },
       "encounter": {
-        "id": "act1_5_three_front_ambush",
-        "title": "Акт I · Засада с трёх сторон",
+        "id": "ld7_a3b_scout",
+        "title": "Акт I · 4 · Гоблин-разведчик",
+        "enemies": [
+          {
+            "id": "scout_e",
+            "species": "small-goblin",
+            "label": "Goblin Scout",
+            "side": 1,
+            "hp": 3,
+            "attackTimer": {
+              "interval": 4,
+              "damage": 2
+            },
+            "ability": {
+              "id": "scout_walk",
+              "kind": "shift",
+              "interval": 2,
+              "sides": [
+                1,
+                3
+              ],
+              "label": "move"
+            }
+          },
+          {
+            "id": "lookout_n",
+            "species": "small-goblin",
+            "label": "Goblin Lookout",
+            "side": 0,
+            "hp": 2,
+            "attackTimer": {
+              "interval": 5,
+              "damage": 2
+            }
+          }
+        ],
+        "rotate": {
+          "allow": [
+            1,
+            -1
+          ],
+          "advancesTurn": false,
+          "useRunPool": true
+        },
+        "blockedTapDamage": 1,
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
+      }
+    },
+    {
+      "id": "act1-stage-5",
+      "title": "Акт I · 5 · Засада с трёх сторон",
+      "board": {
+        "preset": "square-7",
+        "size": 7,
+        "seed": 50,
+        "profile": "short"
+      },
+      "presentation": {
+        "arena": "imported-goblinas-na-approved-1789716079863",
+        "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+        "calibration": {
+          "id": "prologue-5x5-good",
+          "background": "assets/arenas/imported/1789716079855-goblinas-na-approved.png",
+          "boardSizeLocked": 6,
+          "boardPlaneFrac": {
+            "tl": [
+              0.35482595564653957,
+              0.41824894339321783
+            ],
+            "tr": [
+              0.6459652167819395,
+              0.41824894339321783
+            ],
+            "br": [
+              0.6855221783297312,
+              0.8036217412639407
+            ],
+            "bl": [
+              0.3128955824417937,
+              0.8036217412639407
+            ]
+          },
+          "anchors": {
+            "top": {
+              "x": 0.5027689676916272,
+              "y": 0.3044877646498292
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8445411516800271,
+              "y": 0.4646880293719555
+            }
+          },
+          "effectAnchors": {
+            "top": {
+              "x": 0.5019778405324979,
+              "y": 0.31593062900914937
+            },
+            "left": {
+              "x": 0.17,
+              "y": 0.62
+            },
+            "right": {
+              "x": 0.8627373177765313,
+              "y": 0.46039696205769565
+            }
+          },
+          "actorScale": {
+            "top": 1,
+            "left": 1,
+            "right": 1
+          },
+          "spritePivot": {
+            "top": {
+              "dx": 0,
+              "dy": 0
+            },
+            "left": {
+              "dx": 0,
+              "dy": 0
+            },
+            "right": {
+              "dx": 0,
+              "dy": 0
+            }
+          }
+        }
+      },
+      "encounter": {
+        "id": "ld7_a4_three",
+        "title": "Акт I · 5 · Засада с трёх сторон",
         "enemies": [
           {
             "id": "grunt_n",
@@ -1152,7 +1167,7 @@
             "side": 0,
             "hp": 2,
             "attackTimer": {
-              "interval": 4,
+              "interval": 5,
               "damage": 2
             }
           },
@@ -1172,10 +1187,10 @@
             "species": "spider-brute",
             "label": "Camp Brute",
             "side": 3,
-            "hp": 1,
+            "hp": 3,
             "attackTimer": {
-              "interval": 5,
-              "damage": 2
+              "interval": 7,
+              "damage": 3
             }
           }
         ],
@@ -1188,72 +1203,73 @@
           "useRunPool": true
         },
         "blockedTapDamage": 1,
-        "notes": "Story: игрок добирается до лагеря и попадает в настоящую засаду. Gameplay: первый three-front triage; выбрать срочную цель важнее равномерного распределения урона."
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
       }
     },
     {
       "id": "act1-stage-6",
       "title": "Акт I · 6 · Капитан стражи",
       "board": {
-        "preset": "square-6",
-        "size": 6,
-        "seed": 97
+        "preset": "square-7",
+        "size": 7,
+        "seed": 54,
+        "profile": "mixed"
       },
       "presentation": {
-        "arena": "6x6-5",
-        "background": "assets/arenas/prologue-act1/6x6-5.png",
+        "arena": "goblin-camp-podium",
+        "background": "assets/arenas/library/goblin-camp-podium.jpg",
         "calibration": {
-          "id": "6x6-5",
-          "background": "assets/arenas/prologue-act1/6x6-5.png",
+          "id": "goblin-camp-podium",
+          "background": "assets/arenas/library/goblin-camp-podium.jpg",
           "boardSizeLocked": 6,
           "boardPlaneFrac": {
             "tl": [
-              0.3342563175339479,
-              0.3929324978842111
+              0.356,
+              0.42
             ],
             "tr": [
-              0.657832305246277,
-              0.3887130992414708
+              0.646,
+              0.42
             ],
             "br": [
-              0.7029272172671063,
-              0.7994022889686356
+              0.677,
+              0.815
             ],
             "bl": [
-              0.2915348171700729,
-              0.7994022889686356
+              0.324,
+              0.815
             ]
           },
           "anchors": {
             "top": {
               "x": 0.5,
-              "y": 0.155
+              "y": 0.31
             },
             "left": {
-              "x": 0.17,
-              "y": 0.6
+              "x": 0.145,
+              "y": 0.45
             },
             "right": {
-              "x": 0.83,
-              "y": 0.6
+              "x": 0.855,
+              "y": 0.45
             }
           },
           "effectAnchors": {
             "top": {
               "x": 0.5,
-              "y": 0.155
+              "y": 0.32
             },
             "left": {
-              "x": 0.17,
-              "y": 0.6
+              "x": 0.13,
+              "y": 0.46
             },
             "right": {
-              "x": 0.83,
-              "y": 0.6
+              "x": 0.87,
+              "y": 0.46
             }
           },
           "actorScale": {
-            "top": 0.55,
+            "top": 1,
             "left": 1,
             "right": 1
           },
@@ -1264,18 +1280,18 @@
             },
             "left": {
               "dx": 0,
-              "dy": 0.08
+              "dy": 0
             },
             "right": {
               "dx": 0,
-              "dy": 0.08
+              "dy": 0
             }
           }
         }
       },
       "encounter": {
-        "id": "act1_6_guard_captain",
-        "title": "Акт I · Капитан стражи",
+        "id": "ld7_a5_captain",
+        "title": "Акт I · 6 · Капитан стражи",
         "enemies": [
           {
             "id": "captain_e",
@@ -1284,13 +1300,13 @@
             "side": 1,
             "hp": 3,
             "attackTimer": {
-              "interval": 4,
+              "interval": 5,
               "damage": 3
             },
             "ability": {
               "id": "guard_shield",
               "kind": "shield",
-              "interval": 3,
+              "interval": 2,
               "label": "shield"
             }
           },
@@ -1299,8 +1315,11 @@
             "species": "small-goblin",
             "label": "Goblin Pest",
             "side": 3,
-            "hp": 1,
-            "attackTimer": null
+            "hp": 2,
+            "attackTimer": {
+              "interval": 6,
+              "damage": 1
+            }
           }
         ],
         "rotate": {
@@ -1312,16 +1331,17 @@
           "useRunPool": true
         },
         "blockedTapDamage": 1,
-        "notes": "Story: капитан охраны задерживает игрока перед внутренней частью лагеря. COMBAT-001 playtest: Captain поднимает одноразовый Shield каждые 3 world turns; следующий projectile hit снимает щит без HP damage. Второй мелкий враг заставляет решать, тратить ли стрелы на капитана до/после Shield. HP/timers/interval provisional — пользователь тюнит после ручного прохождения."
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
       }
     },
     {
       "id": "act1-stage-7",
       "title": "Акт I · 7 · Ритуальные ворота",
       "board": {
-        "preset": "square-6",
-        "size": 6,
-        "seed": 239
+        "preset": "square-8",
+        "size": 8,
+        "seed": 65,
+        "profile": "short"
       },
       "presentation": {
         "arena": "imported-goblinas-na-approved-1789716079863",
@@ -1398,17 +1418,17 @@
         }
       },
       "encounter": {
-        "id": "act1_7_ritual_gate",
-        "title": "Акт I · Ритуальные ворота",
+        "id": "ld7_a6_gate",
+        "title": "Акт I · 7 · Ритуальные ворота",
         "enemies": [
           {
             "id": "caster_n",
             "species": "goblin-shaman",
             "label": "Goblin Caster",
             "side": 0,
-            "hp": 2,
+            "hp": 3,
             "attackTimer": {
-              "interval": 3,
+              "interval": 4,
               "damage": 4,
               "kind": "cast",
               "interruptible": true,
@@ -1424,9 +1444,9 @@
             "species": "small-goblin",
             "label": "Goblin Rock Thrower",
             "side": 3,
-            "hp": 2,
+            "hp": 3,
             "attackTimer": {
-              "interval": 5,
+              "interval": 8,
               "damage": 1
             },
             "ability": {
@@ -1442,7 +1462,7 @@
             "species": "small-goblin",
             "label": "Goblin Guard",
             "side": 1,
-            "hp": 1,
+            "hp": 2,
             "attackTimer": {
               "interval": 4,
               "damage": 2
@@ -1458,16 +1478,17 @@
           "useRunPool": true
         },
         "blockedTapDamage": 1,
-        "notes": "Story: последний заслон перед Goblin King — caster, камнемёт и охрана одновременно. Gameplay: экзамен на interrupt + pin + multi-side priority перед boss. Баланс намеренно provisional для ручного playtest."
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
       }
     },
     {
       "id": "act1-stage-8",
       "title": "Акт I · 8 · Goblin King",
       "board": {
-        "preset": "square-6",
-        "size": 6,
-        "seed": 186
+        "preset": "square-8",
+        "size": 8,
+        "seed": 73,
+        "profile": "short"
       },
       "presentation": {
         "arena": "imported-goblinas-na-approved-1789716079863",
@@ -1544,8 +1565,8 @@
         }
       },
       "encounter": {
-        "id": "act1_8_goblin_king",
-        "title": "Акт I · Goblin King",
+        "id": "ld7_a7_king",
+        "title": "Акт I · 8 · Goblin King",
         "boss": {
           "id": "goblin-king",
           "phases": [
@@ -1560,12 +1581,19 @@
             },
             {
               "side": 1,
-              "hpUnits": 3,
+              "hpUnits": 4,
               "attackTimer": {
-                "interval": 4,
-                "damage": 2
+                "interval": 3,
+                "damage": 3,
+                "kind": "cast",
+                "interruptible": true,
+                "interruptedAttack": {
+                  "interval": 4,
+                  "damage": 2,
+                  "kind": "normal"
+                }
               },
-              "label": "Phase 2: cornered King moves East"
+              "label": "Phase 2: cornered King moves East, war-cry"
             }
           ]
         },
@@ -1578,7 +1606,7 @@
           "useRunPool": true
         },
         "blockedTapDamage": 1,
-        "notes": "Story payoff: тот же Goblin King, который насмехался и сбежал в первой сцене, наконец загнан в угол. Boss reward Ricochet пока НЕ включён: механика ещё не реализована; после EXP/BUILD Ricochet награда подключается сюда."
+        "notes": "LD-007 provisional playtest stage (branch design/LD-007-act1-gameplay-pass)."
       }
     }
   ],

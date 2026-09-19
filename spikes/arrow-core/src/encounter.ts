@@ -142,7 +142,7 @@ export type AbilityTargetPolicy = 'free-arrow'
  * ability/scripting system. `kind` absent means legacy `'stone_throw'` so pre-framework
  * encounter JSON and tests keep working unchanged.
  */
-export type AbilityKind = 'stone_throw' | 'shield'
+export type AbilityKind = 'stone_throw' | 'shield' | 'shift'
 
 /** EXP-013 Stone Throw: pin the selected arrow for `pinDuration` world turns. */
 export interface StoneThrowAbility {
@@ -172,7 +172,27 @@ export interface ShieldAbility {
   label?: string
 }
 
-export type EnemyAbility = StoneThrowAbility | ShieldAbility
+/**
+ * LD-007 Side Shift (provisional playtest prototype, not accepted content): on its own countdown
+ * the enemy walks to the next arena side in `sides` (cyclic; it starts from wherever its own
+ * `side` sits in that list, or from `sides[0]`). Nothing else changes — HP, attack timer and the
+ * board are untouched; only *which arrow direction reaches it* moves. The designer intent is to
+ * make direction a resource over time: the ammo you need for this enemy is different two turns
+ * from now, so "wait for him to walk into my E arrows" becomes a real line. A shift is skipped
+ * (countdown still resets) if the destination side is already held by another live enemy —
+ * one target per side stays true.
+ */
+export interface ShiftAbility {
+  id: string
+  kind: 'shift'
+  /** Ticks on every legal world turn (alongside `attackTimer`, not instead of it). */
+  interval: number
+  /** Arena sides visited in order, wrapping around. */
+  sides: Dir[]
+  label?: string
+}
+
+export type EnemyAbility = StoneThrowAbility | ShieldAbility | ShiftAbility
 
 /** Resolution kind of an ability; absent `kind` is the legacy Stone Throw shape. */
 export const abilityKind = (a: EnemyAbility): AbilityKind => a.kind ?? 'stone_throw'
@@ -180,6 +200,7 @@ export const abilityKind = (a: EnemyAbility): AbilityKind => a.kind ?? 'stone_th
 /** One-line ability description for reports/viewer/debug HUD (`THROW IN N` / `SHIELD IN N`). */
 export function describeAbility(a: EnemyAbility): string {
   if (abilityKind(a) === 'shield') return `SHIELD IN ${a.interval} (one-shot, absorbs next hit)`
+  if (abilityKind(a) === 'shift') return `MOVE IN ${a.interval} (${(a as ShiftAbility).sides.map((d) => DIR_NAMES[d]).join('->')})`
   const s = a as StoneThrowAbility
   return `THROW IN ${s.interval} (${s.targetPolicy}, pin ${s.pinDuration} turns)`
 }
@@ -305,6 +326,8 @@ export type TapResult =
       pinnedThisTurn?: { id: number; turnsLeft: number }[]
       /** COMBAT-001, `enemies` mode only: enemy ids that raised their one-shot shield this turn. */
       shieldRaised?: { id: string }[]
+      /** LD-007, `enemies` mode only: enemies that walked to another arena side this turn. */
+      shifted?: { id: string; from: Dir; to: Dir }[]
       /** COMBAT-001, `enemies` mode only: enemy ids whose shield absorbed this turn's hit (no HP damage). */
       shieldConsumed?: { id: string }[]
       /** STORY-001, `enemies` mode only: enemies that fled the arena this turn (scripted
@@ -336,6 +359,8 @@ interface TimerSnapshot {
   enemyAbilityCountdown?: number[]
   /** COMBAT-001, enemies mode only: one entry per `def.enemies[i]` — that enemy's shield is up. */
   enemyShield?: boolean[]
+  /** LD-007 shift, enemies mode only: one entry per `def.enemies[i]` — current arena side. */
+  enemySide?: Dir[]
 }
 
 type Entry = ({ kind: 'tap'; id: number; hit: boolean } | { kind: 'rotate'; turn: Turn }) & { timerBefore: TimerSnapshot }
@@ -371,6 +396,8 @@ export class EncounterState {
   private enemyAbilityCountdown: number[] = []
   /** COMBAT-001, enemies mode only: `def.enemies[i]`'s one-shot shield is currently up. */
   private enemyShield: boolean[] = []
+  /** LD-007 shift, enemies mode only: `def.enemies[i]`'s CURRENT arena side (starts at `def.side`). */
+  private enemySide: Dir[] = []
   private playerHpValue: number
   /** The HP this encounter started with (constructor param), needed to replay it exactly in clone(). */
   readonly playerHpStart: number
@@ -400,6 +427,7 @@ export class EncounterState {
       this.enemyCastInterrupted = def.enemies.map(() => false)
       this.enemyAbilityCountdown = def.enemies.map((e) => e.ability?.interval ?? Infinity)
       this.enemyShield = def.enemies.map(() => false)
+      this.enemySide = def.enemies.map((e) => e.side)
     } else {
       let hp = 0
       let granted = 0
@@ -540,7 +568,7 @@ export class EncounterState {
       const at = this.currentEnemyAttackTimer(i)
       return {
         id: e.id,
-        side: e.side,
+        side: this.enemySide[i],
         hp: Math.max(0, this.enemyHp[i]),
         hpMax: e.hp,
         dead: this.enemyHp[i] <= 0,
@@ -593,7 +621,7 @@ export class EncounterState {
    * STORY-001: fled enemies already left the arena and can no longer be hit. */
   private targetIndexAt(side: Dir): number {
     if (!this.def.enemies) return -1
-    return this.def.enemies.findIndex((e, i) => e.side === side && this.enemyHp[i] > 0 && !this.isFled(i))
+    return this.def.enemies.findIndex((_e, i) => this.enemySide[i] === side && this.enemyHp[i] > 0 && !this.isFled(i))
   }
 
   wouldHit(id: number): boolean {
@@ -639,6 +667,7 @@ export class EncounterState {
         enemyCastInterrupted: [...this.enemyCastInterrupted],
         enemyAbilityCountdown: [...this.enemyAbilityCountdown],
         enemyShield: [...this.enemyShield],
+        enemySide: [...this.enemySide],
         pinTurnsLeft,
       }
     }
@@ -660,6 +689,7 @@ export class EncounterState {
       this.enemyCastInterrupted = t.enemyCastInterrupted!
       this.enemyAbilityCountdown = t.enemyAbilityCountdown!
       this.enemyShield = t.enemyShield!
+      this.enemySide = t.enemySide!
     } else {
       this.countdown = t.countdown!
       this.hitsThisCycle = t.hitsThisCycle!
@@ -707,6 +737,7 @@ export class EncounterState {
     pinExpired: number[]
     pinnedThisTurn: { id: number; turnsLeft: number }[]
     shieldRaised: { id: string }[]
+    shifted: { id: string; from: Dir; to: Dir }[]
   } {
     const pinExpired: number[] = []
     for (let id = 0; id < this.pinTurnsLeft.length; id++) {
@@ -716,6 +747,7 @@ export class EncounterState {
     }
     const pinnedThisTurn: { id: number; turnsLeft: number }[] = []
     const shieldRaised: { id: string }[] = []
+    const shifted: { id: string; from: Dir; to: Dir }[] = []
     const defs = this.def.enemies!
     for (let i = 0; i < defs.length; i++) {
       if (this.enemyHp[i] <= 0 || this.isFled(i)) continue
@@ -733,6 +765,19 @@ export class EncounterState {
         }
         continue
       }
+      if (abilityKind(ability) === 'shift') {
+        // LD-007: walk to the next side in the cycle unless another live enemy already holds it.
+        const sides = (ability as ShiftAbility).sides
+        const cur = this.enemySide[i]
+        const at = sides.indexOf(cur)
+        const to = sides[(at < 0 ? 0 : at + 1) % sides.length]
+        const occupied = defs.some((_d, j) => j !== i && this.enemyHp[j] > 0 && !this.isFled(j) && this.enemySide[j] === to)
+        if (to !== cur && !occupied) {
+          this.enemySide[i] = to
+          shifted.push({ id: defs[i].id, from: cur, to })
+        }
+        continue
+      }
       const target = this.selectAbilityTarget(ability as StoneThrowAbility)
       if (target >= 0) {
         this.pinTurnsLeft[target] = (ability as StoneThrowAbility).pinDuration
@@ -741,7 +786,7 @@ export class EncounterState {
       // target < 0: fizzle -- no safe arrow to pin this cycle. The countdown still reset above, so
       // the ability simply tries again next cycle rather than retrying every turn.
     }
-    return { pinExpired, pinnedThisTurn, shieldRaised }
+    return { pinExpired, pinnedThisTurn, shieldRaised, shifted }
   }
 
   /**
@@ -908,6 +953,7 @@ export class EncounterState {
     let pinExpired: number[] = []
     let pinnedThisTurn: { id: number; turnsLeft: number }[] = []
     let shieldRaised: { id: string }[] = []
+    let shifted: { id: string; from: Dir; to: Dir }[] = []
     if (!this.won) {
       // Not everyone required is dead yet (and the board isn't cleared alive): the world keeps
       // ticking for every enemy still standing, same rule as the boss's per-turn advance.
@@ -921,11 +967,12 @@ export class EncounterState {
       pinExpired = pinRes.pinExpired
       pinnedThisTurn = pinRes.pinnedThisTurn
       shieldRaised = pinRes.shieldRaised
+      shifted = pinRes.shifted
     }
     return {
       ok: true, arenaDir, hit, hitDamage, phaseBefore: 0, phaseAfter: 0, granted: 0,
       interrupted, castInterrupted, enemyAttacked: attacked, enemyDamage, enemyAttacks,
-      pinExpired, pinnedThisTurn, shieldRaised, shieldConsumed, fled,
+      pinExpired, pinnedThisTurn, shieldRaised, shifted, shieldConsumed, fled,
       playerHp: this.playerHpValue, won: this.won, lost: this.lost, playerDead: this.playerDead,
     }
   }
@@ -1031,7 +1078,8 @@ export class EncounterState {
       const ci = this.enemyCastInterrupted.map((b) => (b ? 1 : 0)).join(',')
       const ac = this.enemyAbilityCountdown.map((c) => (Number.isFinite(c) ? c : 'inf')).join(',')
       const sh = this.enemyShield.map((b) => (b ? 1 : 0)).join(',')
-      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${pin}|${this.playerHpValue}`
+      const sd = this.enemySide.join(',')
+      return `${this.board.key()}|${this.rot}|${this.rotates}|E|${this.enemyHp.join(',')}|${cd}|${this.enemyHitsThisCycle.join(',')}|${ci}|${ac}|${sh}|${sd}|${pin}|${this.playerHpValue}`
     }
     const c = Number.isFinite(this.countdown) ? this.countdown : 'inf'
     return `${this.board.key()}|${this.rot}|${this.hitCount}|${this.rotates}|${c}|${this.hitsThisCycle}|${this.castInterrupted ? 1 : 0}|${pin}|${this.playerHpValue}`
@@ -1061,7 +1109,7 @@ function checkAttackTimer(at: AttackTimer, label: string): void {
 }
 
 const ABILITY_TARGET_POLICIES: readonly AbilityTargetPolicy[] = ['free-arrow']
-const ABILITY_KINDS: readonly AbilityKind[] = ['stone_throw', 'shield']
+const ABILITY_KINDS: readonly AbilityKind[] = ['stone_throw', 'shield', 'shift']
 
 function checkAbility(a: EnemyAbility, label: string): void {
   if (typeof a.id !== 'string' || a.id.length === 0) throw new Error(`${label}: ability.id must be a non-empty string`)
@@ -1074,6 +1122,13 @@ function checkAbility(a: EnemyAbility, label: string): void {
     const s = a as unknown as Record<string, unknown>
     if (s['targetPolicy'] !== undefined) throw new Error(`${label}: shield ability must not set targetPolicy`)
     if (s['pinDuration'] !== undefined) throw new Error(`${label}: shield ability must not set pinDuration`)
+    return
+  }
+  if (abilityKind(a) === 'shift') {
+    const sh = a as ShiftAbility
+    if (!Array.isArray(sh.sides) || sh.sides.length < 2 || sh.sides.some((d) => ![0, 1, 2, 3].includes(d))) {
+      throw new Error(`${label}: shift ability needs sides = at least two of 0..3`)
+    }
     return
   }
   const st = a as StoneThrowAbility

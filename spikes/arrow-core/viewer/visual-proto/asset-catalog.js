@@ -2,6 +2,8 @@
 // Provides stable IDs, user-facing labels, default side/stats, and paths.
 // Designed to cleanly merge with ASSET-001 when additional assets are prepared.
 
+import { ARENA_LIBRARY } from './arena-library.js'
+
 export const ARENA_CATALOG = [
   {
     id: 'prologue-5x5-good',
@@ -55,6 +57,8 @@ export const ARENA_CATALOG = [
     suggestedSize: 9,
     calibrationId: 'demonforge-10x8',
   },
+  // LD-007: the rest of magicarrowassets/arenas/ (36 arenas), see arena-library.js.
+  ...ARENA_LIBRARY,
 ]
 
 export const CREATURE_CATALOG = [

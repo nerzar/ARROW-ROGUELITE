@@ -1,0 +1,48 @@
+{
+ "id": "ld7_a4_three",
+ "title": "Акт I · 5 · Засада с трёх сторон",
+ "enemies": [
+  {
+   "id": "grunt_n",
+   "species": "small-goblin",
+   "label": "Goblin Ambusher",
+   "side": 0,
+   "hp": 2,
+   "attackTimer": {
+    "interval": 5,
+    "damage": 2
+   }
+  },
+  {
+   "id": "grunt_e",
+   "species": "small-goblin",
+   "label": "Goblin Raider",
+   "side": 1,
+   "hp": 2,
+   "attackTimer": {
+    "interval": 3,
+    "damage": 2
+   }
+  },
+  {
+   "id": "brute_w",
+   "species": "spider-brute",
+   "label": "Camp Brute",
+   "side": 3,
+   "hp": 3,
+   "attackTimer": {
+    "interval": 7,
+    "damage": 3
+   }
+  }
+ ],
+ "rotate": {
+  "allow": [
+   1,
+   -1
+  ],
+  "advancesTurn": false,
+  "useRunPool": true
+ },
+ "blockedTapDamage": 1
+}

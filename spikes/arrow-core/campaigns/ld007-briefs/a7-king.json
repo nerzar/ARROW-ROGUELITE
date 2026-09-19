@@ -1,0 +1,43 @@
+{
+ "id": "ld7_a7_king",
+ "title": "Акт I · 8 · Goblin King",
+ "boss": {
+  "id": "goblin-king",
+  "phases": [
+   {
+    "side": 0,
+    "hpUnits": 3,
+    "attackTimer": {
+     "interval": 5,
+     "damage": 2
+    },
+    "label": "Phase 1: King holds the center"
+   },
+   {
+    "side": 1,
+    "hpUnits": 4,
+    "attackTimer": {
+     "interval": 3,
+     "damage": 3,
+     "kind": "cast",
+     "interruptible": true,
+     "interruptedAttack": {
+      "interval": 4,
+      "damage": 2,
+      "kind": "normal"
+     }
+    },
+    "label": "Phase 2: cornered King moves East, war-cry"
+   }
+  ]
+ },
+ "rotate": {
+  "allow": [
+   1,
+   -1
+  ],
+  "advancesTurn": false,
+  "useRunPool": true
+ },
+ "blockedTapDamage": 1
+}
