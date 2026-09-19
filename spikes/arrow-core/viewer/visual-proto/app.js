@@ -4,7 +4,7 @@
 // 16:9 desktop shell: board-renderer.js draws the board/targets, this file owns scene loading,
 // input, HUD DOM, and the win/loss overlay. No combat rule is duplicated here.
 import {
-  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, PRESETS, RunState, validateEncounter,
+  DIR_NAMES, findWin, formatAction, formatEncounterReport, generateLevel, ITEMS, PRESETS, RunState, validateEncounter,
 } from '../../dist/src/index.js'
 import { applyPoseOverrides, ASSET_MANIFEST, BOSS_MANIFESTS, bossSpeciesFor, ENEMY_MANIFESTS, loadAssets, loadBossPack, loadWolfPack } from './assets.js'
 import { ARENA_CALIBRATIONS, getArenaCalibration, hasArenaCalibrationOverride, resolveArenaPresentation } from './arena-calibration.js'
@@ -21,6 +21,7 @@ import {
   onEnemyGameplayEvent, readEnemySnapshot, tickEnemyVisual,
 } from './enemy-visual-state.js'
 import { FLIGHT_MS } from './projectile-flight.js'
+import { createItemBar, showRewardDraft } from './items-ui.js'
 
 const $ = (id) => document.getElementById(id)
 const ui = {
@@ -38,6 +39,7 @@ const ui = {
 // BUILD-025/CAL-004: canon Prologue sequence -- now shared with calibration-editor.js via
 // ./prologue-steps.js (imported above) so both always agree on the same 5 steps.
 const STANDALONE_SCENES = [
+  { key: 'wave-001', title: 'Debug · WAVE-001 · Две волны', file: '../../encounters/wave-001.json' },
   { key: 'act1-e1', title: 'Act I #1 · Двуручный рубеж (seed 22)', file: '../../encounters/act1-e1.json' },
   { key: 'act1-e2', title: 'Act I #2 · Взаимный замок (seed 112)', file: '../../encounters/act1-e2.json' },
   { key: 'act1-e3', title: 'Act I #3 · Кастер и свита (seed 25)', file: '../../encounters/act1-e3.json' },
@@ -81,6 +83,19 @@ const wolfPosesLoaded = ENEMY_POSES.filter((p) => wolfPack[p]).length
 applyDomAssets(assets)
 
 const runConfig = await fetchJson('../../encounters/cp-run-config.json').catch(() => ({ playerMaxHp: 10 }))
+// ITEM-001 debug: `?items=bow,shield` starts every run with those items (playtest shortcut, no effect otherwise).
+{
+  const q = new URLSearchParams(location.search).get('items')
+  if (q) runConfig.startingItems = q.split(',').map((x) => x.trim()).filter((x) => x in ITEMS)
+}
+// ITEM-001: item bar (placeholder look) under the player card; the reward draft lives in the overlay.
+const itemBar = createItemBar(document.querySelector('.hud-left'), {
+  onUse: (id, target) => useItem(id, target),
+  targetLabel: (side) => {
+    const t = run ? renderer.collectTargets(run.encounter, def).find((x) => x.side === side && !x.dead && !x.fled) : null
+    return t?.label ?? DIR_NAMES[side]
+  },
+})
 
 let run = null
 let level = null
@@ -138,6 +153,7 @@ function syncScenePick() {
 function tickAndSyncWolves(now) {
   if (!wolfVisuals || !run) return
   for (const e of run.encounter.enemies ?? []) {
+    if (e.pending) continue
     const snap = readEnemySnapshot(e)
     let v = wolfVisuals.get(e.id)
     if (!v) {
@@ -340,7 +356,8 @@ function loadActiveStep() {
     ? ` 👑 ${fleeGuests.map((e) => e.label ?? e.id).join(', ')} нельзя убить: после ${fleeGuests[0].flee.afterHits} попаданий он дразнит, затем показывает зад и сбегает — бой продолжится, чисти board до конца.`
     : ''
   ui.msgLine.textContent = def.enemies
-    ? `Враги одновременно: ${run.encounter.enemies.map((e) => e.label ?? e.id).join(', ')}.` +
+    ? `На арене: ${run.encounter.enemies.filter((e) => !e.pending).map((e) => e.label ?? e.id).join(', ') || 'ожидание волны'}.` +
+      (def.enemies.some((e) => e.arrival) ? ' Следующие враги указаны над свободными подиумами.' : '') +
       (hasAbility ? ' Следи за THROW IN N — брошенный камень временно PINNED одну стрелку.' : '') + fleeIntro
     : `Цель: ${def.boss?.id ?? 'boss'}.`
   const rep = validateEncounter(level, def, { playerHp: run.hpAtEntry })
@@ -403,6 +420,7 @@ function tap(id) {
   renderer.setFlash({ blocked: -1, blocker: -1 })
   renderer.onTapResult(level, id, r, before)
   const after = renderer.collectTargets(s, def)
+  renderer.markArrivals(before, after, r.hit ? FLIGHT_MS : 0)
   renderer.markDeaths(before, after)
   // STORY-001: advance previously-fled enemies one beat first (taunt -> back -> away),
   // then stamp new flees — a fresh flee always plays the full sequence from the taunt.
@@ -435,7 +453,7 @@ function tap(id) {
         if (!v) continue
         if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
         else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
-        else if (r.hit && e.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+        else if (r.hit && before.find((b) => b.id === e.id && !b.pending && !b.dead && !b.fled)?.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
       }
       tickAndSyncWolves(now)
     }
@@ -503,6 +521,7 @@ function tap(id) {
     `${formatAction({ kind: 'tap', id })}  ${r.hit ? 'HIT' : 'miss'}  hp ${s.hp}` +
       (r.enemyAttacked ? `  ENEMY (player ${r.playerHp})` : '') +
       (r.castInterrupted ? '  CAST INTERRUPTED' : '') +
+      (r.arrived?.length ? `  ARRIVED: ${r.arrived.map((e) => e.id).join(', ')}` : '') +
       (r.fled && r.fled.length ? `  FLED: ${r.fled.map((f) => f.id).join(', ')}` : '') +
       (fledBack.length ? `  FLED-BACK: ${fledBack.join(', ')}` : '') +
       (fledAway.length ? `  FLED-AWAY: ${fledAway.join(', ')}` : '') +
@@ -531,13 +550,75 @@ function rotate(turn) {
     flashPlayerHit()
     renderer.onRotateEnemyAttack()
   }
-  renderer.markDeaths(before, renderer.collectTargets(s, def))
+  const after = renderer.collectTargets(s, def)
+  renderer.markDeaths(before, after)
+  renderer.markArrivals(before, after)
+  const arrived = after.filter((e) => !e.pending && before.find((b) => b.id === e.id)?.pending)
   // VIS-006: a rotate can tick enemy timers (telegraphs may arm); re-sync baselines only.
   tickAndSyncWolves(performance.now())
   setMsg(text, false)
-  pushLog(`${formatAction({ kind: 'rotate', turn })}  → ${s.rotation * 90}°`)
+  pushLog(`${formatAction({ kind: 'rotate', turn })}  → ${s.rotation * 90}°` + (arrived.length ? `  ARRIVED: ${arrived.map((e) => e.id).join(', ')}` : ''))
   renderPanel()
   kick()
+  if (s.playerDead) scheduleGameOver()
+}
+
+// ITEM-001: use an inventory item. Free actions (Shield/Flask) just refresh the panel; a Bow
+// shot reuses the tap's post-hit presentation path minus the arrow flight (no board arrow moved).
+function useItem(id, target) {
+  const s = run.encounter
+  if (s.over || overlayTimer) return
+  const before = renderer.collectTargets(s, def)
+  const phaseBefore = bossVisual ? s.phaseIndex : -1
+  const r = s.useItem(id, target)
+  hint = null
+  if (!r.ok) {
+    setMsg('Предмет сейчас нельзя использовать.', true)
+    return
+  }
+  const label = ITEMS[id].label
+  const after = renderer.collectTargets(s, def)
+  const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
+  if (r.hit) {
+    renderer.markDeaths(before, after)
+    renderer.markFled(before, after)
+    targetsBefore = after
+    if (wolfVisuals) {
+      const now = performance.now()
+      for (const e of s.enemies) {
+        const snap = readEnemySnapshot(e)
+        const v = wolfVisuals.get(e.id)
+        if (!v) continue
+        if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
+        else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
+        else if (e.side === target) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+      }
+      tickAndSyncWolves(now)
+    }
+    if (bossVisual) {
+      const now = performance.now()
+      const snap = bossSnap()
+      if (r.won) bossVisual = onBossGameplayEvent(bossVisual, 'won', now, snap)
+      else if (s.phaseIndex !== phaseBefore) bossVisual = onBossGameplayEvent(bossVisual, 'phase', now, snap)
+      else if (r.castInterrupted) bossVisual = onBossGameplayEvent(bossVisual, 'interrupted', now, snap)
+      else bossVisual = onBossGameplayEvent(bossVisual, 'hit', now, snap)
+    }
+  }
+  let text = `${label}`
+  if (r.hit) text += ` · попадание (${r.hitDamage}) · HP целей ${s.hp}/${s.totalHp}`
+  if (id === 'shield') text += ` · щит ${s.wardHp}`
+  if (id === 'health_flask') text += ` · HP игрока ${s.playerHp}`
+  if (r.enemyAttacked) {
+    text += ` · ВРАГ АТАКУЕТ (HP игрока ${r.playerHp})`
+    flashPlayerHit()
+  }
+  if (r.castInterrupted) text += ' · CAST INTERRUPTED'
+  if (r.rewards && r.rewards.length) text += ` · LOOT: ${r.rewards.map((x) => [x.heal ? `+${x.heal} HP` : '', x.rotate ? `+${x.rotate} Rotate` : ''].filter(Boolean).join(' ') || '—').join(', ')}`
+  setMsg(text, false)
+  pushLog(`item ${id}${target !== undefined ? ` -> ${DIR_NAMES[target]}` : ''}${r.hit ? `  HIT ${r.hitDamage}` : ''}  player ${s.playerHp}${s.wardHp ? ` ward ${s.wardHp}` : ''}`)
+  renderPanel()
+  kick()
+  if (r.won) scheduleWin()
   if (s.playerDead) scheduleGameOver()
 }
 
@@ -550,7 +631,7 @@ function showHint() {
     return
   }
   hint = r.sequence[0]
-  setMsg(`Подсказка: ${hint.kind === 'tap' ? `стрелка #${hint.id}` : `Rotate ${hint.turn === 1 ? 'cw' : 'ccw'}`}.`, false)
+  setMsg(`Подсказка: ${hint.kind === 'tap' ? `стрелка #${hint.id}` : hint.kind === 'rotate' ? `Rotate ${hint.turn === 1 ? 'cw' : 'ccw'}` : `предмет ${ITEMS[hint.id].label}${hint.target !== undefined ? ` → ${DIR_NAMES[hint.target]}` : ''}`}.`, false)
   kick()
 }
 
@@ -635,18 +716,32 @@ function showOverlay(kind) {
         }
       }
     } else if (isSeq) {
-      ui.overlayTitle.textContent = 'Этап пройден'
-      let body = `HP: ${run.encounter.playerHp}/${run.maxHp}.`
-      if (run.rotateCharges > 0) {
-        body += ` Rotate осталось: ${run.rotateCharges}.`
+      const showNext = () => {
+        ui.overlayTitle.style.display = ''
+        ui.overlayBody.style.display = ''
+        ui.overlayNext.style.display = ''
+        ui.overlayTitle.textContent = 'Этап пройден'
+        let body = `HP: ${run.encounter.playerHp}/${run.maxHp}.`
+        if (run.rotateCharges > 0) {
+          body += ` Rotate осталось: ${run.rotateCharges}.`
+        }
+        body += ` Золото: ${run.gold}.`
+        if (run.inventory.length) body += ` Предметы: ${run.inventory.map((it) => ITEMS[it.id].label).join(', ')}.`
+        ui.overlayBody.textContent = body
+        ui.overlayNext.textContent = 'Следующий этап →'
+        ui.overlayNext.onclick = () => {
+          hideOverlay()
+          run.advance()
+          loadActiveStep()
+        }
       }
-      ui.overlayBody.textContent = body
-      ui.overlayNext.textContent = 'Следующий этап →'
-      ui.overlayNext.onclick = () => {
-        hideOverlay()
-        run.advance()
-        loadActiveStep()
-      }
+      // ITEM-001: the reward draft comes first; the usual "next step" card follows the pick.
+      if (run.rewardPending) {
+        ui.overlayTitle.style.display = 'none'
+        ui.overlayBody.style.display = 'none'
+        ui.overlayNext.style.display = 'none'
+        showRewardDraft(ui.overlay.querySelector('.card'), run, { onDone: showNext })
+      } else showNext()
     } else {
       ui.overlayTitle.textContent = 'Победа!'
       ui.overlayBody.textContent = `HP на финише: ${run.encounter.playerHp}/${run.maxHp}.`
@@ -705,6 +800,7 @@ function renderPanel() {
   // live shared pool via the same getter), encounter-local otherwise. At 0 the buttons stay
   // visible but disabled (disabled comes from canRotate below); the label always shows the count.
   ui.rotateCharges.textContent = def.rotate.allow.length === 0 ? '' : `Rotate ×${s.rotateCharges}`
+  itemBar.render(run)
   const statusLines = [
     `${def.title ?? def.id}`,
     `board ${board.preset} seed ${board.seed} (${level.width}x${level.height}, ${level.arrows.length} стрел)`,

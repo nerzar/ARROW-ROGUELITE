@@ -1,12 +1,13 @@
 # TASK: ITEM-001 — Run inventory + reward draft (1 of 3) + первые 3 предмета
 
-STATUS: READY
+STATUS: DONE
 TYPE: BUILD
 SIZE: L
 AGENT:
 BASE_BRANCH: main
 BRANCH: build/ITEM-001-inventory-reward-draft
-START_SHA:
+START_SHA: 927c05e
+RESULT_SHA: (see branch head)
 
 ## Цель
 
@@ -64,3 +65,34 @@ run-инвентаре и реально меняют следующий бой.
 - `RunState` сериализуем (`toJSON`/`fromJSON`) — задел под VK saves, без самого сохранения.
 
 После сдачи STOP.
+
+## RESULT
+
+- Движок: `src/items.ts` (таблица предметов, BALANCE-SYSTEM v0.1), `EncounterState.useItem/canUseItem/itemActions/liveTargetSides/wardHp/items`,
+  действие `{kind:'item', id, target?}` в `EncounterAction`; Bow = projectile-hit с полными правилами стрелы
+  (щит врага поглощает, cast прерывается, kill reward, hit-shift), Turn Cost 1 двигает мир; Shield = ward,
+  поглощающий урон атак; Flask = heal с cap; undo/clone/key корректны; в boss-режиме Bow не переносит
+  лишние единицы через границу фазы.
+- Солвер: `findWin/maxHits/minDamageToWin` перебирают предметы, `WinQuery.maxItems` (0 = «голыми руками»).
+- RunState: инвентарь (3 слота, recharge encounter/run), draft 1-из-3 (`rewardOffers/chooseReward/skipReward`,
+  детерминирован `runSeed` + id этапа; heal предлагается только при неполном HP), `winHeal` + heal-награда,
+  `toJSON/fromJSON` (run-level), `startingItems`, `noRewardAfter`.
+- Правило пользователя (2026-09-19): предмет — редкость, обычная награда — золото. Draft всегда 3 карты:
+  золото (base 8 + 2·этап) · +3 HP (если ранен) или +1 Rotate · предмет с шансом `itemChance` (0.3) либо
+  двойное золото; `def.rewardItem: true` принуждает предмет (босс/ключевые бои). Золото копится в
+  `RunState.gold`, сохраняется, показывается в панели; тратить пока негде (магазин — следующая задача).
+- Viewer: `items-ui.js` — панель предметов под карточкой игрока (пипсы зарядов, picker цели для Лука),
+  экран награды внутри win-overlay перед «Следующий этап»; `?items=bow,shield,health_flask` — debug-старт.
+- `encounters/cp-run-config.json`: `runSeed: 1`, `noRewardAfter: [prologue-stage-1, prologue-stage-2]`.
+
+## VERIFY
+
+- `npm test`: 36 файлов / 402 теста (10 новых в `test/item-001-inventory-rewards.test.ts`).
+- Браузер: пролог этап 3 → draft (Фляга / +1 Rotate / Щит) → Щит → этап 4: щит применён («Щит: 2»),
+  Лук с picker'ом цели убивает правого гоблина (2 урона), заряд гаснет.
+
+## FOUND
+
+- Презентация Лука — без полёта снаряда (сразу hit-реакция): отдельная presentation-задача (можно в PRESENT-001).
+- Draft после каждого этапа включая пролог 3–5 — provisional; `noRewardAfter` в run-config это регулирует.
+- Экран награды и панель — плейсхолдеры под ART-011/012/014/015.

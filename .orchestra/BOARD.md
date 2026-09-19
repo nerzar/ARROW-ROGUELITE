@@ -36,6 +36,7 @@ BOARD хранит не только одну текущую задачу, а **
 |---|---|---|---|
 | ASSET-005/007/008 — Hit/Stunned split | IN PROGRESS (внешний арт) | — | ChatGPT-в-браузере генерирует недостающие позы: 8 существующих мобов ждут `stunned`, Goblin Grunt/Matron ждут `hit`. Не код-задача, см. `.orchestra/tasks/`. |
 | ART-010 — UI Style Base / Visual Bible v1 | READY | `art/ART-010-ui-style-base` | Зафиксировать единый visual language для HUD/rewards/popups/items: материалы, рамки, кнопки, цвет, glow, typography, motion. |
+| ART-010B — PC-first UI Style Pass | READY | `art/ART-010B-pc-ui-style-pass` | Ещё 3 desktop-first направления по canonical current-game refs: проще, чище, меньше тяжёлого fantasy-декора; финал выбирает пользователь. |
 | ART-011 — Reward Choice Screen Exploration | READY | `art/ART-011-reward-choice-screen` | 2–4 варианта reward screen в общем fantasy-языке; карточки, rarity, hover/select, confirm. Anchor-screen, финал только после user review. |
 | ART-012 — Player HUD Exploration | READY | `art/ART-012-player-hud` | 2–4 варианта HUD: HP, Rotate, active items/charges/statuses. Anchor-screen, не перекрывать board/arena. |
 | ITEM-001 — Run inventory + reward draft 1-of-3 + Bow/Shield/Flask | READY | `build/ITEM-001-inventory-reward-draft` | Первая петля наград: инвентарь в RunState, действие `item`, draft после боя, солвер видит предметы. Плейсхолдер-UI. |
