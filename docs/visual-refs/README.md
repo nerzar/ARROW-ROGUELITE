@@ -44,3 +44,12 @@
 | `hud/03-hud-runeforge.png` | Вариант 3 · Arcane Runeforge (боевой тактический стиль, сегментированный HP) |
 | `docs/ART-012-PLAYER-HUD-EXPLORATION.md` | Полный аналитический отчёт с разбором плюсов/минусов и рекомендацией |
 
+## Утверждённая адаптация HUD (`hud/`, задача ART-012B)
+
+| Файл | Описание |
+|---|---|
+| `approved-ui/approved-hud-reference.png` | Канонический утверждённый референс HUD-языка (из `magicarrowassets/gameplay-reference/hud-approved.png`) |
+| `hud/04-hud-approved-adaptation.png` | **Финальная адаптация (1280×720)**: утверждённый HUD на каноническом live screenshot (Moonlit Fortress) |
+| `docs/ART-012B-APPROVED-HUD-ADAPTATION.md` | Полный отчёт по архитектуре адаптации, компоновке и соблюдению ограничений |
+
+
