@@ -1,0 +1,8 @@
+{
+  "name": "Arrow-Roguelite",
+  "description": "Tactical arrow-puzzle roguelite with combat encounters and campaign editor",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

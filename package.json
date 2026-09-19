@@ -1,0 +1,20 @@
+{
+  "name": "arrow-roguelite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "spikes/arrow-core"
+  ],
+  "scripts": {
+    "build": "npm --prefix spikes/arrow-core run build",
+    "dev": "npm --prefix spikes/arrow-core run build && node server.js",
+    "start": "node server.js",
+    "test": "npm --prefix spikes/arrow-core run test",
+    "lint": "npm --prefix spikes/arrow-core run typecheck"
+  },
+  "dependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "~5.9.3"
+  }
+}

@@ -33,7 +33,7 @@ const ui = {
   resetBtn: $('resetBtn'), saveStorageBtn: $('saveStorageBtn'), clearStorageBtn: $('clearStorageBtn'), copyBtn: $('copyBtn'), downloadBtn: $('downloadBtn'),
   newLevelBtn: $('newLevelBtn'), saveBadge: $('saveBadge'), playLevelBtn: $('playLevelBtn'), playCampaignBtn: $('playCampaignBtn'),
   importArenaBtn: $('importArenaBtn'), importArenaInput: $('importArenaInput'), importArenaStatus: $('importArenaStatus'),
-  authorLevelTitle: $('authorLevelTitle'), authorBoardSize: $('authorBoardSize'), authorBoardProfile: $('authorBoardProfile'), authorBoardSeed: $('authorBoardSeed'), rollSeedBtn: $('rollSeedBtn'),
+  authorLevelTitle: $('authorLevelTitle'), authorBoardSize: $('authorBoardSize'), authorBoardSeed: $('authorBoardSeed'), rollSeedBtn: $('rollSeedBtn'),
   authorBlockedTap: $('authorBlockedTap'), btnDupLevel: $('btnDupLevel'), btnDelLevel: $('btnDelLevel'), btnMoveUp: $('btnMoveUp'), btnMoveDown: $('btnMoveDown'),
   authorEnemiesList: $('authorEnemiesList'), authorAddEnemyBtn: $('authorAddEnemyBtn'),
   scaleTop: $('scaleTop'), scaleTopNum: $('scaleTopNum'),
@@ -228,7 +228,6 @@ async function loadLevel(idx) {
   // 3. Sync UI inputs
   ui.authorLevelTitle.value = levelDef.title || `Этап ${idx + 1}`
   ui.authorBoardSize.value = String(levelDef.board.size || 5)
-  ui.authorBoardProfile.value = levelDef.board.profile || 'long'
   ui.authorBoardSeed.value = String(levelDef.board.seed || 1000)
   ui.authorBlockedTap.value = String(levelDef.encounter.blockedTapDamage ?? 1)
   ui.stagePick.value = String(idx)
@@ -817,18 +816,6 @@ ui.authorBoardSize.onchange = () => {
     const s = Number(ui.authorBoardSize.value)
     levelDef.board.size = s
     levelDef.board.preset = `square-${s}`
-    rebuildCurrentLevel()
-    updateStagePickOptions()
-  }
-}
-
-// LD-007 (provisional): arrow-density profile, see board-profiles.js
-ui.authorBoardProfile.onchange = () => {
-  const levelDef = campaign.levels[currentLevelIndex]
-  if (levelDef) {
-    const p = ui.authorBoardProfile.value
-    if (p === 'long') delete levelDef.board.profile
-    else levelDef.board.profile = p
     rebuildCurrentLevel()
     updateStagePickOptions()
   }

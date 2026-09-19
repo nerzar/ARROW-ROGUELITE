@@ -56,7 +56,7 @@ export class RunState {
 
   private buildEncounterState(): EncounterState {
     const step = this.steps[this.idx]
-    return EncounterState.fromLevel(step.level, step.def, this.entryHp, this.rotatePool, this.config.playerMaxHp)
+    return EncounterState.fromLevel(step.level, step.def, this.entryHp, this.rotatePool)
   }
 
   get stepIndex(): number {
@@ -109,8 +109,7 @@ export class RunState {
   advance(): boolean {
     if (!this.encounterState.won || this.isLastStep) return false
     this.rotatePool.charges += this.steps[this.idx].def.winRotateReward ?? 0
-    // ACT-I-003: rest beat — heal on completion, capped at max HP.
-    this.entryHp = Math.min(this.config.playerMaxHp, this.encounterState.playerHp + (this.steps[this.idx].def.winHeal ?? 0))
+    this.entryHp = this.encounterState.playerHp
     this.entryRotate = this.rotatePool.charges
     this.idx++
     this.encounterState = this.buildEncounterState()

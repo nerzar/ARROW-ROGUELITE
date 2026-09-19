@@ -15,12 +15,15 @@
     "cli": "npm run build && node dist/tools/cli.js",
     "gen": "npm run build && node dist/tools/cli.js gen",
     "bench": "npm run build && node dist/tools/cli.js bench",
-    "viewer": "npm run build && node tools/serve.mjs"
+    "viewer": "npm run build && node tools/serve.mjs",
+    "dev": "npm run build && node tools/serve.mjs"
+  },
+  "dependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "~5.9.3"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
     "fast-check": "^4.3.0",
-    "typescript": "~5.9.3",
     "vitest": "^3.2.4"
   }
 }

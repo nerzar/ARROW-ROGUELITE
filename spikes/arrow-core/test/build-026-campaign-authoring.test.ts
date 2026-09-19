@@ -203,8 +203,8 @@ describe('BUILD-026: Campaign & Level Authoring Model', () => {
     expect(aliasResolved!.id).toBe('boss-shadow-moon')
   })
 
-  it('BUILD-031/ACT-I-003: contains the full 13-creature catalog with valid labels and manifests', () => {
-    expect(CREATURE_CATALOG.length).toBe(13)
+  it('BUILD-031: contains the full 10-creature catalog with valid labels and manifests', () => {
+    expect(CREATURE_CATALOG.length).toBe(10)
 
     const expectedCreatureIds = [
       'goblin-shaman',
@@ -217,9 +217,6 @@ describe('BUILD-026: Campaign & Level Authoring Model', () => {
       'small-spider',
       'toxic-demonic-spider',
       'skeleton-child',
-      'goblin-grunt',
-      'goblin-matron',
-      'goblin-drunkard',
     ]
 
     for (const id of expectedCreatureIds) {
