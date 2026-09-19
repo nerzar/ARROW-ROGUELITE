@@ -441,6 +441,10 @@ function tap(id) {
   const defAtTap = def
   const wolfMap = wolfVisuals
   const attacked = new Set((r.enemyAttacks ?? []).map((a) => a.id))
+  // PRESENT-001: a healer visibly casts (attack pose for the standard hold) when its heal
+  // resolves -- the spark + green popup are stamped in the renderer, the pose lives here
+  // with the other per-actor gameplay -> presentation events.
+  const healedBy = new Set((r.healed ?? []).map((h) => h.id))
   const fireImpact = () => {
     if (!run || run.encounter !== enc || def !== defAtTap) return
     renderer.markDeaths(before, after)
@@ -456,6 +460,7 @@ function tap(id) {
         if (e.dead) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'defeated', now, snap))
         else if (attacked.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
         else if (r.hit && before.find((b) => b.id === e.id && !b.pending && !b.dead && !b.fled)?.side === r.arenaDir) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'hit', now, snap))
+        else if (healedBy.has(e.id)) wolfVisuals.set(e.id, onEnemyGameplayEvent(v, 'attack', now, snap))
       }
       tickAndSyncWolves(now)
     }
@@ -476,6 +481,16 @@ function tap(id) {
   }
   if (r.hit) setTimeout(fireImpact, FLIGHT_MS)
   else fireImpact()
+  // PRESENT-001: loot reward toast on the player card, arrival-synced like the death
+  // visuals (a kill always comes with a hit, but stay correct if that ever changes).
+  if (r.rewards && r.rewards.length) {
+    const lootHeal = r.rewards.reduce((a, w) => a + (w.heal ?? 0), 0)
+    const lootRotate = r.rewards.reduce((a, w) => a + (w.rotate ?? 0), 0)
+    if (lootHeal > 0 || lootRotate > 0) {
+      if (r.hit) setTimeout(() => { if (run && run.encounter === enc && def === defAtTap) flashPlayerHeal(lootHeal, lootRotate) }, FLIGHT_MS)
+      else flashPlayerHeal(lootHeal, lootRotate)
+    }
+  }
 
   let text = `#${id} ${r.hit ? 'попадание' : 'мимо'} · HP целей ${s.hp}/${s.totalHp}`
   if (r.enemyAttacked) {
@@ -645,6 +660,27 @@ function flashPlayerHit() {
   ui.stage.classList.add('hit-flash')
   setTimeout(() => ui.stage.classList.remove('hit-flash'), 260) // animation has no fill-mode: forwards, so it must be removed explicitly or it freezes at opacity 1
   ui.playerCard.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }], { duration: 220 })
+}
+
+// PRESENT-001: loot kill reward lands on the player -- a green pulse on the player card
+// plus a floating "+N HP / +M R" toast. DOM-only (WAAPI + inline styles, no CSS file
+// change); the matching burst + popup at the victim's slot lives in the renderer.
+function flashPlayerHeal(heal, rotate) {
+  const parts = []
+  if (heal > 0) parts.push(`+${heal} HP`)
+  if (rotate > 0) parts.push(`+${rotate} R`)
+  if (!parts.length || !ui.playerCard?.animate) return
+  ui.playerCard.animate(
+    [{ transform: 'scale(1)', boxShadow: '0 0 0 rgba(16,185,129,0)' }, { transform: 'scale(1.04)', boxShadow: '0 0 18px rgba(16,185,129,0.9)' }, { transform: 'scale(1)', boxShadow: '0 0 0 rgba(16,185,129,0)' }],
+    { duration: 600 },
+  )
+  const toast = document.createElement('div')
+  toast.textContent = parts.join('  ')
+  toast.style.cssText = 'position:absolute;left:8px;top:-6px;z-index:5;pointer-events:none;font:800 15px system-ui;color:#bbf7d0;text-shadow:0 1px 2px #14532d, 0 0 8px rgba(16,185,129,.8);'
+  if (getComputedStyle(ui.playerCard).position === 'static') ui.playerCard.style.position = 'relative'
+  ui.playerCard.append(toast)
+  toast.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-26px)', opacity: 0 }], { duration: 1200, easing: 'ease-out' }).onfinish = () => toast.remove()
+  setTimeout(() => toast.remove(), 1400)
 }
 
 function setMsg(text, bad) {
@@ -1115,6 +1151,7 @@ window.visualDebug = {
     return wolfVisuals?.get(id) ?? null
   },
   layout: () => renderer.debugLayout(), // VIS-007: per-frame arena layout (canvas coords)
+  fx: (key) => renderer.debugFx(key), // PRESENT-001: per-target ability fx stamps (debug/QA)
   // BUILD-035: live projectile shots + hit-anchors (debug/QA only -- no gameplay effect).
   shots: () => renderer.debugShots(),
   anchors: () => renderer.debugAnchors(),
